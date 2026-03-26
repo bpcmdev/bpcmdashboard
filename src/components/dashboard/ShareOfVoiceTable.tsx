@@ -1,4 +1,15 @@
-const sovData = [
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
+
+interface SovRow {
+  rank: number;
+  brand: string;
+  pct: number;
+  delta: string;
+  highlight: boolean;
+}
+
+const fallbackData: SovRow[] = [
   { rank: 1, brand: 'Milk Makeup', pct: 21, delta: '▲+4pts', highlight: true },
   { rank: 2, brand: 'Rhode', pct: 20, delta: '-1pt', highlight: false },
   { rank: 3, brand: 'Pat McGrath Labs', pct: 17, delta: '—', highlight: false },
@@ -9,6 +20,32 @@ const sovData = [
 ];
 
 const ShareOfVoiceTable = () => {
+  const [sovData, setSovData] = useState<SovRow[]>(fallbackData);
+
+  useEffect(() => {
+    const fetchSov = async () => {
+      const { data, error } = await supabase
+        .from('competitive_sov')
+        .select('*')
+        .order('rank', { ascending: true });
+
+      if (error || !data || data.length === 0) {
+        console.error('Failed to fetch competitive_sov:', error);
+        return;
+      }
+
+      setSovData(data.map((row: Record<string, any>) => ({
+        rank: row.rank ?? 0,
+        brand: row.brand ?? '',
+        pct: row.pct ?? row.share ?? 0,
+        delta: row.delta ?? '—',
+        highlight: (row.brand ?? '').toLowerCase().includes('milk'),
+      })));
+    };
+
+    fetchSov();
+  }, []);
+
   return (
     <div>
       <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">
