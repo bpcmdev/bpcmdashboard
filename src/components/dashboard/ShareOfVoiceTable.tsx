@@ -19,6 +19,12 @@ const fallbackData: SovRow[] = [
   { rank: 7, brand: 'Charlotte Tilbury', pct: 5, delta: '—', highlight: false },
 ];
 
+function formatDeltaPts(pts: number): string {
+  if (pts > 0) return `▲+${pts}pts`;
+  if (pts < 0) return `${pts}pt${Math.abs(pts) !== 1 ? 's' : ''}`;
+  return '—';
+}
+
 const ShareOfVoiceTable = () => {
   const [sovData, setSovData] = useState<SovRow[]>(fallbackData);
 
@@ -36,10 +42,10 @@ const ShareOfVoiceTable = () => {
 
       setSovData(data.map((row: Record<string, any>) => ({
         rank: row.rank ?? 0,
-        brand: row.brand ?? '',
-        pct: row.pct ?? row.share ?? 0,
-        delta: row.delta ?? '—',
-        highlight: (row.brand ?? '').toLowerCase().includes('milk'),
+        brand: row.brand_name ?? '',
+        pct: row.sov_pct ?? 0,
+        delta: formatDeltaPts(row.delta_pts ?? 0),
+        highlight: (row.brand_name ?? '').toLowerCase().includes('milk'),
       })));
     };
 
