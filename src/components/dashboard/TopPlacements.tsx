@@ -35,8 +35,12 @@ function formatDate(dateStr: string): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-function formatTier(tier: number, placementType: string): string {
+const CORP_KEYWORDS = ['waldencast', 'turnaround', 'president', 'ceo', 'cfo', 'ipo', 'earnings', 'quarterly', 'annual report', 'takes the helm', 'names', 'appoints'];
+
+function formatTier(tier: number, placementType: string, headline: string): string {
   if (placementType === 'corporate' || placementType === 'corp') return 'CORP NEWS';
+  const lower = headline.toLowerCase();
+  if (CORP_KEYWORDS.some(kw => lower.includes(kw))) return 'CORP NEWS';
   return `TIER ${tier}`;
 }
 
@@ -67,7 +71,7 @@ const TopPlacements = () => {
         date: row.published_at ? formatDate(row.published_at) : '',
         reach: row.outlet_umv ? formatReach(row.outlet_umv) : '',
         placedBy: formatPlacedBy(row.placed_by ?? '', row.placement_type ?? ''),
-        tier: formatTier(row.outlet_tier ?? 1, row.placement_type ?? ''),
+        tier: formatTier(row.outlet_tier ?? 1, row.placement_type ?? '', row.headline ?? ''),
       })));
     };
 
