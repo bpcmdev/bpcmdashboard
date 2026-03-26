@@ -28,10 +28,16 @@ const fallbackKpis: KpiCardProps[] = [
   { label: 'Influencer ROI', value: '4.2x', delta: '— stable', deltaType: 'neutral' },
 ];
 
-function getDeltaType(delta: string): 'positive' | 'negative' | 'neutral' {
-  if (delta.includes('▲') || delta.includes('+')) return 'positive';
-  if (delta.includes('▼') || delta.includes('-')) return 'negative';
-  return 'neutral';
+function formatCompact(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
+  return String(n);
+}
+
+function formatDelta(val: number, suffix: string): { delta: string; deltaType: 'positive' | 'negative' | 'neutral' } {
+  if (val > 0) return { delta: `▲ ${val}${suffix}`, deltaType: 'positive' };
+  if (val < 0) return { delta: `▼ ${Math.abs(val)}${suffix}`, deltaType: 'negative' };
+  return { delta: '— stable', deltaType: 'neutral' };
 }
 
 const KpiBar = () => {
@@ -51,14 +57,21 @@ const KpiBar = () => {
         return;
       }
 
-      const row = data as Record<string, any>;
+      const r = data as Record<string, any>;
+      const placementDelta = formatDelta(r.wow_placement_delta ?? 0, '% vs prior week');
+      const emvDelta = formatDelta(r.wow_emv_delta ?? 0, '%');
+      const sentimentDelta = formatDelta(r.mom_sentiment_delta ?? 0, 'pts MoM');
+      const reachDelta = formatDelta(r.wow_reach_delta ?? 0, '%');
+      const sovDelta = formatDelta(r.sov_delta_pts ?? 0, 'pts');
+      const roiVal = r.influencer_roi ?? 0;
+
       setKpis([
-        { label: 'Press Placements', value: String(row.press_placements ?? '47'), delta: row.press_placements_delta ?? '▲ 31% vs prior week', deltaType: getDeltaType(row.press_placements_delta ?? '▲') },
-        { label: 'Earned Media Value', value: row.earned_media_value ?? '$2.1M', delta: row.earned_media_value_delta ?? '▲ 18%', deltaType: getDeltaType(row.earned_media_value_delta ?? '▲') },
-        { label: 'Sentiment Score', value: row.sentiment_score ?? '72/100', delta: row.sentiment_score_delta ?? '▲ 8pts MoM', deltaType: getDeltaType(row.sentiment_score_delta ?? '▲') },
-        { label: 'Social Reach', value: row.social_reach ?? '6.4M', delta: row.social_reach_delta ?? '▲ 22%', deltaType: getDeltaType(row.social_reach_delta ?? '▲') },
-        { label: 'Share of Voice', value: row.share_of_voice ?? '21%', delta: row.share_of_voice_delta ?? '▲ 4pts', deltaType: getDeltaType(row.share_of_voice_delta ?? '▲') },
-        { label: 'Influencer ROI', value: row.influencer_roi ?? '4.2x', delta: row.influencer_roi_delta ?? '— stable', deltaType: getDeltaType(row.influencer_roi_delta ?? '—') },
+        { label: 'Press Placements', value: String(r.placement_count ?? 0), ...placementDelta },
+        { label: 'Earned Media Value', value: `$${formatCompact(r.emv_usd ?? 0)}`, ...emvDelta },
+        { label: 'Sentiment Score', value: `${r.sentiment_score ?? 0}/100`, ...sentimentDelta },
+        { label: 'Social Reach', value: formatCompact(r.social_reach ?? 0), ...reachDelta },
+        { label: 'Share of Voice', value: `${r.sov_pct ?? 0}%`, ...sovDelta },
+        { label: 'Influencer ROI', value: `${roiVal}x`, delta: '— stable', deltaType: 'neutral' },
       ]);
     };
 

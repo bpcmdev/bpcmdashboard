@@ -31,8 +31,18 @@ function formatReach(umv: number): string {
 }
 
 function formatDate(dateStr: string): string {
-  const d = new Date(dateStr);
+  const d = new Date(dateStr + 'T00:00:00');
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function formatTier(tier: number, placementType: string): string {
+  if (placementType === 'corporate' || placementType === 'corp') return 'CORP NEWS';
+  return `TIER ${tier}`;
+}
+
+function formatPlacedBy(placedBy: string, placementType: string): string {
+  if (placementType === 'placed') return `${placedBy} placed`;
+  return 'Organic';
 }
 
 const TopPlacements = () => {
@@ -52,12 +62,12 @@ const TopPlacements = () => {
       }
 
       setPlacements(data.map((row: Record<string, any>) => ({
-        outlet: row.outlet ?? '',
+        outlet: row.outlet_name ?? '',
         headline: row.headline ?? '',
-        date: row.date ? formatDate(row.date) : '',
+        date: row.published_at ? formatDate(row.published_at) : '',
         reach: row.outlet_umv ? formatReach(row.outlet_umv) : '',
-        placedBy: row.placed_by ?? row.source ?? 'Organic',
-        tier: (row.tier ?? 'TIER 1').toUpperCase(),
+        placedBy: formatPlacedBy(row.placed_by ?? '', row.placement_type ?? ''),
+        tier: formatTier(row.outlet_tier ?? 1, row.placement_type ?? ''),
       })));
     };
 
