@@ -13,8 +13,8 @@ const DashboardHeader = () => {
       </div>
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-1.5">
-          <span className="inline-block w-2 h-2 rounded-full bg-green-400 animate-pulse-live" />
-          <span className="text-xs font-semibold tracking-wider text-green-400">LIVE</span>
+          <span className="inline-block w-2 h-2 rounded-full animate-pulse-live" style={{ backgroundColor: 'hsl(145 63% 42%)' }} />
+          <span className="text-xs font-semibold tracking-wider text-positive">LIVE</span>
         </div>
         <button className="text-xs font-medium tracking-wider uppercase px-3 py-1.5 border border-white/20 hover:bg-white/10 transition-colors">
           Export PDF

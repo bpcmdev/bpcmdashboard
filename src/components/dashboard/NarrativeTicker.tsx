@@ -3,7 +3,7 @@ const TICKER_TEXT = "Active turnaround cycle — Mazdack Rassi named President F
 const NarrativeTicker = () => {
   return (
     <div className="dashboard-ticker px-6 py-2.5 flex items-center gap-4 overflow-hidden">
-      <span className="shrink-0 text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 bg-green-500/20 text-green-400 border border-green-500/30">
+      <span className="shrink-0 text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 text-positive border border-accent/30" style={{ backgroundColor: 'hsla(145, 63%, 42%, 0.2)' }}>
         NARRATIVE WATCH
       </span>
       <div className="overflow-hidden flex-1">
