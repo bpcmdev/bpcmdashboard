@@ -71,7 +71,7 @@ const TopPlacements = () => {
         date: row.published_at ? formatDate(row.published_at) : '',
         reach: row.outlet_umv ? formatReach(row.outlet_umv) : '',
         placedBy: formatPlacedBy(row.placed_by ?? '', row.placement_type ?? ''),
-        tier: formatTier(row.outlet_tier ?? 1, row.placement_type ?? ''),
+        tier: formatTier(row.outlet_tier ?? 1, row.placement_type ?? '', row.headline ?? ''),
       })));
     };
 
