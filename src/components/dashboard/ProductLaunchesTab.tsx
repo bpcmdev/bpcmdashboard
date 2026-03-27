@@ -78,11 +78,11 @@ const ProductLaunchesTab = () => {
           <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-3">Press Highlights</h3>
           <div className="divide-y divide-border">
             {pressHighlights.map((p, i) => (
-              <div key={i} className="flex items-center gap-3 py-3">
-                <span className="text-sm font-bold w-24 shrink-0">{p.outlet}</span>
-                <span className="text-xs flex-1 text-foreground/80">{p.headline}</span>
-                <span className="text-[11px] text-muted-foreground shrink-0">{p.date} · {p.reach} · {p.type}</span>
-                <span className={`text-[10px] font-bold tracking-wider px-2 py-0.5 shrink-0 ${tierClass[p.tier] ?? 'bg-tier1'}`}>{p.tier}</span>
+              <div key={i} className="flex items-center gap-3 py-3 min-w-0">
+                <span className="text-sm font-bold w-20 shrink-0">{p.outlet}</span>
+                <span className="text-xs flex-1 min-w-0 truncate text-foreground/80">{p.headline}</span>
+                <span className="text-[11px] text-muted-foreground shrink-0 whitespace-nowrap">{p.date} · {p.reach} · {p.type}</span>
+                <span className={`text-[10px] font-bold tracking-wider px-2 py-0.5 shrink-0 whitespace-nowrap ${tierClass[p.tier] ?? 'bg-tier1'}`}>{p.tier}</span>
               </div>
             ))}
           </div>
