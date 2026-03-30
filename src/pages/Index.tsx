@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import NarrativeTicker from '@/components/dashboard/NarrativeTicker';
 import KpiBar from '@/components/dashboard/KpiBar';
