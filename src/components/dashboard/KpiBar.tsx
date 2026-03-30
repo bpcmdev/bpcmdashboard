@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useWeek } from '@/contexts/WeekContext';
 
 interface KpiCardProps {
   label: string;
@@ -42,13 +43,15 @@ function formatDelta(val: number, suffix: string): { delta: string; deltaType: '
 
 const KpiBar = () => {
   const [kpis, setKpis] = useState<KpiCardProps[]>(fallbackKpis);
+  const { selectedWeek } = useWeek();
 
   useEffect(() => {
+    if (!selectedWeek) return;
     const fetchKpis = async () => {
       const { data, error } = await supabase
         .from('weekly_snapshots')
         .select('*')
-        .order('week_start', { ascending: false })
+        .eq('week_start', selectedWeek)
         .limit(1)
         .single();
 
@@ -76,7 +79,7 @@ const KpiBar = () => {
     };
 
     fetchKpis();
-  }, []);
+  }, [selectedWeek]);
 
   return (
     <div className="bg-card flex divide-x divide-border border-b border-border">

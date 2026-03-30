@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useWeek } from '@/contexts/WeekContext';
 
 interface SovRow {
   rank: number;
@@ -27,16 +28,40 @@ function formatDeltaPts(pts: number): string {
 
 const ShareOfVoiceTable = () => {
   const [sovData, setSovData] = useState<SovRow[]>(fallbackData);
+  const { selectedWeek } = useWeek();
 
   useEffect(() => {
+    if (!selectedWeek) return;
     const fetchSov = async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('competitive_sov')
         .select('*')
         .order('rank', { ascending: true });
 
+      // Filter by week if column exists
+      query = query.eq('week_start', selectedWeek);
+
+      const { data, error } = await query;
+
       if (error || !data || data.length === 0) {
-        console.error('Failed to fetch competitive_sov:', error);
+        // Fallback: try without week filter
+        const { data: allData, error: allError } = await supabase
+          .from('competitive_sov')
+          .select('*')
+          .order('rank', { ascending: true });
+
+        if (allError || !allData || allData.length === 0) {
+          console.error('Failed to fetch competitive_sov:', error);
+          return;
+        }
+
+        setSovData(allData.map((row: Record<string, any>) => ({
+          rank: row.rank ?? 0,
+          brand: row.brand_name ?? '',
+          pct: row.sov_pct ?? 0,
+          delta: formatDeltaPts(row.delta_pts ?? 0),
+          highlight: (row.brand_name ?? '').toLowerCase().includes('milk'),
+        })));
         return;
       }
 
@@ -50,7 +75,7 @@ const ShareOfVoiceTable = () => {
     };
 
     fetchSov();
-  }, []);
+  }, [selectedWeek]);
 
   return (
     <div>

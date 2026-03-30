@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useWeek } from '@/contexts/WeekContext';
 
 interface Placement {
   outlet: string;
@@ -51,14 +52,24 @@ function formatPlacedBy(placedBy: string, placementType: string): string {
 
 const TopPlacements = () => {
   const [placements, setPlacements] = useState<Placement[]>(fallbackPlacements);
+  const { selectedWeek } = useWeek();
 
   useEffect(() => {
+    if (!selectedWeek) return;
     const fetchPlacements = async () => {
-      const { data, error } = await supabase
+      const weekEnd = new Date(selectedWeek + 'T00:00:00');
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      const endStr = weekEnd.toISOString().split('T')[0];
+
+      let query = supabase
         .from('placements')
         .select('*')
+        .gte('published_at', selectedWeek)
+        .lte('published_at', endStr)
         .order('outlet_umv', { ascending: false })
         .limit(10);
+
+      const { data, error } = await query;
 
       if (error || !data || data.length === 0) {
         console.error('Failed to fetch placements:', error);
@@ -76,7 +87,7 @@ const TopPlacements = () => {
     };
 
     fetchPlacements();
-  }, []);
+  }, [selectedWeek]);
 
   return (
     <div>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { WeekProvider } from '@/contexts/WeekContext';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import NarrativeTicker from '@/components/dashboard/NarrativeTicker';
 import KpiBar from '@/components/dashboard/KpiBar';
@@ -36,17 +37,19 @@ const Index = () => {
   if (loading) return <div className="min-h-screen bg-background" />;
 
   return (
-    <div className="min-h-screen bg-background">
-      <DashboardHeader />
-      <NarrativeTicker />
-      <KpiBar />
-      <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
-      {TabContent ? <TabContent /> : (
-        <div className="flex items-center justify-center py-24 text-muted-foreground text-sm">
-          {activeTab} — Coming soon
-        </div>
-      )}
-    </div>
+    <WeekProvider>
+      <div className="min-h-screen bg-background">
+        <DashboardHeader />
+        <NarrativeTicker />
+        <KpiBar />
+        <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+        {TabContent ? <TabContent /> : (
+          <div className="flex items-center justify-center py-24 text-muted-foreground text-sm">
+            {activeTab} — Coming soon
+          </div>
+        )}
+      </div>
+    </WeekProvider>
   );
 };
 
