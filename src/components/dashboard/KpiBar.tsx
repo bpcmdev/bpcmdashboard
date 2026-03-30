@@ -53,7 +53,7 @@ const KpiBar = () => {
         .select('*')
         .eq('week_start', selectedWeek)
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (error || !data) {
         console.error('Failed to fetch weekly_snapshots:', error);
