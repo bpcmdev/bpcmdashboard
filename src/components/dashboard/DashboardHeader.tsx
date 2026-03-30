@@ -1,4 +1,16 @@
+import { ChevronDown } from 'lucide-react';
+import { useWeek } from '@/contexts/WeekContext';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
+
 const DashboardHeader = () => {
+  const { selectedWeek, setSelectedWeek, weeks } = useWeek();
+  const currentLabel = weeks.find(w => w.weekStart === selectedWeek)?.label ?? 'Loading…';
+
   return (
     <header className="dashboard-header px-6 py-3 flex items-center justify-between">
       <div className="flex items-center gap-2">
@@ -9,7 +21,27 @@ const DashboardHeader = () => {
         <span className="opacity-40">|</span>
         <span>Waldencast PLC · BPCM</span>
         <span className="opacity-40">|</span>
-        <span>Week of Mar 17–23, 2026</span>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="inline-flex items-center gap-1.5 hover:opacity-100 transition-opacity uppercase tracking-widest text-xs">
+              Week of {currentLabel}
+              <ChevronDown className="w-3 h-3 opacity-60" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="center" className="w-56 max-h-80 overflow-y-auto bg-card border-border">
+            {weeks.map((w) => (
+              <DropdownMenuItem
+                key={w.weekStart}
+                onClick={() => setSelectedWeek(w.weekStart)}
+                className={`text-xs tracking-wider cursor-pointer ${
+                  w.weekStart === selectedWeek ? 'font-bold text-foreground bg-accent' : 'text-muted-foreground'
+                }`}
+              >
+                {w.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-1.5">

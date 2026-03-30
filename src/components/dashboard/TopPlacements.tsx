@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useWeek } from '@/contexts/WeekContext';
 
 interface Placement {
   outlet: string;
