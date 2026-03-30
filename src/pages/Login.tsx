@@ -1,20 +1,22 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/hooks/useAuth';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
 const Login = () => {
+  const { loading: authLoading } = useAuth(false);
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
+    setSubmitting(true);
     try {
       const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
       if (authError) throw authError;
@@ -22,7 +24,7 @@ const Login = () => {
     } catch {
       setError('Invalid credentials or unauthorised email domain');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -93,10 +95,10 @@ const Login = () => {
           )}
           <Button
             type="submit"
-            disabled={loading}
+            disabled={submitting || authLoading}
             className="w-full h-11 bg-primary text-primary-foreground hover:bg-primary/90 font-medium text-sm"
           >
-            {loading ? 'Signing in…' : 'Sign in'}
+            {submitting ? 'Signing in…' : 'Sign in'}
           </Button>
         </form>
 

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import NarrativeTicker from '@/components/dashboard/NarrativeTicker';
 import KpiBar from '@/components/dashboard/KpiBar';
@@ -28,8 +29,11 @@ const TAB_MAP: Record<string, React.ComponentType> = {
 };
 
 const Index = () => {
+  const { loading } = useAuth(true);
   const [activeTab, setActiveTab] = useState('EARNED MEDIA');
   const TabContent = TAB_MAP[activeTab];
+
+  if (loading) return <div className="min-h-screen bg-background" />;
 
   return (
     <div className="min-h-screen bg-background">
