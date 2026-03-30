@@ -95,10 +95,10 @@ const Login = () => {
           )}
           <Button
             type="submit"
-            disabled={loading}
+            disabled={submitting || authLoading}
             className="w-full h-11 bg-primary text-primary-foreground hover:bg-primary/90 font-medium text-sm"
           >
-            {loading ? 'Signing in…' : 'Sign in'}
+            {submitting ? 'Signing in…' : 'Sign in'}
           </Button>
         </form>
 
