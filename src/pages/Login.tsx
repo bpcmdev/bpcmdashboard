@@ -24,7 +24,7 @@ const Login = () => {
     } catch {
       setError('Invalid credentials or unauthorised email domain');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
