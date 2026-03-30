@@ -29,8 +29,11 @@ const TAB_MAP: Record<string, React.ComponentType> = {
 };
 
 const Index = () => {
+  const { loading } = useAuth(true);
   const [activeTab, setActiveTab] = useState('EARNED MEDIA');
   const TabContent = TAB_MAP[activeTab];
+
+  if (loading) return <div className="min-h-screen bg-background" />;
 
   return (
     <div className="min-h-screen bg-background">
