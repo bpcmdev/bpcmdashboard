@@ -14,6 +14,8 @@ import {
 
 const DashboardHeader = () => {
   const { selectedWeek, setSelectedWeek, weeks, lastUpdated } = useWeek();
+  const { isAdmin, clientId } = useAdmin();
+  const [adminOpen, setAdminOpen] = useState(false);
   const navigate = useNavigate();
   const currentLabel = weeks.find(w => w.weekStart === selectedWeek)?.label ?? 'Loading…';
 
