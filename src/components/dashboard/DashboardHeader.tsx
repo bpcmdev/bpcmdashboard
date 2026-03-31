@@ -1,7 +1,10 @@
-import { ChevronDown, LogOut } from 'lucide-react';
+import { useState } from 'react';
+import { ChevronDown, LogOut, Shield } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useWeek } from '@/contexts/WeekContext';
 import { supabase } from '@/lib/supabase';
+import { useAdmin } from '@/hooks/useAdmin';
+import AdminPanel from '@/components/dashboard/AdminPanel';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
