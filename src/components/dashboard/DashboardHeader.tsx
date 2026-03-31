@@ -1,7 +1,10 @@
-import { ChevronDown, LogOut } from 'lucide-react';
+import { useState } from 'react';
+import { ChevronDown, LogOut, Shield } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useWeek } from '@/contexts/WeekContext';
 import { supabase } from '@/lib/supabase';
+import { useAdmin } from '@/hooks/useAdmin';
+import AdminPanel from '@/components/dashboard/AdminPanel';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -11,6 +14,8 @@ import {
 
 const DashboardHeader = () => {
   const { selectedWeek, setSelectedWeek, weeks, lastUpdated } = useWeek();
+  const { isAdmin, clientId } = useAdmin();
+  const [adminOpen, setAdminOpen] = useState(false);
   const navigate = useNavigate();
   const currentLabel = weeks.find(w => w.weekStart === selectedWeek)?.label ?? 'Loading…';
 
@@ -74,6 +79,15 @@ const DashboardHeader = () => {
         <button className="text-xs font-medium tracking-wider uppercase px-3 py-1.5 border border-white/20 hover:bg-white/10 transition-colors">
           Refresh
         </button>
+        {isAdmin && (
+          <button
+            onClick={() => setAdminOpen(true)}
+            className="flex items-center gap-1.5 text-xs font-medium tracking-wider uppercase px-3 py-1.5 border border-white/20 hover:bg-white/10 transition-colors"
+          >
+            <Shield className="w-3 h-3" />
+            Admin
+          </button>
+        )}
         <button
           onClick={handleLogout}
           className="flex items-center gap-1.5 text-xs font-medium tracking-wider uppercase px-3 py-1.5 border border-white/20 hover:bg-white/10 transition-colors"
@@ -82,6 +96,7 @@ const DashboardHeader = () => {
           Logout
         </button>
       </div>
+      {isAdmin && <AdminPanel open={adminOpen} onOpenChange={setAdminOpen} clientId={clientId} />}
     </header>
   );
 };
