@@ -3,14 +3,16 @@ import { supabase } from '@/lib/supabase';
 
 interface WeekOption {
   label: string;
-  weekStart: string; // ISO date string e.g. "2026-03-17"
+  weekStart: string;
 }
 
 interface WeekContextType {
-  selectedWeek: string; // ISO date string
+  selectedWeek: string;
   setSelectedWeek: (week: string) => void;
   weeks: WeekOption[];
   loading: boolean;
+  lastUpdated: Date | null;
+  refreshData: () => void;
 }
 
 const WeekContext = createContext<WeekContextType>({
@@ -18,13 +20,14 @@ const WeekContext = createContext<WeekContextType>({
   setSelectedWeek: () => {},
   weeks: [],
   loading: true,
+  lastUpdated: null,
+  refreshData: () => {},
 });
 
 export const useWeek = () => useContext(WeekContext);
 
 function generateLast12Weeks(): WeekOption[] {
   const weeks: WeekOption[] = [];
-  // Start from Mar 23, 2026 (most recent Sunday) and go back 12 weeks
   const baseDate = new Date('2026-03-23T00:00:00');
   for (let i = 0; i < 12; i++) {
     const endDate = new Date(baseDate);
@@ -52,10 +55,23 @@ export const WeekProvider = ({ children }: { children: ReactNode }) => {
   const [weeks, setWeeks] = useState<WeekOption[]>([]);
   const [selectedWeek, setSelectedWeek] = useState('');
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const refreshData = () => {
+    setRefreshKey(k => k + 1);
+    setLastUpdated(new Date());
+  };
+
+  // Track when selectedWeek changes to update lastUpdated
+  useEffect(() => {
+    if (selectedWeek) {
+      setLastUpdated(new Date());
+    }
+  }, [selectedWeek, refreshKey]);
 
   useEffect(() => {
     const init = async () => {
-      // Try to get available weeks from DB
       const { data } = await supabase
         .from('weekly_snapshots')
         .select('week_start')
@@ -86,13 +102,14 @@ export const WeekProvider = ({ children }: { children: ReactNode }) => {
       if (weekOptions.length > 0) {
         setSelectedWeek(weekOptions[0].weekStart);
       }
+      setLastUpdated(new Date());
       setLoading(false);
     };
     init();
   }, []);
 
   return (
-    <WeekContext.Provider value={{ selectedWeek, setSelectedWeek, weeks, loading }}>
+    <WeekContext.Provider value={{ selectedWeek, setSelectedWeek, weeks, loading, lastUpdated, refreshData }}>
       {children}
     </WeekContext.Provider>
   );
