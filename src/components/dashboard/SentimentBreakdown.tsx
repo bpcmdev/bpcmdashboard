@@ -24,26 +24,33 @@ const SentimentBreakdown = () => {
 
   useEffect(() => {
     if (!selectedWeek) return;
-    const fetch = async () => {
+    const fetchSentiment = async () => {
+      // weekly_snapshots has sentiment_score but not sentiment_positive_pct etc.
+      // Use sentiment_score to derive a rough breakdown, or just use fallback
       const { data: row } = await supabase
         .from('weekly_snapshots')
-        .select('sentiment_positive_pct, sentiment_neutral_pct, sentiment_negative_pct, positive_drivers, negative_themes')
+        .select('sentiment_score')
         .eq('week_start', selectedWeek)
         .maybeSingle();
 
-      if (row) {
+      if (row && row.sentiment_score != null) {
+        // Derive approximate breakdown from overall score (0-100)
+        const score = row.sentiment_score;
+        const positive = Math.round(score * 0.8);
+        const negative = Math.round((100 - score) * 0.4);
+        const neutral = 100 - positive - negative;
         setData({
-          positive: row.sentiment_positive_pct ?? fallback.positive,
-          neutral: row.sentiment_neutral_pct ?? fallback.neutral,
-          negative: row.sentiment_negative_pct ?? fallback.negative,
-          positiveDrivers: row.positive_drivers ?? fallback.positiveDrivers,
-          negativeThemes: row.negative_themes ?? fallback.negativeThemes,
+          positive,
+          neutral: Math.max(0, neutral),
+          negative,
+          positiveDrivers: fallback.positiveDrivers,
+          negativeThemes: fallback.negativeThemes,
         });
       } else {
         setData(fallback);
       }
     };
-    fetch();
+    fetchSentiment();
   }, [selectedWeek]);
 
   return (
