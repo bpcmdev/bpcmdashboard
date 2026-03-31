@@ -1,5 +1,7 @@
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, LogOut } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useWeek } from '@/contexts/WeekContext';
+import { supabase } from '@/lib/supabase';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -8,8 +10,19 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 const DashboardHeader = () => {
-  const { selectedWeek, setSelectedWeek, weeks } = useWeek();
+  const { selectedWeek, setSelectedWeek, weeks, lastUpdated } = useWeek();
+  const navigate = useNavigate();
   const currentLabel = weeks.find(w => w.weekStart === selectedWeek)?.label ?? 'Loading…';
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/login', { replace: true });
+  };
+
+  const formatLastUpdated = (date: Date | null) => {
+    if (!date) return '';
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase();
+  };
 
   return (
     <header className="dashboard-header px-6 py-3 flex items-center justify-between">
@@ -44,15 +57,29 @@ const DashboardHeader = () => {
         </DropdownMenu>
       </div>
       <div className="flex items-center gap-4">
-        <div className="flex items-center gap-1.5">
-          <span className="inline-block w-2 h-2 rounded-full animate-pulse-live" style={{ backgroundColor: 'hsl(145 63% 42%)' }} />
-          <span className="text-xs font-semibold tracking-wider text-positive">LIVE</span>
+        <div className="flex flex-col items-center gap-0.5">
+          <div className="flex items-center gap-1.5">
+            <span className="inline-block w-2 h-2 rounded-full animate-pulse-live" style={{ backgroundColor: 'hsl(145 63% 42%)' }} />
+            <span className="text-xs font-semibold tracking-wider text-positive">LIVE</span>
+          </div>
+          {lastUpdated && (
+            <span className="text-[9px] text-muted-foreground tracking-wide">
+              Updated {formatLastUpdated(lastUpdated)}
+            </span>
+          )}
         </div>
         <button className="text-xs font-medium tracking-wider uppercase px-3 py-1.5 border border-white/20 hover:bg-white/10 transition-colors">
           Export PDF
         </button>
         <button className="text-xs font-medium tracking-wider uppercase px-3 py-1.5 border border-white/20 hover:bg-white/10 transition-colors">
           Refresh
+        </button>
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-1.5 text-xs font-medium tracking-wider uppercase px-3 py-1.5 border border-white/20 hover:bg-white/10 transition-colors"
+        >
+          <LogOut className="w-3 h-3" />
+          Logout
         </button>
       </div>
     </header>

@@ -1,12 +1,55 @@
+import { useEffect, useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { supabase } from '@/lib/supabase';
+import { useWeek } from '@/contexts/WeekContext';
 
-const data = [
+interface TierData {
+  name: string;
+  value: number;
+  color: string;
+}
+
+const fallbackData: TierData[] = [
   { name: 'Tier 1', value: 19, color: 'hsl(0 0% 9%)' },
   { name: 'Tier 2', value: 17, color: 'hsl(0 0% 35%)' },
   { name: 'Tier 3', value: 11, color: 'hsl(0 0% 70%)' },
 ];
 
 const CoverageByTier = () => {
+  const [data, setData] = useState<TierData[]>(fallbackData);
+  const { selectedWeek } = useWeek();
+
+  useEffect(() => {
+    if (!selectedWeek) return;
+    const fetchTiers = async () => {
+      const weekEnd = new Date(selectedWeek + 'T00:00:00');
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      const endStr = weekEnd.toISOString().split('T')[0];
+
+      const { data: placements } = await supabase
+        .from('placements')
+        .select('outlet_tier')
+        .gte('published_at', selectedWeek)
+        .lte('published_at', endStr);
+
+      if (placements && placements.length > 0) {
+        const counts: Record<number, number> = {};
+        placements.forEach((p: any) => {
+          const tier = p.outlet_tier ?? 3;
+          counts[tier] = (counts[tier] || 0) + 1;
+        });
+        setData([
+          { name: 'Tier 1', value: counts[1] || 0, color: 'hsl(0 0% 9%)' },
+          { name: 'Tier 2', value: counts[2] || 0, color: 'hsl(0 0% 35%)' },
+          { name: 'Tier 3', value: counts[3] || 0, color: 'hsl(0 0% 70%)' },
+        ]);
+      } else {
+        setData(fallbackData);
+      }
+    };
+    fetchTiers();
+  }, [selectedWeek]);
+
   return (
     <div>
       <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">
