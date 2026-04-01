@@ -128,14 +128,10 @@ function KeyWinsForm({ clientId }: { clientId: string | null }) {
   const handleSubmit = async () => {
     if (!title) return;
     setSubmitting(true);
-    const { error } = await supabase.from('key_wins').insert({
-      client_id: clientId,
-      title,
-      category,
-      description,
-      reach,
-      tier,
-    });
+    const payload = { client_id: clientId, title, category, description, reach, tier };
+    console.log('[AdminPanel] key_wins insert payload:', payload);
+    const { error } = await supabase.from('key_wins').insert(payload);
+    if (error) console.error('[AdminPanel] key_wins insert error:', error);
     setSubmitting(false);
     if (!error) {
       setSuccess('Key win added');
