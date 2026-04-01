@@ -23,6 +23,7 @@ const WeekContext = createContext<WeekContextType>({
   loading: true,
   lastUpdated: null,
   refreshData: () => {},
+  refreshKey: 0,
 });
 
 export const useWeek = () => useContext(WeekContext);
