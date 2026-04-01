@@ -7,7 +7,6 @@ import TopPlacements from './TopPlacements';
 const EarnedMediaTab = () => {
   return (
     <div className="p-6 space-y-6">
-      {/* Top row */}
       <div className="grid grid-cols-5 gap-6">
         <div className="col-span-3 bg-card p-5 border border-border">
           <PlacementVolumeChart />
@@ -16,8 +15,6 @@ const EarnedMediaTab = () => {
           <ShareOfVoiceTable />
         </div>
       </div>
-
-      {/* Bottom row */}
       <div className="grid grid-cols-5 gap-6">
         <div className="col-span-3 bg-card p-5 border border-border">
           <SentimentBreakdown />
@@ -26,8 +23,6 @@ const EarnedMediaTab = () => {
           <CoverageByTier />
         </div>
       </div>
-
-      {/* Top Placements */}
       <div className="bg-card p-5 border border-border">
         <TopPlacements />
       </div>
