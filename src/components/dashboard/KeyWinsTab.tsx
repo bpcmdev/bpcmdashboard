@@ -1,72 +1,72 @@
-const WINS = [
-  {
-    column: 'Corporate Comms',
-    cards: [
-      {
-        tag: 'CORPORATE COMMS',
-        headline: 'Frank B appointment — 14 earned pieces in 5 days',
-        body: 'BPCM drafted and distributed the Global Artistic Director announcement, securing placements in WWD, Vogue, Allure + 11 more. Positive sentiment at 71%.',
-        footer: '$680K EMV · Tier 1 dominant · Key message uptake 88%',
-      },
-      {
-        tag: 'BRAND PARTNERSHIP',
-        headline: 'Boots UK launch — accelerating international',
-        body: 'New UK retail partnership supporting Waldencast\'s international turnaround. BPCM coordinating UK trade and consumer press.',
-        footer: 'UK market entry · Trade + consumer PR active',
-      },
-    ],
-  },
-  {
-    column: 'Earned Media',
-    cards: [
-      {
-        tag: 'EARNED MEDIA',
-        headline: 'Hypebeast Hydro Grip Gel Concealer feature',
-        body: 'Unsolicited deep-dive following Connor Storrie\'s Golden Globes preview. Highest-reach organic piece of the quarter — no paid support.',
-        footer: '5.7M reach · Tier 1 · Organic',
-      },
-      {
-        tag: 'EARNED MEDIA',
-        headline: 'Vogue "brands rewriting their stories" feature',
-        body: 'BPCM placed Milk Makeup in a marquee Vogue digital feature supporting the turnaround narrative at the highest editorial tier.',
-        footer: '8.1M reach · Tier 1 · BPCM placed',
-      },
-    ],
-  },
-  {
-    column: 'Influencer & Social',
-    cards: [
-      {
-        tag: 'INFLUENCER & SOCIAL',
-        headline: 'Connor Storrie activation — 8.1x ROI',
-        body: '4.8M reach across Instagram with 6.2% engagement — well above the 2.8% category benchmark.',
-        footer: '4.8M reach · 6.2% eng · 8.1x ROI',
-      },
-      {
-        tag: 'INFLUENCER & SOCIAL',
-        headline: 'Engagement rate up 64% over 8 weeks',
-        body: 'Average influencer engagement climbed from 3.1% to 5.1% — driven by tighter selection and the Frank B cultural moment.',
-        footer: '3.1% → 5.1% · 8-week trend · All platforms',
-      },
-    ],
-  },
-];
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
+import { useAdmin } from '@/hooks/useAdmin';
+
+interface KeyWin {
+  id: string;
+  title: string;
+  category: string;
+  description: string;
+  reach: string;
+  tier: string;
+}
 
 const KeyWinsTab = () => {
+  const { clientId } = useAdmin();
+  const [wins, setWins] = useState<KeyWin[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!clientId) return;
+    const fetch = async () => {
+      const { data, error } = await supabase
+        .from('key_wins')
+        .select('*')
+        .eq('client_id', clientId)
+        .order('created_at', { ascending: false });
+      if (error) console.error('[KeyWinsTab] error:', error);
+      setWins(data ?? []);
+      setLoading(false);
+    };
+    fetch();
+  }, [clientId]);
+
+  if (loading) return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
+
+  if (wins.length === 0) {
+    return (
+      <div className="p-6 text-center text-sm text-muted-foreground py-24">
+        No key wins yet. Add entries via the Admin panel.
+      </div>
+    );
+  }
+
+  // Group by category
+  const grouped: Record<string, KeyWin[]> = {};
+  for (const w of wins) {
+    const cat = w.category || 'Uncategorized';
+    if (!grouped[cat]) grouped[cat] = [];
+    grouped[cat].push(w);
+  }
+
+  const columns = Object.entries(grouped);
+
   return (
     <div className="p-6">
-      <div className="grid grid-cols-3 gap-6">
-        {WINS.map((col) => (
-          <div key={col.column} className="space-y-4">
-            {col.cards.map((card, i) => (
-              <div key={i} className="bg-card border border-border p-5">
+      <div className={`grid gap-6`} style={{ gridTemplateColumns: `repeat(${Math.min(columns.length, 3)}, 1fr)` }}>
+        {columns.map(([category, cards]) => (
+          <div key={category} className="space-y-4">
+            {cards.map((card) => (
+              <div key={card.id} className="bg-card border border-border p-5">
                 <span className="inline-block text-[10px] font-bold tracking-[0.12em] uppercase px-2 py-0.5 bg-foreground text-background mb-3">
-                  {card.tag}
+                  {card.category}
                 </span>
-                <h4 className="text-sm font-bold text-foreground mb-2">{card.headline}</h4>
-                <p className="text-xs text-muted-foreground leading-relaxed mb-4">{card.body}</p>
+                <h4 className="text-sm font-bold text-foreground mb-2">{card.title}</h4>
+                <p className="text-xs text-muted-foreground leading-relaxed mb-4">{card.description}</p>
                 <div className="border-t border-border pt-3">
-                  <p className="text-[11px] text-muted-foreground">{card.footer}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {[card.reach, card.tier].filter(Boolean).join(' · ')}
+                  </p>
                 </div>
               </div>
             ))}
