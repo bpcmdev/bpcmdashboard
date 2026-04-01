@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAdmin } from '@/hooks/useAdmin';
+import { useWeek } from '@/contexts/WeekContext';
 
 interface KeyWin {
   id: string;
