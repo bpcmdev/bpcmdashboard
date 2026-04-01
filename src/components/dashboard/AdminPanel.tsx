@@ -69,7 +69,7 @@ function PipelineForm({ clientId }: { clientId: string | null }) {
   const handleSubmit = async () => {
     if (!title || !eventType) return;
     setSubmitting(true);
-    const payload = { client_id: clientId, title, event_date: eventDate ? format(eventDate, 'yyyy-MM-dd') : null, event_type: eventType, description, monitor_strings: monitorStrings, priority };
+    const payload = { client_id: clientId, title, event_date: eventDate ? format(eventDate, 'yyyy-MM-dd') : null, event_type: eventType, description, monitor_strings: monitorStrings ? monitorStrings.split(',').map(s => s.trim()).filter(Boolean) : [], priority };
     console.log('[AdminPanel] pipeline_moments insert payload:', payload);
     const { error } = await supabase.from('pipeline_moments').insert(payload);
     if (error) console.error('[AdminPanel] pipeline_moments insert error:', error);
@@ -238,7 +238,7 @@ function ProductLaunchesForm({ clientId }: { clientId: string | null }) {
   const handleSubmit = async () => {
     if (!productName) return;
     setSubmitting(true);
-    const payload = { client_id: clientId, product_name: productName, launch_type: launchType, description, launch_date: launchDate ? format(launchDate, 'yyyy-MM-dd') : null, retailers, status };
+    const payload = { client_id: clientId, product_name: productName, launch_type: launchType, description, launch_date: launchDate ? format(launchDate, 'yyyy-MM-dd') : null, retailers: retailers ? retailers.split(',').map(s => s.trim()).filter(Boolean) : [], status };
     console.log('[AdminPanel] product_pipeline insert payload:', payload);
     const { error } = await supabase.from('product_pipeline').insert(payload);
     if (error) console.error('[AdminPanel] product_pipeline insert error:', error);
