@@ -187,15 +187,10 @@ function PartnershipsForm({ clientId }: { clientId: string | null }) {
   const handleSubmit = async () => {
     if (!partnerName) return;
     setSubmitting(true);
-    const { error } = await supabase.from('partnerships').insert({
-      client_id: clientId,
-      partner_name: partnerName,
-      type,
-      status,
-      description,
-      emv_generated: emv ? Number(emv) : null,
-      notes,
-    });
+    const payload = { client_id: clientId, partner_name: partnerName, type, status, description, emv_generated: emv ? Number(emv) : null, notes };
+    console.log('[AdminPanel] partnerships insert payload:', payload);
+    const { error } = await supabase.from('partnerships').insert(payload);
+    if (error) console.error('[AdminPanel] partnerships insert error:', error);
     setSubmitting(false);
     if (!error) {
       setSuccess('Partnership added');
