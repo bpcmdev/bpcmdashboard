@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface Placement {
   outlet: string;
@@ -10,13 +11,6 @@ interface Placement {
   placedBy: string;
   tier: string;
 }
-
-const fallbackPlacements: Placement[] = [
-  { outlet: 'WWD', headline: 'Milk Makeup names Frank B as Global Artistic Director', date: 'Mar 21', reach: '4.2M reach', placedBy: 'BPCM placed', tier: 'TIER 1' },
-  { outlet: 'Vogue', headline: 'The beauty brands rewriting their stories in 2026', date: 'Mar 20', reach: '8.1M reach', placedBy: 'BPCM placed', tier: 'TIER 1' },
-  { outlet: 'Cosmetics Business', headline: 'Waldencast plots Milk Makeup turnaround: Rassi takes the helm', date: 'Mar 19', reach: '1.8M reach', placedBy: 'Organic', tier: 'CORP NEWS' },
-  { outlet: 'Hypebeast', headline: 'Hydro Grip Gel Concealer is the product everyone\'s talking about', date: 'Mar 18', reach: '5.7M reach', placedBy: 'Organic', tier: 'TIER 1' },
-];
 
 const tierClass: Record<string, string> = {
   'TIER 1': 'bg-tier1',
@@ -51,17 +45,21 @@ function formatPlacedBy(placedBy: string, placementType: string): string {
 }
 
 const TopPlacements = () => {
-  const [placements, setPlacements] = useState<Placement[]>(fallbackPlacements);
+  const [placements, setPlacements] = useState<Placement[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const { selectedWeek, refreshKey } = useWeek();
 
   useEffect(() => {
     if (!selectedWeek) return;
     const fetchPlacements = async () => {
+      setLoading(true);
+      setError(false);
       const weekEnd = new Date(selectedWeek + 'T00:00:00');
       weekEnd.setDate(weekEnd.getDate() + 6);
       const endStr = weekEnd.toISOString().split('T')[0];
 
-      let query = supabase
+      const { data, error: err } = await supabase
         .from('placements')
         .select('*')
         .gte('published_at', selectedWeek)
@@ -69,14 +67,14 @@ const TopPlacements = () => {
         .order('outlet_umv', { ascending: false })
         .limit(10);
 
-      const { data, error } = await query;
-
-      if (error || !data || data.length === 0) {
-        console.error('Failed to fetch placements:', error);
+      if (err) {
+        console.error('Failed to fetch placements:', err);
+        setError(true);
+        setLoading(false);
         return;
       }
 
-      setPlacements(data.map((row: Record<string, any>) => ({
+      setPlacements((data ?? []).map((row: Record<string, any>) => ({
         outlet: row.outlet_name ?? '',
         headline: row.headline ?? '',
         date: row.published_at ? formatDate(row.published_at) : '',
@@ -84,10 +82,35 @@ const TopPlacements = () => {
         placedBy: formatPlacedBy(row.placed_by ?? '', row.placement_type ?? ''),
         tier: formatTier(row.outlet_tier ?? 1, row.placement_type ?? '', row.headline ?? ''),
       })));
+      setLoading(false);
     };
 
     fetchPlacements();
   }, [selectedWeek, refreshKey]);
+
+  if (error) {
+    return <p className="text-sm text-destructive text-center py-8">Unable to load data. Please try refreshing.</p>;
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        <Skeleton className="h-4 w-48" />
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-10 w-full" />
+        ))}
+      </div>
+    );
+  }
+
+  if (placements.length === 0) {
+    return (
+      <div>
+        <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-3">Top Placements This Week</h3>
+        <p className="text-xs text-muted-foreground text-center py-8">No placements for this week.</p>
+      </div>
+    );
+  }
 
   return (
     <div>

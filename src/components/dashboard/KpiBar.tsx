@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface KpiCardProps {
   label: string;
@@ -21,12 +22,12 @@ const KpiCard = ({ label, value, delta, deltaType }: KpiCardProps) => {
 };
 
 const fallbackKpis: KpiCardProps[] = [
-  { label: 'Press Placements', value: '47', delta: '▲ 31% vs prior week', deltaType: 'positive' },
-  { label: 'Earned Media Value', value: '$2.1M', delta: '▲ 18%', deltaType: 'positive' },
-  { label: 'Sentiment Score', value: '72/100', delta: '▲ 8pts MoM', deltaType: 'positive' },
-  { label: 'Social Reach', value: '6.4M', delta: '▲ 22%', deltaType: 'positive' },
-  { label: 'Share of Voice', value: '21%', delta: '▲ 4pts', deltaType: 'positive' },
-  { label: 'Influencer ROI', value: '4.2x', delta: '— stable', deltaType: 'neutral' },
+  { label: 'Press Placements', value: '—', delta: '—', deltaType: 'neutral' },
+  { label: 'Earned Media Value', value: '—', delta: '—', deltaType: 'neutral' },
+  { label: 'Sentiment Score', value: '—', delta: '—', deltaType: 'neutral' },
+  { label: 'Social Reach', value: '—', delta: '—', deltaType: 'neutral' },
+  { label: 'Share of Voice', value: '—', delta: '—', deltaType: 'neutral' },
+  { label: 'Influencer ROI', value: '—', delta: '—', deltaType: 'neutral' },
 ];
 
 function formatCompact(n: number): string {
@@ -43,20 +44,32 @@ function formatDelta(val: number, suffix: string): { delta: string; deltaType: '
 
 const KpiBar = () => {
   const [kpis, setKpis] = useState<KpiCardProps[]>(fallbackKpis);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const { selectedWeek, refreshKey } = useWeek();
 
   useEffect(() => {
     if (!selectedWeek) return;
     const fetchKpis = async () => {
-      const { data, error } = await supabase
+      setLoading(true);
+      setError(false);
+      const { data, error: err } = await supabase
         .from('weekly_snapshots')
         .select('*')
         .eq('week_start', selectedWeek)
         .limit(1)
         .maybeSingle();
 
-      if (error || !data) {
-        console.error('Failed to fetch weekly_snapshots:', error);
+      if (err) {
+        console.error('Failed to fetch weekly_snapshots:', err);
+        setError(true);
+        setLoading(false);
+        return;
+      }
+
+      if (!data) {
+        setKpis(fallbackKpis);
+        setLoading(false);
         return;
       }
 
@@ -76,10 +89,33 @@ const KpiBar = () => {
         { label: 'Share of Voice', value: `${r.sov_pct ?? 0}%`, ...sovDelta },
         { label: 'Influencer ROI', value: `${roiVal}x`, delta: '— stable', deltaType: 'neutral' },
       ]);
+      setLoading(false);
     };
 
     fetchKpis();
   }, [selectedWeek, refreshKey]);
+
+  if (error) {
+    return (
+      <div className="bg-card border-b border-border px-5 py-4 text-center">
+        <p className="text-sm text-destructive">Unable to load data. Please try refreshing.</p>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="bg-card flex divide-x divide-border border-b border-border">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="flex-1 px-5 py-4 text-center space-y-2">
+            <Skeleton className="h-3 w-20 mx-auto" />
+            <Skeleton className="h-7 w-16 mx-auto" />
+            <Skeleton className="h-3 w-24 mx-auto" />
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="bg-card flex divide-x divide-border border-b border-border">

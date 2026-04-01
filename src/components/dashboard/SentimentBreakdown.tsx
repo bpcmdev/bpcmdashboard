@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface SentimentData {
   positive: number;
@@ -10,31 +11,31 @@ interface SentimentData {
   negativeThemes: string;
 }
 
-const fallback: SentimentData = {
-  positive: 58,
-  neutral: 31,
-  negative: 11,
-  positiveDrivers: 'Frank B, Hydro Grip launch, Ulta expansion',
-  negativeThemes: 'prior sales decline coverage, pricing',
-};
-
 const SentimentBreakdown = () => {
-  const [data, setData] = useState<SentimentData>(fallback);
+  const [data, setData] = useState<SentimentData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const { selectedWeek, refreshKey } = useWeek();
 
   useEffect(() => {
     if (!selectedWeek) return;
     const fetchSentiment = async () => {
-      // weekly_snapshots has sentiment_score but not sentiment_positive_pct etc.
-      // Use sentiment_score to derive a rough breakdown, or just use fallback
-      const { data: row } = await supabase
+      setLoading(true);
+      setError(false);
+      const { data: row, error: err } = await supabase
         .from('weekly_snapshots')
         .select('sentiment_score')
         .eq('week_start', selectedWeek)
         .maybeSingle();
 
+      if (err) {
+        console.error('Failed to fetch sentiment:', err);
+        setError(true);
+        setLoading(false);
+        return;
+      }
+
       if (row && row.sentiment_score != null) {
-        // Derive approximate breakdown from overall score (0-100)
         const score = row.sentiment_score;
         const positive = Math.round(score * 0.8);
         const negative = Math.round((100 - score) * 0.4);
@@ -43,15 +44,37 @@ const SentimentBreakdown = () => {
           positive,
           neutral: Math.max(0, neutral),
           negative,
-          positiveDrivers: fallback.positiveDrivers,
-          negativeThemes: fallback.negativeThemes,
+          positiveDrivers: 'Frank B, Hydro Grip launch, Ulta expansion',
+          negativeThemes: 'prior sales decline coverage, pricing',
         });
       } else {
-        setData(fallback);
+        setData({ positive: 0, neutral: 0, negative: 0, positiveDrivers: '—', negativeThemes: '—' });
       }
+      setLoading(false);
     };
     fetchSentiment();
   }, [selectedWeek, refreshKey]);
+
+  if (error) {
+    return <p className="text-sm text-destructive text-center py-8">Unable to load data. Please try refreshing.</p>;
+  }
+
+  if (loading || !data) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-4 w-40" />
+        <Skeleton className="h-5 w-full" />
+        <Skeleton className="h-5 w-full" />
+        <Skeleton className="h-5 w-full" />
+      </div>
+    );
+  }
+
+  const bars = [
+    { label: 'Positive', pct: data.positive, barClass: 'bg-foreground' },
+    { label: 'Neutral', pct: data.neutral, barClass: 'bg-muted-foreground/50' },
+    { label: 'Negative', pct: data.negative, barClass: 'bg-destructive' },
+  ];
 
   return (
     <div>
@@ -59,33 +82,17 @@ const SentimentBreakdown = () => {
         Sentiment Breakdown
       </h3>
       <div className="space-y-3">
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-medium">Positive</span>
-            <span className="text-xs font-bold">{data.positive}%</span>
+        {bars.map((b) => (
+          <div key={b.label}>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-medium">{b.label}</span>
+              <span className="text-xs font-bold">{b.pct}%</span>
+            </div>
+            <div className="h-5 bg-secondary w-full">
+              <div className={`h-full ${b.barClass}`} style={{ width: `${b.pct}%` }} />
+            </div>
           </div>
-          <div className="h-5 bg-secondary w-full">
-            <div className="h-full bg-foreground" style={{ width: `${data.positive}%` }} />
-          </div>
-        </div>
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-medium">Neutral</span>
-            <span className="text-xs font-bold">{data.neutral}%</span>
-          </div>
-          <div className="h-5 bg-secondary w-full">
-            <div className="h-full bg-muted-foreground/50" style={{ width: `${data.neutral}%` }} />
-          </div>
-        </div>
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-medium">Negative</span>
-            <span className="text-xs font-bold">{data.negative}%</span>
-          </div>
-          <div className="h-5 bg-secondary w-full">
-            <div className="h-full bg-destructive" style={{ width: `${data.negative}%` }} />
-          </div>
-        </div>
+        ))}
       </div>
       <div className="mt-4 space-y-1">
         <p className="text-[11px] text-muted-foreground">

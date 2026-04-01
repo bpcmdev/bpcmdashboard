@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface TierData {
   name: string;
@@ -9,28 +10,33 @@ interface TierData {
   color: string;
 }
 
-const fallbackData: TierData[] = [
-  { name: 'Tier 1', value: 19, color: 'hsl(0 0% 9%)' },
-  { name: 'Tier 2', value: 17, color: 'hsl(0 0% 35%)' },
-  { name: 'Tier 3', value: 11, color: 'hsl(0 0% 70%)' },
-];
-
 const CoverageByTier = () => {
-  const [data, setData] = useState<TierData[]>(fallbackData);
+  const [data, setData] = useState<TierData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const { selectedWeek, refreshKey } = useWeek();
 
   useEffect(() => {
     if (!selectedWeek) return;
     const fetchTiers = async () => {
+      setLoading(true);
+      setError(false);
       const weekEnd = new Date(selectedWeek + 'T00:00:00');
       weekEnd.setDate(weekEnd.getDate() + 6);
       const endStr = weekEnd.toISOString().split('T')[0];
 
-      const { data: placements } = await supabase
+      const { data: placements, error: err } = await supabase
         .from('placements')
         .select('outlet_tier')
         .gte('published_at', selectedWeek)
         .lte('published_at', endStr);
+
+      if (err) {
+        console.error('Failed to fetch tier data:', err);
+        setError(true);
+        setLoading(false);
+        return;
+      }
 
       if (placements && placements.length > 0) {
         const counts: Record<number, number> = {};
@@ -44,11 +50,29 @@ const CoverageByTier = () => {
           { name: 'Tier 3', value: counts[3] || 0, color: 'hsl(0 0% 70%)' },
         ]);
       } else {
-        setData(fallbackData);
+        setData([
+          { name: 'Tier 1', value: 0, color: 'hsl(0 0% 9%)' },
+          { name: 'Tier 2', value: 0, color: 'hsl(0 0% 35%)' },
+          { name: 'Tier 3', value: 0, color: 'hsl(0 0% 70%)' },
+        ]);
       }
+      setLoading(false);
     };
     fetchTiers();
   }, [selectedWeek, refreshKey]);
+
+  if (error) {
+    return <p className="text-sm text-destructive text-center py-8">Unable to load data. Please try refreshing.</p>;
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-4 w-40" />
+        <Skeleton className="h-[160px] w-[160px] rounded-full mx-auto" />
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -58,28 +82,12 @@ const CoverageByTier = () => {
       <div className="flex items-center gap-6">
         <ResponsiveContainer width={160} height={160}>
           <PieChart>
-            <Pie
-              data={data}
-              cx="50%"
-              cy="50%"
-              innerRadius={45}
-              outerRadius={72}
-              dataKey="value"
-              stroke="none"
-            >
+            <Pie data={data} cx="50%" cy="50%" innerRadius={45} outerRadius={72} dataKey="value" stroke="none">
               {data.map((entry, index) => (
                 <Cell key={index} fill={entry.color} />
               ))}
             </Pie>
-            <Tooltip
-              contentStyle={{
-                backgroundColor: 'hsl(0 0% 9%)',
-                border: 'none',
-                borderRadius: '2px',
-                color: 'white',
-                fontSize: 11,
-              }}
-            />
+            <Tooltip contentStyle={{ backgroundColor: 'hsl(0 0% 9%)', border: 'none', borderRadius: '2px', color: 'white', fontSize: 11 }} />
           </PieChart>
         </ResponsiveContainer>
         <div className="space-y-2">

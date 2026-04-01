@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface SovRow {
   rank: number;
@@ -10,16 +11,6 @@ interface SovRow {
   highlight: boolean;
 }
 
-const fallbackData: SovRow[] = [
-  { rank: 1, brand: 'Milk Makeup', pct: 21, delta: '▲+4pts', highlight: true },
-  { rank: 2, brand: 'Rhode', pct: 20, delta: '-1pt', highlight: false },
-  { rank: 3, brand: 'Pat McGrath Labs', pct: 17, delta: '—', highlight: false },
-  { rank: 4, brand: 'Glossier', pct: 16, delta: '—', highlight: false },
-  { rank: 5, brand: 'Merit Beauty', pct: 13, delta: '—', highlight: false },
-  { rank: 6, brand: 'Tower 28', pct: 10, delta: '-2pts', highlight: false },
-  { rank: 7, brand: 'Charlotte Tilbury', pct: 5, delta: '—', highlight: false },
-];
-
 function formatDeltaPts(pts: number): string {
   if (pts > 0) return `▲+${pts}pts`;
   if (pts < 0) return `${pts}pt${Math.abs(pts) !== 1 ? 's' : ''}`;
@@ -27,35 +18,55 @@ function formatDeltaPts(pts: number): string {
 }
 
 const ShareOfVoiceTable = () => {
-  const [sovData, setSovData] = useState<SovRow[]>(fallbackData);
+  const [sovData, setSovData] = useState<SovRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const { selectedWeek, refreshKey } = useWeek();
 
   useEffect(() => {
     if (!selectedWeek) return;
     const fetchSov = async () => {
-      // competitive_sov table does NOT have a week_start column
-      // Just fetch all rows ordered by rank
-      const { data, error } = await supabase
+      setLoading(true);
+      setError(false);
+      const { data, error: err } = await supabase
         .from('competitive_sov')
         .select('*')
         .order('rank', { ascending: true });
 
-      if (error || !data || data.length === 0) {
-        console.error('Failed to fetch competitive_sov:', error);
+      if (err) {
+        console.error('Failed to fetch competitive_sov:', err);
+        setError(true);
+        setLoading(false);
         return;
       }
 
-      setSovData(data.map((row: Record<string, any>) => ({
+      setSovData((data ?? []).map((row: Record<string, any>) => ({
         rank: row.rank ?? 0,
         brand: row.brand_name ?? '',
         pct: row.sov_pct ?? 0,
         delta: formatDeltaPts(row.delta_pts ?? 0),
         highlight: (row.brand_name ?? '').toLowerCase().includes('milk'),
       })));
+      setLoading(false);
     };
 
     fetchSov();
   }, [selectedWeek, refreshKey]);
+
+  if (error) {
+    return <p className="text-sm text-destructive text-center py-8">Unable to load data. Please try refreshing.</p>;
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        <Skeleton className="h-4 w-48" />
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton key={i} className="h-5 w-full" />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div>
