@@ -79,7 +79,7 @@ const KpiBar = () => {
     };
 
     fetchKpis();
-  }, [selectedWeek]);
+  }, [selectedWeek, refreshKey]);
 
   return (
     <div className="bg-card flex divide-x divide-border border-b border-border">

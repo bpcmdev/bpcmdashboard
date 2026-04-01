@@ -46,7 +46,7 @@ const ProductLaunchesTab = () => {
       setLoading(false);
     };
     fetch();
-  }, [clientId]);
+  }, [clientId, refreshKey]);
 
   if (loading) return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
 

@@ -51,7 +51,7 @@ const SentimentBreakdown = () => {
       }
     };
     fetchSentiment();
-  }, [selectedWeek]);
+  }, [selectedWeek, refreshKey]);
 
   return (
     <div>

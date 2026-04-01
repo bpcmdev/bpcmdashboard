@@ -55,7 +55,7 @@ const ShareOfVoiceTable = () => {
     };
 
     fetchSov();
-  }, [selectedWeek]);
+  }, [selectedWeek, refreshKey]);
 
   return (
     <div>
