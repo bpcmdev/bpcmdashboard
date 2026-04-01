@@ -71,7 +71,7 @@ const ProductLaunchesTab = () => {
             <div>
               <h3 className="text-lg font-bold tracking-wide">{prod.product_name.toUpperCase()}</h3>
               <p className="text-xs opacity-70 mt-1">
-                {prod.retailers?.join(' + ')}{prod.launch_date ? ` · Launched ${new Date(prod.launch_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}
+                {toArray(prod.retailers).join(' + ')}{prod.launch_date ? ` · Launched ${new Date(prod.launch_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}
               </p>
               {prod.description && <p className="text-xs opacity-60 mt-1">{prod.description}</p>}
             </div>
