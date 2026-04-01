@@ -13,6 +13,7 @@ interface WeekContextType {
   loading: boolean;
   lastUpdated: Date | null;
   refreshData: () => void;
+  refreshKey: number;
 }
 
 const WeekContext = createContext<WeekContextType>({
