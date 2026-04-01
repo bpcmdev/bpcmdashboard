@@ -69,15 +69,10 @@ function PipelineForm({ clientId }: { clientId: string | null }) {
   const handleSubmit = async () => {
     if (!title || !eventType) return;
     setSubmitting(true);
-    const { error } = await supabase.from('pipeline_moments').insert({
-      client_id: clientId,
-      title,
-      event_date: eventDate ? format(eventDate, 'yyyy-MM-dd') : null,
-      event_type: eventType,
-      description,
-      monitor_strings: monitorStrings,
-      priority,
-    });
+    const payload = { client_id: clientId, title, event_date: eventDate ? format(eventDate, 'yyyy-MM-dd') : null, event_type: eventType, description, monitor_strings: monitorStrings, priority };
+    console.log('[AdminPanel] pipeline_moments insert payload:', payload);
+    const { error } = await supabase.from('pipeline_moments').insert(payload);
+    if (error) console.error('[AdminPanel] pipeline_moments insert error:', error);
     setSubmitting(false);
     if (!error) {
       setSuccess('Pipeline moment added');
@@ -133,14 +128,10 @@ function KeyWinsForm({ clientId }: { clientId: string | null }) {
   const handleSubmit = async () => {
     if (!title) return;
     setSubmitting(true);
-    const { error } = await supabase.from('key_wins').insert({
-      client_id: clientId,
-      title,
-      category,
-      description,
-      reach,
-      tier,
-    });
+    const payload = { client_id: clientId, title, category, description, reach, tier };
+    console.log('[AdminPanel] key_wins insert payload:', payload);
+    const { error } = await supabase.from('key_wins').insert(payload);
+    if (error) console.error('[AdminPanel] key_wins insert error:', error);
     setSubmitting(false);
     if (!error) {
       setSuccess('Key win added');
@@ -196,15 +187,10 @@ function PartnershipsForm({ clientId }: { clientId: string | null }) {
   const handleSubmit = async () => {
     if (!partnerName) return;
     setSubmitting(true);
-    const { error } = await supabase.from('partnerships').insert({
-      client_id: clientId,
-      partner_name: partnerName,
-      type,
-      status,
-      description,
-      emv_generated: emv ? Number(emv) : null,
-      notes,
-    });
+    const payload = { client_id: clientId, partner_name: partnerName, type, status, description, emv_generated: emv ? Number(emv) : null, notes };
+    console.log('[AdminPanel] partnerships insert payload:', payload);
+    const { error } = await supabase.from('partnerships').insert(payload);
+    if (error) console.error('[AdminPanel] partnerships insert error:', error);
     setSubmitting(false);
     if (!error) {
       setSuccess('Partnership added');
@@ -252,15 +238,10 @@ function ProductLaunchesForm({ clientId }: { clientId: string | null }) {
   const handleSubmit = async () => {
     if (!productName) return;
     setSubmitting(true);
-    const { error } = await supabase.from('product_pipeline').insert({
-      client_id: clientId,
-      product_name: productName,
-      launch_type: launchType,
-      description,
-      launch_date: launchDate ? format(launchDate, 'yyyy-MM-dd') : null,
-      retailers,
-      status,
-    });
+    const payload = { client_id: clientId, product_name: productName, launch_type: launchType, description, launch_date: launchDate ? format(launchDate, 'yyyy-MM-dd') : null, retailers, status };
+    console.log('[AdminPanel] product_pipeline insert payload:', payload);
+    const { error } = await supabase.from('product_pipeline').insert(payload);
+    if (error) console.error('[AdminPanel] product_pipeline insert error:', error);
     setSubmitting(false);
     if (!error) {
       setSuccess('Product launch added');
