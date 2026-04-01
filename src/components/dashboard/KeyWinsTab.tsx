@@ -13,6 +13,7 @@ interface KeyWin {
 }
 
 const KeyWinsTab = () => {
+  const { refreshKey } = useWeek();
   const { clientId } = useAdmin();
   const [wins, setWins] = useState<KeyWin[]>([]);
   const [loading, setLoading] = useState(true);
