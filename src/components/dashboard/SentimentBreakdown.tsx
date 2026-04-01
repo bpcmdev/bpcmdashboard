@@ -20,7 +20,7 @@ const fallback: SentimentData = {
 
 const SentimentBreakdown = () => {
   const [data, setData] = useState<SentimentData>(fallback);
-  const { selectedWeek } = useWeek();
+  const { selectedWeek, refreshKey } = useWeek();
 
   useEffect(() => {
     if (!selectedWeek) return;
