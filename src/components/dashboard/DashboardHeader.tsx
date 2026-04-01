@@ -76,7 +76,7 @@ const DashboardHeader = () => {
         <button className="text-xs font-medium tracking-wider uppercase px-3 py-1.5 border border-white/20 hover:bg-white/10 transition-colors">
           Export PDF
         </button>
-        <button className="text-xs font-medium tracking-wider uppercase px-3 py-1.5 border border-white/20 hover:bg-white/10 transition-colors">
+        <button onClick={refreshData} className="text-xs font-medium tracking-wider uppercase px-3 py-1.5 border border-white/20 hover:bg-white/10 transition-colors">
           Refresh
         </button>
         {isAdmin && (

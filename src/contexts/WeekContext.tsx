@@ -111,7 +111,7 @@ export const WeekProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   return (
-    <WeekContext.Provider value={{ selectedWeek, setSelectedWeek, weeks, loading, lastUpdated, refreshData }}>
+    <WeekContext.Provider value={{ selectedWeek, setSelectedWeek, weeks, loading, lastUpdated, refreshData, refreshKey }}>
       {children}
     </WeekContext.Provider>
   );
