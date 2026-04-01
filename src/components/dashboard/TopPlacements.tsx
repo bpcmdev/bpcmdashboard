@@ -52,7 +52,7 @@ function formatPlacedBy(placedBy: string, placementType: string): string {
 
 const TopPlacements = () => {
   const [placements, setPlacements] = useState<Placement[]>(fallbackPlacements);
-  const { selectedWeek } = useWeek();
+  const { selectedWeek, refreshKey } = useWeek();
 
   useEffect(() => {
     if (!selectedWeek) return;
@@ -87,7 +87,7 @@ const TopPlacements = () => {
     };
 
     fetchPlacements();
-  }, [selectedWeek]);
+  }, [selectedWeek, refreshKey]);
 
   return (
     <div>

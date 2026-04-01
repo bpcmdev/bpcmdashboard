@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAdmin } from '@/hooks/useAdmin';
+import { useWeek } from '@/contexts/WeekContext';
 
 interface Product {
   id: string;
@@ -27,6 +28,7 @@ const typeBadge: Record<string, { label: string; style: string }> = {
 };
 
 const ProductLaunchesTab = () => {
+  const { refreshKey } = useWeek();
   const { clientId } = useAdmin();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,7 +46,7 @@ const ProductLaunchesTab = () => {
       setLoading(false);
     };
     fetch();
-  }, [clientId]);
+  }, [clientId, refreshKey]);
 
   if (loading) return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
 

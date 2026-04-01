@@ -17,7 +17,7 @@ const fallbackData: TierData[] = [
 
 const CoverageByTier = () => {
   const [data, setData] = useState<TierData[]>(fallbackData);
-  const { selectedWeek } = useWeek();
+  const { selectedWeek, refreshKey } = useWeek();
 
   useEffect(() => {
     if (!selectedWeek) return;
@@ -48,7 +48,7 @@ const CoverageByTier = () => {
       }
     };
     fetchTiers();
-  }, [selectedWeek]);
+  }, [selectedWeek, refreshKey]);
 
   return (
     <div>

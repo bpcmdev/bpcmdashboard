@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { supabase } from '@/lib/supabase';
 import { useAdmin } from '@/hooks/useAdmin';
+import { useWeek } from '@/contexts/WeekContext';
 
 interface Partnership {
   id: string;
@@ -20,6 +21,7 @@ const statusBadge: Record<string, { label: string; style: string }> = {
 };
 
 const PartnershipsTab = () => {
+  const { refreshKey } = useWeek();
   const { clientId } = useAdmin();
   const [partnerships, setPartnerships] = useState<Partnership[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,7 +39,7 @@ const PartnershipsTab = () => {
       setLoading(false);
     };
     fetch();
-  }, [clientId]);
+  }, [clientId, refreshKey]);
 
   if (loading) return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
 

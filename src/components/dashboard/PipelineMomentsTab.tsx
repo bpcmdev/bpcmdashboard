@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAdmin } from '@/hooks/useAdmin';
+import { useWeek } from '@/contexts/WeekContext';
 
 interface PipelineEntry {
   id: string;
@@ -40,6 +41,7 @@ function groupByMonth(entries: PipelineEntry[]) {
 }
 
 const PipelineMomentsTab = () => {
+  const { refreshKey } = useWeek();
   const { clientId } = useAdmin();
   const [entries, setEntries] = useState<PipelineEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,7 +59,7 @@ const PipelineMomentsTab = () => {
       setLoading(false);
     };
     fetch();
-  }, [clientId]);
+  }, [clientId, refreshKey]);
 
   if (loading) return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
 

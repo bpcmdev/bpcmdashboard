@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAdmin } from '@/hooks/useAdmin';
+import { useWeek } from '@/contexts/WeekContext';
 
 interface KeyWin {
   id: string;
@@ -12,6 +13,7 @@ interface KeyWin {
 }
 
 const KeyWinsTab = () => {
+  const { refreshKey } = useWeek();
   const { clientId } = useAdmin();
   const [wins, setWins] = useState<KeyWin[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,7 +31,7 @@ const KeyWinsTab = () => {
       setLoading(false);
     };
     fetch();
-  }, [clientId]);
+  }, [clientId, refreshKey]);
 
   if (loading) return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
 

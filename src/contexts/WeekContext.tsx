@@ -13,6 +13,7 @@ interface WeekContextType {
   loading: boolean;
   lastUpdated: Date | null;
   refreshData: () => void;
+  refreshKey: number;
 }
 
 const WeekContext = createContext<WeekContextType>({
@@ -22,6 +23,7 @@ const WeekContext = createContext<WeekContextType>({
   loading: true,
   lastUpdated: null,
   refreshData: () => {},
+  refreshKey: 0,
 });
 
 export const useWeek = () => useContext(WeekContext);
@@ -109,7 +111,7 @@ export const WeekProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   return (
-    <WeekContext.Provider value={{ selectedWeek, setSelectedWeek, weeks, loading, lastUpdated, refreshData }}>
+    <WeekContext.Provider value={{ selectedWeek, setSelectedWeek, weeks, loading, lastUpdated, refreshData, refreshKey }}>
       {children}
     </WeekContext.Provider>
   );

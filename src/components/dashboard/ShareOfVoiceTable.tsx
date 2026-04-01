@@ -28,7 +28,7 @@ function formatDeltaPts(pts: number): string {
 
 const ShareOfVoiceTable = () => {
   const [sovData, setSovData] = useState<SovRow[]>(fallbackData);
-  const { selectedWeek } = useWeek();
+  const { selectedWeek, refreshKey } = useWeek();
 
   useEffect(() => {
     if (!selectedWeek) return;
@@ -55,7 +55,7 @@ const ShareOfVoiceTable = () => {
     };
 
     fetchSov();
-  }, [selectedWeek]);
+  }, [selectedWeek, refreshKey]);
 
   return (
     <div>
