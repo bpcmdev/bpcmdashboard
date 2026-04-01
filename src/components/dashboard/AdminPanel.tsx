@@ -238,15 +238,10 @@ function ProductLaunchesForm({ clientId }: { clientId: string | null }) {
   const handleSubmit = async () => {
     if (!productName) return;
     setSubmitting(true);
-    const { error } = await supabase.from('product_pipeline').insert({
-      client_id: clientId,
-      product_name: productName,
-      launch_type: launchType,
-      description,
-      launch_date: launchDate ? format(launchDate, 'yyyy-MM-dd') : null,
-      retailers,
-      status,
-    });
+    const payload = { client_id: clientId, product_name: productName, launch_type: launchType, description, launch_date: launchDate ? format(launchDate, 'yyyy-MM-dd') : null, retailers, status };
+    console.log('[AdminPanel] product_pipeline insert payload:', payload);
+    const { error } = await supabase.from('product_pipeline').insert(payload);
+    if (error) console.error('[AdminPanel] product_pipeline insert error:', error);
     setSubmitting(false);
     if (!error) {
       setSuccess('Product launch added');
