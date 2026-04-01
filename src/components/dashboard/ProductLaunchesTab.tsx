@@ -97,8 +97,8 @@ const ProductLaunchesTab = () => {
                   <p className="text-xs text-muted-foreground leading-relaxed mb-2">
                     {prod.description}
                   </p>
-                  {prod.retailers?.length > 0 && (
-                    <p className="text-[11px] text-muted-foreground mb-2">Retailers: {prod.retailers.join(', ')}</p>
+                  {toArray(prod.retailers).length > 0 && (
+                    <p className="text-[11px] text-muted-foreground mb-2">Retailers: {toArray(prod.retailers).join(', ')}</p>
                   )}
                   {prod.launch_date && (
                     <p className="text-[11px] text-muted-foreground mb-3">
