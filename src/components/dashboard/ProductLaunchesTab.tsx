@@ -28,6 +28,7 @@ const typeBadge: Record<string, { label: string; style: string }> = {
 };
 
 const ProductLaunchesTab = () => {
+  const { refreshKey } = useWeek();
   const { clientId } = useAdmin();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
