@@ -56,6 +56,9 @@ const ProductLaunchesTab = () => {
     );
   }
 
+  const toArray = (v: unknown): string[] =>
+    Array.isArray(v) ? v : typeof v === 'string' ? v.split(',').map(s => s.trim()).filter(Boolean) : [];
+
   const activeProducts = products.filter(p => p.status === 'active');
   const upcomingProducts = products.filter(p => p.status !== 'active');
 
@@ -68,7 +71,7 @@ const ProductLaunchesTab = () => {
             <div>
               <h3 className="text-lg font-bold tracking-wide">{prod.product_name.toUpperCase()}</h3>
               <p className="text-xs opacity-70 mt-1">
-                {prod.retailers?.join(' + ')}{prod.launch_date ? ` · Launched ${new Date(prod.launch_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}
+                {toArray(prod.retailers).join(' + ')}{prod.launch_date ? ` · Launched ${new Date(prod.launch_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}
               </p>
               {prod.description && <p className="text-xs opacity-60 mt-1">{prod.description}</p>}
             </div>
@@ -94,8 +97,8 @@ const ProductLaunchesTab = () => {
                   <p className="text-xs text-muted-foreground leading-relaxed mb-2">
                     {prod.description}
                   </p>
-                  {prod.retailers?.length > 0 && (
-                    <p className="text-[11px] text-muted-foreground mb-2">Retailers: {prod.retailers.join(', ')}</p>
+                  {toArray(prod.retailers).length > 0 && (
+                    <p className="text-[11px] text-muted-foreground mb-2">Retailers: {toArray(prod.retailers).join(', ')}</p>
                   )}
                   {prod.launch_date && (
                     <p className="text-[11px] text-muted-foreground mb-3">
