@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 const DashboardHeader = () => {
-  const { selectedWeek, setSelectedWeek, weeks, lastUpdated } = useWeek();
+  const { selectedWeek, setSelectedWeek, weeks, lastUpdated, refreshData } = useWeek();
   const { isAdmin, clientId } = useAdmin();
   const [adminOpen, setAdminOpen] = useState(false);
   const navigate = useNavigate();
