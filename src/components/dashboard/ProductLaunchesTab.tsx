@@ -56,6 +56,9 @@ const ProductLaunchesTab = () => {
     );
   }
 
+  const toArray = (v: unknown): string[] =>
+    Array.isArray(v) ? v : typeof v === 'string' ? v.split(',').map(s => s.trim()).filter(Boolean) : [];
+
   const activeProducts = products.filter(p => p.status === 'active');
   const upcomingProducts = products.filter(p => p.status !== 'active');
 
