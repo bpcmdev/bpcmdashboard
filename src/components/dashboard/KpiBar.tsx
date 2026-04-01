@@ -43,7 +43,7 @@ function formatDelta(val: number, suffix: string): { delta: string; deltaType: '
 
 const KpiBar = () => {
   const [kpis, setKpis] = useState<KpiCardProps[]>(fallbackKpis);
-  const { selectedWeek } = useWeek();
+  const { selectedWeek, refreshKey } = useWeek();
 
   useEffect(() => {
     if (!selectedWeek) return;
