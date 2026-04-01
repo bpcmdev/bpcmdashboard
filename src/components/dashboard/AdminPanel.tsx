@@ -69,15 +69,10 @@ function PipelineForm({ clientId }: { clientId: string | null }) {
   const handleSubmit = async () => {
     if (!title || !eventType) return;
     setSubmitting(true);
-    const { error } = await supabase.from('pipeline_moments').insert({
-      client_id: clientId,
-      title,
-      event_date: eventDate ? format(eventDate, 'yyyy-MM-dd') : null,
-      event_type: eventType,
-      description,
-      monitor_strings: monitorStrings,
-      priority,
-    });
+    const payload = { client_id: clientId, title, event_date: eventDate ? format(eventDate, 'yyyy-MM-dd') : null, event_type: eventType, description, monitor_strings: monitorStrings, priority };
+    console.log('[AdminPanel] pipeline_moments insert payload:', payload);
+    const { error } = await supabase.from('pipeline_moments').insert(payload);
+    if (error) console.error('[AdminPanel] pipeline_moments insert error:', error);
     setSubmitting(false);
     if (!error) {
       setSuccess('Pipeline moment added');
