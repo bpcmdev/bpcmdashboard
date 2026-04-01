@@ -87,7 +87,7 @@ const TopPlacements = () => {
     };
 
     fetchPlacements();
-  }, [selectedWeek]);
+  }, [selectedWeek, refreshKey]);
 
   return (
     <div>

@@ -48,7 +48,7 @@ const CoverageByTier = () => {
       }
     };
     fetchTiers();
-  }, [selectedWeek]);
+  }, [selectedWeek, refreshKey]);
 
   return (
     <div>
