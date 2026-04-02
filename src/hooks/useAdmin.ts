@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 export function useAdmin() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [clientId, setClientId] = useState<string | null>(null);
+  const [clientName, setClientName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -24,11 +25,20 @@ export function useAdmin() {
         setIsAdmin(data.role === 'admin');
         setClientId(data.client_id);
         console.log('[useAdmin] role:', data.role, '| isAdmin:', data.role === 'admin');
+
+        if (data.client_id) {
+          const { data: client } = await supabase
+            .from('clients')
+            .select('name')
+            .eq('id', data.client_id)
+            .maybeSingle();
+          if (client) setClientName(client.name);
+        }
       }
       setLoading(false);
     };
     check();
   }, []);
 
-  return { isAdmin, clientId, loading };
+  return { isAdmin, clientId, clientName, loading };
 }
