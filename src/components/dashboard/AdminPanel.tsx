@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import { useWeek } from '@/contexts/WeekContext';
 import { supabase } from '@/lib/supabase';
@@ -10,7 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarIcon, Check } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { CalendarIcon, Check, Pencil, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AdminPanelProps {
@@ -491,6 +492,247 @@ function PlacementsForm({ clientId }: { clientId: string | null }) {
   );
 }
 
+/* ── User Management ── */
+interface UserRow {
+  id: string;
+  full_name: string;
+  email: string;
+  role: string;
+  client_id: string | null;
+  clients: { name: string } | null;
+}
+
+interface ClientOption {
+  id: string;
+  name: string;
+}
+
+function UserManagement() {
+  const [users, setUsers] = useState<UserRow[]>([]);
+  const [clients, setClients] = useState<ClientOption[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [inviteName, setInviteName] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState('');
+  const [inviteClient, setInviteClient] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState('');
+  const [editingUser, setEditingUser] = useState<UserRow | null>(null);
+  const [editRole, setEditRole] = useState('');
+  const [editClient, setEditClient] = useState('');
+
+  const callEdgeFunction = useCallback(async (body: Record<string, unknown>) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('Not authenticated');
+    const { data, error } = await supabase.functions.invoke('admin-users', {
+      body,
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (error) throw error;
+    return data;
+  }, []);
+
+  const fetchUsers = useCallback(async () => {
+    try {
+      const data = await callEdgeFunction({ action: 'list' });
+      setUsers(data.users || []);
+    } catch (err) {
+      console.error('[UserManagement] fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [callEdgeFunction]);
+
+  const fetchClients = useCallback(async () => {
+    const { data } = await supabase.from('clients').select('id, name').order('name');
+    setClients(data || []);
+  }, []);
+
+  useEffect(() => {
+    fetchUsers();
+    fetchClients();
+  }, [fetchUsers, fetchClients]);
+
+  const handleInvite = async () => {
+    if (!inviteName || !inviteEmail || !inviteRole || !inviteClient) return;
+    setSubmitting(true);
+    try {
+      await callEdgeFunction({
+        action: 'invite',
+        email: inviteEmail,
+        full_name: inviteName,
+        role: inviteRole,
+        client_id: inviteClient,
+      });
+      setSuccess('User invited successfully');
+      setInviteName(''); setInviteEmail(''); setInviteRole(''); setInviteClient('');
+      fetchUsers();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err: any) {
+      console.error('[UserManagement] invite error:', err);
+      setSuccess('');
+    }
+    setSubmitting(false);
+  };
+
+  const handleUpdate = async () => {
+    if (!editingUser) return;
+    setSubmitting(true);
+    try {
+      await callEdgeFunction({
+        action: 'update',
+        user_id: editingUser.id,
+        role: editRole,
+        client_id: editClient,
+      });
+      setEditingUser(null);
+      fetchUsers();
+    } catch (err: any) {
+      console.error('[UserManagement] update error:', err);
+    }
+    setSubmitting(false);
+  };
+
+  const handleDelete = async (userId: string) => {
+    try {
+      await callEdgeFunction({ action: 'delete', user_id: userId });
+      fetchUsers();
+    } catch (err: any) {
+      console.error('[UserManagement] delete error:', err);
+    }
+  };
+
+  const startEdit = (user: UserRow) => {
+    setEditingUser(user);
+    setEditRole(user.role);
+    setEditClient(user.client_id || '');
+  };
+
+  return (
+    <div className="space-y-6">
+      {success && <SuccessMessage message={success} />}
+
+      {/* Invite Form */}
+      <div className="space-y-3 border border-border rounded-lg p-4">
+        <p className="text-[10px] font-bold tracking-[0.12em] uppercase text-muted-foreground">Invite New User</p>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Full Name"><Input value={inviteName} onChange={e => setInviteName(e.target.value)} placeholder="Full name" /></Field>
+          <Field label="Email"><Input type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="Email" /></Field>
+          <Field label="Role">
+            <Select value={inviteRole} onValueChange={setInviteRole}>
+              <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="client">Client</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Client">
+            <Select value={inviteClient} onValueChange={setInviteClient}>
+              <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
+              <SelectContent>
+                {clients.map(c => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+        </div>
+        <Button onClick={handleInvite} disabled={submitting || !inviteName || !inviteEmail || !inviteRole || !inviteClient} className="w-full bg-foreground text-background hover:bg-foreground/90">
+          {submitting ? 'Inviting…' : 'Invite User'}
+        </Button>
+      </div>
+
+      {/* User List */}
+      <div className="space-y-2">
+        <p className="text-[10px] font-bold tracking-[0.12em] uppercase text-muted-foreground">Existing Users</p>
+        {loading ? (
+          <p className="text-xs text-muted-foreground">Loading…</p>
+        ) : users.length === 0 ? (
+          <p className="text-xs text-muted-foreground">No users found.</p>
+        ) : (
+          <div className="space-y-2">
+            {users.map(user => (
+              <div key={user.id} className="flex items-center justify-between border border-border rounded-lg px-3 py-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold truncate">{user.full_name}</p>
+                  <p className="text-[10px] text-muted-foreground truncate">{user.email}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {user.role} · {user.clients?.name || '—'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 ml-2">
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => startEdit(user)}>
+                    <Pencil className="w-3 h-3" />
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive">
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete User</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to delete {user.full_name}? This will remove them from both the database and authentication system.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleDelete(user.id)}>Delete</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Edit Dialog */}
+      {editingUser && (
+        <AlertDialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Edit {editingUser.full_name}</AlertDialogTitle>
+              <AlertDialogDescription>Update role or client assignment.</AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="space-y-3 py-2">
+              <Field label="Role">
+                <Select value={editRole} onValueChange={setEditRole}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="client">Client</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field label="Client">
+                <Select value={editClient} onValueChange={setEditClient}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {clients.map(c => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleUpdate} disabled={submitting}>
+                {submitting ? 'Saving…' : 'Save Changes'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+    </div>
+  );
+}
+
 /* ── Main Panel ── */
 export default function AdminPanel({ open, onOpenChange, clientId }: AdminPanelProps) {
   return (
@@ -501,13 +743,14 @@ export default function AdminPanel({ open, onOpenChange, clientId }: AdminPanelP
         </div>
         <div className="p-6">
           <Tabs defaultValue="pipeline" className="w-full">
-            <TabsList className="w-full grid grid-cols-6 bg-muted">
+            <TabsList className="w-full grid grid-cols-7 bg-muted">
               <TabsTrigger value="pipeline" className="text-[10px] tracking-wider uppercase">Pipeline</TabsTrigger>
               <TabsTrigger value="keywins" className="text-[10px] tracking-wider uppercase">Key Wins</TabsTrigger>
               <TabsTrigger value="partnerships" className="text-[10px] tracking-wider uppercase">Partners</TabsTrigger>
               <TabsTrigger value="products" className="text-[10px] tracking-wider uppercase">Products</TabsTrigger>
               <TabsTrigger value="placements" className="text-[10px] tracking-wider uppercase">Placements</TabsTrigger>
               <TabsTrigger value="snapshot" className="text-[10px] tracking-wider uppercase">Snapshot</TabsTrigger>
+              <TabsTrigger value="users" className="text-[10px] tracking-wider uppercase">Users</TabsTrigger>
             </TabsList>
             <TabsContent value="pipeline" className="mt-6"><PipelineForm clientId={clientId} /></TabsContent>
             <TabsContent value="keywins" className="mt-6"><KeyWinsForm clientId={clientId} /></TabsContent>
@@ -515,6 +758,7 @@ export default function AdminPanel({ open, onOpenChange, clientId }: AdminPanelP
             <TabsContent value="products" className="mt-6"><ProductLaunchesForm clientId={clientId} /></TabsContent>
             <TabsContent value="placements" className="mt-6"><PlacementsForm clientId={clientId} /></TabsContent>
             <TabsContent value="snapshot" className="mt-6"><WeeklySnapshotForm clientId={clientId} /></TabsContent>
+            <TabsContent value="users" className="mt-6"><UserManagement /></TabsContent>
           </Tabs>
         </div>
       </SheetContent>
