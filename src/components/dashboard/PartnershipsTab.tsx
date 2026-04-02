@@ -25,8 +25,8 @@ const statusBadge: Record<string, { label: string; style: string }> = {
 };
 
 const PartnershipsTab = () => {
-  const { refreshKey } = useWeek();
-  const { clientId, isAdmin } = useAdmin();
+  const { refreshKey, activeClientId: clientId } = useWeek();
+  const { isAdmin } = useAdmin();
   const [partnerships, setPartnerships] = useState<Partnership[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);

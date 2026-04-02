@@ -17,8 +17,8 @@ interface KeyWin {
 }
 
 const KeyWinsTab = () => {
-  const { refreshKey } = useWeek();
-  const { clientId, isAdmin } = useAdmin();
+  const { refreshKey, activeClientId: clientId } = useWeek();
+  const { isAdmin } = useAdmin();
   const [wins, setWins] = useState<KeyWin[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
