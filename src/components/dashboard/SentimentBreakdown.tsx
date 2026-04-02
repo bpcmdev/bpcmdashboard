@@ -56,7 +56,7 @@ const SentimentBreakdown = () => {
       setLoading(false);
     };
     fetchSentiment();
-  }, [selectedWeek, refreshKey]);
+  }, [selectedWeek, refreshKey, activeClientId]);
 
   if (error) {
     return <p className="text-sm text-destructive text-center py-8">Unable to load data. Please try refreshing.</p>;
