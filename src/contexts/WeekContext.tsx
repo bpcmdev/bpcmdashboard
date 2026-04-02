@@ -74,15 +74,40 @@ export const WeekProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const init = async () => {
-      const { data } = await supabase
+      // Get logged-in user's client_id
+      const { data: { user } } = await supabase.auth.getUser();
+      let userClientId: string | null = null;
+      if (user) {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('client_id')
+          .eq('id', user.id)
+          .maybeSingle();
+        userClientId = profile?.client_id ?? null;
+      }
+
+      let query = supabase
         .from('weekly_snapshots')
         .select('week_start')
-        .order('week_start', { ascending: false })
-        .limit(12);
+        .order('week_start', { ascending: false });
+
+      if (userClientId) {
+        query = query.eq('client_id', userClientId);
+      }
+
+      const { data } = await query;
 
       let weekOptions: WeekOption[];
       if (data && data.length > 0) {
-        weekOptions = data.map((row: any) => {
+        // Deduplicate week_start values
+        const seen = new Set<string>();
+        const unique = data.filter((row: any) => {
+          if (seen.has(row.week_start)) return false;
+          seen.add(row.week_start);
+          return true;
+        });
+
+        weekOptions = unique.map((row: any) => {
           const start = new Date(row.week_start + 'T00:00:00');
           const end = new Date(start);
           end.setDate(end.getDate() + 6);
