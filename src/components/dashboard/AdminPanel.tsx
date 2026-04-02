@@ -741,25 +741,28 @@ export default function AdminPanel({ open, onOpenChange, clientId }: AdminPanelP
         <div className="bg-foreground text-background px-6 py-4">
           <SheetTitle className="text-background text-sm font-bold tracking-widest uppercase">Admin Data Entry</SheetTitle>
         </div>
-        <div className="p-6">
-          <Tabs defaultValue="pipeline" className="w-full">
-            <TabsList className="w-full grid grid-cols-7 bg-muted">
-              <TabsTrigger value="pipeline" className="text-[10px] tracking-wider uppercase">Pipeline</TabsTrigger>
-              <TabsTrigger value="keywins" className="text-[10px] tracking-wider uppercase">Key Wins</TabsTrigger>
-              <TabsTrigger value="partnerships" className="text-[10px] tracking-wider uppercase">Partners</TabsTrigger>
-              <TabsTrigger value="products" className="text-[10px] tracking-wider uppercase">Products</TabsTrigger>
-              <TabsTrigger value="placements" className="text-[10px] tracking-wider uppercase">Placements</TabsTrigger>
-              <TabsTrigger value="snapshot" className="text-[10px] tracking-wider uppercase">Snapshot</TabsTrigger>
-              <TabsTrigger value="users" className="text-[10px] tracking-wider uppercase">Users</TabsTrigger>
-            </TabsList>
-            <TabsContent value="pipeline" className="mt-6"><PipelineForm clientId={clientId} /></TabsContent>
-            <TabsContent value="keywins" className="mt-6"><KeyWinsForm clientId={clientId} /></TabsContent>
-            <TabsContent value="partnerships" className="mt-6"><PartnershipsForm clientId={clientId} /></TabsContent>
-            <TabsContent value="products" className="mt-6"><ProductLaunchesForm clientId={clientId} /></TabsContent>
-            <TabsContent value="placements" className="mt-6"><PlacementsForm clientId={clientId} /></TabsContent>
-            <TabsContent value="snapshot" className="mt-6"><WeeklySnapshotForm clientId={clientId} /></TabsContent>
-            <TabsContent value="users" className="mt-6"><UserManagement /></TabsContent>
-          </Tabs>
+        <div className="p-6 space-y-6">
+          <Select value={adminSection} onValueChange={setAdminSection}>
+            <SelectTrigger className="w-full text-xs font-semibold tracking-widest uppercase">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="pipeline" className="text-xs tracking-wider uppercase">Pipeline</SelectItem>
+              <SelectItem value="keywins" className="text-xs tracking-wider uppercase">Key Wins</SelectItem>
+              <SelectItem value="partnerships" className="text-xs tracking-wider uppercase">Partners</SelectItem>
+              <SelectItem value="products" className="text-xs tracking-wider uppercase">Products</SelectItem>
+              <SelectItem value="placements" className="text-xs tracking-wider uppercase">Placements</SelectItem>
+              <SelectItem value="snapshot" className="text-xs tracking-wider uppercase">Snapshot</SelectItem>
+              <SelectItem value="users" className="text-xs tracking-wider uppercase">Users</SelectItem>
+            </SelectContent>
+          </Select>
+          {adminSection === 'pipeline' && <PipelineForm clientId={clientId} />}
+          {adminSection === 'keywins' && <KeyWinsForm clientId={clientId} />}
+          {adminSection === 'partnerships' && <PartnershipsForm clientId={clientId} />}
+          {adminSection === 'products' && <ProductLaunchesForm clientId={clientId} />}
+          {adminSection === 'placements' && <PlacementsForm clientId={clientId} />}
+          {adminSection === 'snapshot' && <WeeklySnapshotForm clientId={clientId} />}
+          {adminSection === 'users' && <UserManagement />}
         </div>
       </SheetContent>
     </Sheet>
