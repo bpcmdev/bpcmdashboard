@@ -5,6 +5,7 @@ import { useWeek } from '@/contexts/WeekContext';
 import DataStateWrapper from './DataStateWrapper';
 import PlaceholderCard from './PlaceholderCard';
 import DeleteEntryButton from './DeleteEntryButton';
+import EditPipelineDialog from './EditPipelineDialog';
 
 interface PipelineEntry {
   id: string;
