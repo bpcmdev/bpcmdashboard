@@ -4,6 +4,7 @@ import { useAdmin } from '@/hooks/useAdmin';
 import { useWeek } from '@/contexts/WeekContext';
 import DataStateWrapper from './DataStateWrapper';
 import PlaceholderCard from './PlaceholderCard';
+import DeleteEntryButton from './DeleteEntryButton';
 
 interface KeyWin {
   id: string;
