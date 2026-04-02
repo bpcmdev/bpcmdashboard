@@ -1,15 +1,26 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
+import { useAdmin } from '@/hooks/useAdmin';
 import { Skeleton } from '@/components/ui/skeleton';
+import DeleteEntryButton from './DeleteEntryButton';
+import EditPlacementDialog from './EditPlacementDialog';
 
-interface Placement {
-  outlet: string;
+interface RawPlacement {
+  id: string;
   headline: string;
-  date: string;
-  reach: string;
-  placedBy: string;
-  tier: string;
+  url: string;
+  outlet_name: string;
+  outlet_tier: number;
+  outlet_umv: number | null;
+  author_name: string;
+  published_at: string | null;
+  sentiment: string;
+  ad_value: number | null;
+  impressions: number | null;
+  placement_type: string;
+  placed_by: string;
+  tags: string[];
 }
 
 const tierClass: Record<string, string> = {
@@ -45,10 +56,11 @@ function formatPlacedBy(placedBy: string, placementType: string): string {
 }
 
 const TopPlacements = () => {
-  const [placements, setPlacements] = useState<Placement[]>([]);
+  const [rawPlacements, setRawPlacements] = useState<RawPlacement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const { selectedWeek, refreshKey } = useWeek();
+  const { isAdmin } = useAdmin();
 
   useEffect(() => {
     if (!selectedWeek) return;
@@ -74,13 +86,21 @@ const TopPlacements = () => {
         return;
       }
 
-      setPlacements((data ?? []).map((row: Record<string, any>) => ({
-        outlet: row.outlet_name ?? '',
+      setRawPlacements((data ?? []).map((row: Record<string, any>) => ({
+        id: row.id,
         headline: row.headline ?? '',
-        date: row.published_at ? formatDate(row.published_at) : '',
-        reach: row.outlet_umv ? formatReach(row.outlet_umv) : '',
-        placedBy: formatPlacedBy(row.placed_by ?? '', row.placement_type ?? ''),
-        tier: formatTier(row.outlet_tier ?? 1, row.placement_type ?? '', row.headline ?? ''),
+        url: row.url ?? '',
+        outlet_name: row.outlet_name ?? '',
+        outlet_tier: row.outlet_tier ?? 1,
+        outlet_umv: row.outlet_umv ?? null,
+        author_name: row.author_name ?? '',
+        published_at: row.published_at ?? null,
+        sentiment: row.sentiment ?? '',
+        ad_value: row.ad_value ?? null,
+        impressions: row.impressions ?? null,
+        placement_type: row.placement_type ?? '',
+        placed_by: row.placed_by ?? '',
+        tags: Array.isArray(row.tags) ? row.tags : [],
       })));
       setLoading(false);
     };
@@ -103,7 +123,7 @@ const TopPlacements = () => {
     );
   }
 
-  if (placements.length === 0) {
+  if (rawPlacements.length === 0) {
     return (
       <div>
         <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-3">Top Placements This Week</h3>
@@ -118,22 +138,31 @@ const TopPlacements = () => {
         Top Placements This Week
       </h3>
       <div className="divide-y divide-border">
-        {placements.map((p, i) => (
-          <div key={i} className="flex items-center gap-4 py-3">
-            <span className="text-sm font-bold w-36 shrink-0">{p.outlet}</span>
-            <span className="text-sm flex-1 text-foreground/80">{p.headline}</span>
-            <div className="flex items-center gap-2 shrink-0 text-[11px] text-muted-foreground">
-              <span>{p.date}</span>
-              <span>·</span>
-              <span>{p.reach}</span>
-              <span>·</span>
-              <span>{p.placedBy}</span>
+        {rawPlacements.map((p) => {
+          const tier = formatTier(p.outlet_tier, p.placement_type, p.headline);
+          return (
+            <div key={p.id} className="flex items-center gap-4 py-3">
+              <span className="text-sm font-bold w-36 shrink-0">{p.outlet_name}</span>
+              <span className="text-sm flex-1 text-foreground/80">{p.headline}</span>
+              <div className="flex items-center gap-2 shrink-0 text-[11px] text-muted-foreground">
+                <span>{p.published_at ? formatDate(p.published_at) : ''}</span>
+                <span>·</span>
+                <span>{p.outlet_umv ? formatReach(p.outlet_umv) : ''}</span>
+                <span>·</span>
+                <span>{formatPlacedBy(p.placed_by, p.placement_type)}</span>
+              </div>
+              <span className={`shrink-0 text-[10px] font-bold tracking-wider px-2 py-0.5 ${tierClass[tier] ?? 'bg-tier1'}`}>
+                {tier}
+              </span>
+              {isAdmin && (
+                <div className="flex items-center gap-1 shrink-0">
+                  <EditPlacementDialog entry={p} />
+                  <DeleteEntryButton table="placements" id={p.id} label={p.headline} />
+                </div>
+              )}
             </div>
-            <span className={`shrink-0 text-[10px] font-bold tracking-wider px-2 py-0.5 ${tierClass[p.tier] ?? 'bg-tier1'}`}>
-              {p.tier}
-            </span>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
