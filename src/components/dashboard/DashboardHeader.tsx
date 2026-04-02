@@ -14,7 +14,7 @@ import {
 
 const DashboardHeader = () => {
   const { selectedWeek, setSelectedWeek, weeks, lastUpdated, refreshData } = useWeek();
-  const { isAdmin, clientId } = useAdmin();
+  const { isAdmin, clientId, clientName } = useAdmin();
   const [adminOpen, setAdminOpen] = useState(false);
   const navigate = useNavigate();
   const currentLabel = weeks.find(w => w.weekStart === selectedWeek)?.label ?? 'Loading…';
@@ -32,7 +32,7 @@ const DashboardHeader = () => {
   return (
     <header className="dashboard-header px-6 py-3 flex items-center justify-between">
       <div className="flex items-center gap-2">
-        <span className="text-lg font-extrabold tracking-wider uppercase">Milk Makeup</span>
+        <span className="text-lg font-extrabold tracking-wider uppercase">{clientName ?? 'Loading…'}</span>
       </div>
       <div className="hidden md:flex items-center gap-3 text-xs tracking-widest uppercase opacity-70">
         <span>Intelligence Dashboard</span>
