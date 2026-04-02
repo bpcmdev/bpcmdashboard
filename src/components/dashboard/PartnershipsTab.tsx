@@ -82,6 +82,7 @@ const PartnershipsTab = () => {
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <span className={`text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 ${badge.style}`}>{badge.label}</span>
+                          {isAdmin && <EditPartnershipDialog entry={p} />}
                           {isAdmin && <DeleteEntryButton table="partnerships" id={p.id} label="this partnership" />}
                         </div>
                       </div>
