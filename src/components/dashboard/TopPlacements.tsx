@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -21,6 +21,13 @@ interface RawPlacement {
   placement_type: string;
   placed_by: string;
   tags: string[];
+}
+
+interface TopPlacementsProps {
+  searchText?: string;
+  tierFilter?: string;
+  sentimentFilter?: string;
+  typeFilter?: string;
 }
 
 const tierClass: Record<string, string> = {
@@ -55,7 +62,7 @@ function formatPlacedBy(placedBy: string, placementType: string): string {
   return 'Organic';
 }
 
-const TopPlacements = () => {
+const TopPlacements = ({ searchText = '', tierFilter = 'all', sentimentFilter = 'all', typeFilter = 'all' }: TopPlacementsProps) => {
   const [rawPlacements, setRawPlacements] = useState<RawPlacement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -76,8 +83,7 @@ const TopPlacements = () => {
         .select('*')
         .gte('published_at', selectedWeek)
         .lte('published_at', endStr)
-        .order('outlet_umv', { ascending: false })
-        .limit(10);
+        .order('outlet_umv', { ascending: false });
 
       if (err) {
         console.error('Failed to fetch placements:', err);
@@ -108,6 +114,26 @@ const TopPlacements = () => {
     fetchPlacements();
   }, [selectedWeek, refreshKey]);
 
+  const filtered = useMemo(() => {
+    let result = rawPlacements;
+    if (searchText) {
+      const q = searchText.toLowerCase();
+      result = result.filter(p =>
+        p.headline.toLowerCase().includes(q) || p.outlet_name.toLowerCase().includes(q)
+      );
+    }
+    if (tierFilter !== 'all') {
+      result = result.filter(p => p.outlet_tier === Number(tierFilter));
+    }
+    if (sentimentFilter !== 'all') {
+      result = result.filter(p => p.sentiment === sentimentFilter);
+    }
+    if (typeFilter !== 'all') {
+      result = result.filter(p => p.placement_type === typeFilter);
+    }
+    return result;
+  }, [rawPlacements, searchText, tierFilter, sentimentFilter, typeFilter]);
+
   if (error) {
     return <p className="text-sm text-destructive text-center py-8">Unable to load data. Please try refreshing.</p>;
   }
@@ -123,11 +149,13 @@ const TopPlacements = () => {
     );
   }
 
-  if (rawPlacements.length === 0) {
+  if (filtered.length === 0) {
     return (
       <div>
         <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-3">Top Placements This Week</h3>
-        <p className="text-xs text-muted-foreground text-center py-8">No placements for this week.</p>
+        <p className="text-xs text-muted-foreground text-center py-8">
+          {rawPlacements.length > 0 ? 'No placements match your filters.' : 'No placements for this week.'}
+        </p>
       </div>
     );
   }
@@ -136,22 +164,25 @@ const TopPlacements = () => {
     <div>
       <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-3">
         Top Placements This Week
+        {filtered.length !== rawPlacements.length && (
+          <span className="ml-2 text-muted-foreground font-normal">({filtered.length} of {rawPlacements.length})</span>
+        )}
       </h3>
       <div className="divide-y divide-border">
-        {rawPlacements.map((p) => {
+        {filtered.map((p) => {
           const tier = formatTier(p.outlet_tier, p.placement_type, p.headline);
           return (
-            <div key={p.id} className="flex items-center gap-4 py-3">
-              <span className="text-sm font-bold w-36 shrink-0">{p.outlet_name}</span>
+            <div key={p.id} className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 py-3">
+              <span className="text-sm font-bold md:w-36 shrink-0">{p.outlet_name}</span>
               <span className="text-sm flex-1 text-foreground/80">{p.headline}</span>
-              <div className="flex items-center gap-2 shrink-0 text-[11px] text-muted-foreground">
+              <div className="flex flex-wrap items-center gap-2 shrink-0 text-[11px] text-muted-foreground">
                 <span>{p.published_at ? formatDate(p.published_at) : ''}</span>
-                <span>·</span>
+                <span className="hidden md:inline">·</span>
                 <span>{p.outlet_umv ? formatReach(p.outlet_umv) : ''}</span>
-                <span>·</span>
+                <span className="hidden md:inline">·</span>
                 <span>{formatPlacedBy(p.placed_by, p.placement_type)}</span>
               </div>
-              <span className={`shrink-0 text-[10px] font-bold tracking-wider px-2 py-0.5 ${tierClass[tier] ?? 'bg-tier1'}`}>
+              <span className={`shrink-0 text-[10px] font-bold tracking-wider px-2 py-0.5 w-fit ${tierClass[tier] ?? 'bg-tier1'}`}>
                 {tier}
               </span>
               {isAdmin && (
