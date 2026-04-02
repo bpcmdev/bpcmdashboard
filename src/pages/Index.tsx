@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
-import { WeekProvider, useWeek } from '@/contexts/WeekContext';
+import { WeekProvider } from '@/contexts/WeekContext';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import NarrativeTicker from '@/components/dashboard/NarrativeTicker';
 import KpiBar from '@/components/dashboard/KpiBar';
@@ -33,16 +33,8 @@ const TAB_MAP: Record<string, React.ComponentType> = {
 /** Inner component that can access WeekContext */
 function DashboardContent() {
   const [activeTab, setActiveTab] = useState('EARNED MEDIA');
-  const { clientColor, clientId } = useAdmin();
-  const { setOverrideClientId } = useWeek();
+  const { clientColor } = useAdmin();
   const TabContent = TAB_MAP[activeTab];
-
-  // Sync admin client override into WeekContext
-  useEffect(() => {
-    if (clientId) {
-      setOverrideClientId(clientId);
-    }
-  }, [clientId, setOverrideClientId]);
 
   return (
     <div

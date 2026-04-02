@@ -46,19 +46,24 @@ const KpiBar = () => {
   const [kpis, setKpis] = useState<KpiCardProps[]>(fallbackKpis);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const { selectedWeek, refreshKey } = useWeek();
+  const { selectedWeek, refreshKey, activeClientId } = useWeek();
 
   useEffect(() => {
     if (!selectedWeek) return;
     const fetchKpis = async () => {
       setLoading(true);
       setError(false);
-      const { data, error: err } = await supabase
+      let query = supabase
         .from('weekly_snapshots')
         .select('*')
         .eq('week_start', selectedWeek)
-        .limit(1)
-        .maybeSingle();
+        .limit(1);
+
+      if (activeClientId) {
+        query = query.eq('client_id', activeClientId);
+      }
+
+      const { data, error: err } = await query.maybeSingle();
 
       if (err) {
         console.error('Failed to fetch weekly_snapshots:', err);
@@ -93,7 +98,7 @@ const KpiBar = () => {
     };
 
     fetchKpis();
-  }, [selectedWeek, refreshKey]);
+  }, [selectedWeek, refreshKey, activeClientId]);
 
   if (error) {
     return (

@@ -44,8 +44,8 @@ const toArray = (v: unknown): string[] => {
 };
 
 const ProductLaunchesTab = () => {
-  const { refreshKey } = useWeek();
-  const { clientId, isAdmin } = useAdmin();
+  const { refreshKey, activeClientId: clientId } = useWeek();
+  const { isAdmin } = useAdmin();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);

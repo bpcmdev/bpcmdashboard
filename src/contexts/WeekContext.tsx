@@ -16,6 +16,7 @@ interface WeekContextType {
   refreshKey: number;
   overrideClientId: string | null;
   setOverrideClientId: (id: string | null) => void;
+  activeClientId: string | null;
 }
 
 const WeekContext = createContext<WeekContextType>({
@@ -28,6 +29,7 @@ const WeekContext = createContext<WeekContextType>({
   refreshKey: 0,
   overrideClientId: null,
   setOverrideClientId: () => {},
+  activeClientId: null,
 });
 
 export const useWeek = () => useContext(WeekContext);
@@ -152,7 +154,7 @@ export const WeekProvider = ({ children }: { children: ReactNode }) => {
   }, [activeClientId, userClientId]);
 
   return (
-    <WeekContext.Provider value={{ selectedWeek, setSelectedWeek, weeks, loading, lastUpdated, refreshData, refreshKey, overrideClientId, setOverrideClientId }}>
+    <WeekContext.Provider value={{ selectedWeek, setSelectedWeek, weeks, loading, lastUpdated, refreshData, refreshKey, overrideClientId, setOverrideClientId, activeClientId }}>
       {children}
     </WeekContext.Provider>
   );

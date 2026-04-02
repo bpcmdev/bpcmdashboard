@@ -66,7 +66,7 @@ const TopPlacements = ({ searchText = '', tierFilter = 'all', sentimentFilter = 
   const [rawPlacements, setRawPlacements] = useState<RawPlacement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const { selectedWeek, refreshKey } = useWeek();
+  const { selectedWeek, refreshKey, activeClientId } = useWeek();
   const { isAdmin } = useAdmin();
 
   useEffect(() => {
@@ -78,12 +78,18 @@ const TopPlacements = ({ searchText = '', tierFilter = 'all', sentimentFilter = 
       weekEnd.setDate(weekEnd.getDate() + 6);
       const endStr = weekEnd.toISOString().split('T')[0];
 
-      const { data, error: err } = await supabase
+      let query = supabase
         .from('placements')
         .select('*')
         .gte('published_at', selectedWeek)
         .lte('published_at', endStr)
         .order('outlet_umv', { ascending: false });
+
+      if (activeClientId) {
+        query = query.eq('client_id', activeClientId);
+      }
+
+      const { data, error: err } = await query;
 
       if (err) {
         console.error('Failed to fetch placements:', err);
@@ -112,7 +118,7 @@ const TopPlacements = ({ searchText = '', tierFilter = 'all', sentimentFilter = 
     };
 
     fetchPlacements();
-  }, [selectedWeek, refreshKey]);
+  }, [selectedWeek, refreshKey, activeClientId]);
 
   const filtered = useMemo(() => {
     let result = rawPlacements;

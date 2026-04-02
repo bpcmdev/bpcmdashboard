@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/select';
 
 const DashboardHeader = () => {
-  const { selectedWeek, setSelectedWeek, weeks, lastUpdated, refreshData } = useWeek();
+  const { selectedWeek, setSelectedWeek, weeks, lastUpdated, refreshData, setOverrideClientId } = useWeek();
   const { isAdmin, clientId, clientName, clientLogo, clientColor, allClients, switchClient } = useAdmin();
   const [adminOpen, setAdminOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -36,7 +36,7 @@ const DashboardHeader = () => {
 
   const handleClientSwitch = (newClientId: string) => {
     switchClient(newClientId);
-    // Trigger data refresh after switch
+    setOverrideClientId(newClientId);
     setTimeout(() => refreshData(), 100);
   };
 

@@ -45,8 +45,8 @@ function groupByMonth(entries: PipelineEntry[]) {
 }
 
 const PipelineMomentsTab = () => {
-  const { refreshKey } = useWeek();
-  const { clientId, isAdmin } = useAdmin();
+  const { refreshKey, activeClientId: clientId } = useWeek();
+  const { isAdmin } = useAdmin();
   const [entries, setEntries] = useState<PipelineEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
