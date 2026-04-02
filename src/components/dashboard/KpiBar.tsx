@@ -98,7 +98,7 @@ const KpiBar = () => {
     };
 
     fetchKpis();
-  }, [selectedWeek, refreshKey]);
+  }, [selectedWeek, refreshKey, activeClientId]);
 
   if (error) {
     return (
