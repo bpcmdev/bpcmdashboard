@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
+import { useWeek } from '@/contexts/WeekContext';
 import { supabase } from '@/lib/supabase';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -364,6 +365,118 @@ function WeeklySnapshotForm({ clientId }: { clientId: string | null }) {
   );
 }
 
+/* ── Placements Form ── */
+function PlacementsForm({ clientId }: { clientId: string | null }) {
+  const { selectedWeek } = useWeek();
+  const [headline, setHeadline] = useState('');
+  const [url, setUrl] = useState('');
+  const [outletName, setOutletName] = useState('');
+  const [outletTier, setOutletTier] = useState('');
+  const [outletUmv, setOutletUmv] = useState('');
+  const [authorName, setAuthorName] = useState('');
+  const [publishedAt, setPublishedAt] = useState<Date>();
+  const [sentiment, setSentiment] = useState('');
+  const [adValue, setAdValue] = useState('');
+  const [impressions, setImpressions] = useState('');
+  const [placementType, setPlacementType] = useState('');
+  const [placedBy, setPlacedBy] = useState('');
+  const [tags, setTags] = useState('');
+  const [success, setSuccess] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const num = (v: string) => v ? Number(v) : null;
+
+  const handleSubmit = async () => {
+    if (!headline) return;
+    setSubmitting(true);
+    const payload = {
+      client_id: clientId,
+      week_start: selectedWeek || null,
+      headline,
+      url,
+      outlet_name: outletName,
+      outlet_tier: outletTier ? Number(outletTier) : null,
+      outlet_umv: num(outletUmv),
+      author_name: authorName,
+      published_at: publishedAt ? format(publishedAt, 'yyyy-MM-dd') : null,
+      sentiment,
+      ad_value: num(adValue),
+      impressions: num(impressions),
+      placement_type: placementType,
+      placed_by: placedBy,
+      tags: tags ? tags.split(',').map(s => s.trim()).filter(Boolean) : [],
+    };
+    console.log('[AdminPanel] placements insert payload:', payload);
+    const { error } = await supabase.from('placements').insert(payload);
+    if (error) console.error('[AdminPanel] placements insert error:', error);
+    setSubmitting(false);
+    if (!error) {
+      setSuccess('Placement added');
+      setHeadline(''); setUrl(''); setOutletName(''); setOutletTier(''); setOutletUmv('');
+      setAuthorName(''); setPublishedAt(undefined); setSentiment(''); setAdValue('');
+      setImpressions(''); setPlacementType(''); setPlacedBy(''); setTags('');
+      setTimeout(() => setSuccess(''), 3000);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {success && <SuccessMessage message={success} />}
+      <Field label="Headline"><Input value={headline} onChange={e => setHeadline(e.target.value)} placeholder="Placement headline" /></Field>
+      <Field label="URL"><Input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://…" /></Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Outlet Name"><Input value={outletName} onChange={e => setOutletName(e.target.value)} placeholder="e.g. Allure" /></Field>
+        <Field label="Outlet Tier">
+          <Select value={outletTier} onValueChange={setOutletTier}>
+            <SelectTrigger><SelectValue placeholder="Select tier" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1">Tier 1</SelectItem>
+              <SelectItem value="2">Tier 2</SelectItem>
+              <SelectItem value="3">Tier 3</SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Outlet UMV"><Input type="number" value={outletUmv} onChange={e => setOutletUmv(e.target.value)} placeholder="0" /></Field>
+        <Field label="Author Name"><Input value={authorName} onChange={e => setAuthorName(e.target.value)} placeholder="Author" /></Field>
+      </div>
+      <DateField date={publishedAt} onSelect={setPublishedAt} label="Published Date" />
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Sentiment">
+          <Select value={sentiment} onValueChange={setSentiment}>
+            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="positive">Positive</SelectItem>
+              <SelectItem value="neutral">Neutral</SelectItem>
+              <SelectItem value="negative">Negative</SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
+        <Field label="Placement Type">
+          <Select value={placementType} onValueChange={setPlacementType}>
+            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="earned">Earned</SelectItem>
+              <SelectItem value="newswire">Newswire</SelectItem>
+              <SelectItem value="contributed">Contributed</SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Ad Value"><Input type="number" value={adValue} onChange={e => setAdValue(e.target.value)} placeholder="0" /></Field>
+        <Field label="Impressions"><Input type="number" value={impressions} onChange={e => setImpressions(e.target.value)} placeholder="0" /></Field>
+      </div>
+      <Field label="Placed By"><Input value={placedBy} onChange={e => setPlacedBy(e.target.value)} placeholder="e.g. BPCM" /></Field>
+      <Field label="Tags (comma separated)"><Input value={tags} onChange={e => setTags(e.target.value)} placeholder="skincare, launch" /></Field>
+      <Button onClick={handleSubmit} disabled={submitting || !headline} className="w-full bg-foreground text-background hover:bg-foreground/90">
+        {submitting ? 'Submitting…' : 'Add Placement'}
+      </Button>
+    </div>
+  );
+}
+
 /* ── Main Panel ── */
 export default function AdminPanel({ open, onOpenChange, clientId }: AdminPanelProps) {
   return (
@@ -374,17 +487,19 @@ export default function AdminPanel({ open, onOpenChange, clientId }: AdminPanelP
         </div>
         <div className="p-6">
           <Tabs defaultValue="pipeline" className="w-full">
-            <TabsList className="w-full grid grid-cols-5 bg-muted">
+            <TabsList className="w-full grid grid-cols-6 bg-muted">
               <TabsTrigger value="pipeline" className="text-[10px] tracking-wider uppercase">Pipeline</TabsTrigger>
               <TabsTrigger value="keywins" className="text-[10px] tracking-wider uppercase">Key Wins</TabsTrigger>
               <TabsTrigger value="partnerships" className="text-[10px] tracking-wider uppercase">Partners</TabsTrigger>
               <TabsTrigger value="products" className="text-[10px] tracking-wider uppercase">Products</TabsTrigger>
+              <TabsTrigger value="placements" className="text-[10px] tracking-wider uppercase">Placements</TabsTrigger>
               <TabsTrigger value="snapshot" className="text-[10px] tracking-wider uppercase">Snapshot</TabsTrigger>
             </TabsList>
             <TabsContent value="pipeline" className="mt-6"><PipelineForm clientId={clientId} /></TabsContent>
             <TabsContent value="keywins" className="mt-6"><KeyWinsForm clientId={clientId} /></TabsContent>
             <TabsContent value="partnerships" className="mt-6"><PartnershipsForm clientId={clientId} /></TabsContent>
             <TabsContent value="products" className="mt-6"><ProductLaunchesForm clientId={clientId} /></TabsContent>
+            <TabsContent value="placements" className="mt-6"><PlacementsForm clientId={clientId} /></TabsContent>
             <TabsContent value="snapshot" className="mt-6"><WeeklySnapshotForm clientId={clientId} /></TabsContent>
           </Tabs>
         </div>
