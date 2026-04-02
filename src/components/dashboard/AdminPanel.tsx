@@ -389,9 +389,23 @@ function PlacementsForm({ clientId }: { clientId: string | null }) {
   const handleSubmit = async () => {
     if (!headline) return;
     setSubmitting(true);
+
+    // Resolve week_id from weekly_snapshots
+    let weekId: string | null = null;
+    if (selectedWeek && clientId) {
+      const { data: snapRow, error: snapErr } = await supabase
+        .from('weekly_snapshots')
+        .select('id')
+        .eq('week_start', selectedWeek)
+        .eq('client_id', clientId)
+        .maybeSingle();
+      if (snapErr) console.error('[AdminPanel] weekly_snapshots lookup error:', snapErr);
+      weekId = snapRow?.id ?? null;
+    }
+
     const payload = {
       client_id: clientId,
-      week_start: selectedWeek || null,
+      week_id: weekId,
       headline,
       url,
       outlet_name: outletName,
