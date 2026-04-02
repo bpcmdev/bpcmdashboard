@@ -15,18 +15,21 @@ const SentimentBreakdown = () => {
   const [data, setData] = useState<SentimentData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const { selectedWeek, refreshKey } = useWeek();
+  const { selectedWeek, refreshKey, activeClientId } = useWeek();
 
   useEffect(() => {
     if (!selectedWeek) return;
     const fetchSentiment = async () => {
       setLoading(true);
       setError(false);
-      const { data: row, error: err } = await supabase
+      let query = supabase
         .from('weekly_snapshots')
         .select('sentiment_score')
-        .eq('week_start', selectedWeek)
-        .maybeSingle();
+        .eq('week_start', selectedWeek);
+      if (activeClientId) {
+        query = query.eq('client_id', activeClientId);
+      }
+      const { data: row, error: err } = await query.maybeSingle();
 
       if (err) {
         console.error('Failed to fetch sentiment:', err);
