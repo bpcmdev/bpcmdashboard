@@ -284,6 +284,86 @@ function ProductLaunchesForm({ clientId }: { clientId: string | null }) {
   );
 }
 
+/* ── Weekly Snapshot Form ── */
+function WeeklySnapshotForm({ clientId }: { clientId: string | null }) {
+  const [weekStart, setWeekStart] = useState<Date>();
+  const [placementCount, setPlacementCount] = useState('');
+  const [emvUsd, setEmvUsd] = useState('');
+  const [sentimentScore, setSentimentScore] = useState('');
+  const [socialReach, setSocialReach] = useState('');
+  const [sovPct, setSovPct] = useState('');
+  const [influencerRoi, setInfluencerRoi] = useState('');
+  const [wowPlacementDelta, setWowPlacementDelta] = useState('');
+  const [wowEmvDelta, setWowEmvDelta] = useState('');
+  const [wowReachDelta, setWowReachDelta] = useState('');
+  const [momSentimentDelta, setMomSentimentDelta] = useState('');
+  const [sovDeltaPts, setSovDeltaPts] = useState('');
+  const [narrativeWatch, setNarrativeWatch] = useState('');
+  const [success, setSuccess] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!weekStart) return;
+    setSubmitting(true);
+    const num = (v: string) => v ? Number(v) : null;
+    const payload = {
+      client_id: clientId,
+      week_start: format(weekStart, 'yyyy-MM-dd'),
+      placement_count: num(placementCount),
+      emv_usd: num(emvUsd),
+      sentiment_score: num(sentimentScore),
+      social_reach: num(socialReach),
+      sov_pct: num(sovPct),
+      influencer_roi: num(influencerRoi),
+      wow_placement_delta: num(wowPlacementDelta),
+      wow_emv_delta: num(wowEmvDelta),
+      wow_reach_delta: num(wowReachDelta),
+      mom_sentiment_delta: num(momSentimentDelta),
+      sov_delta_pts: num(sovDeltaPts),
+      narrative_watch: narrativeWatch || null,
+    };
+    console.log('[AdminPanel] weekly_snapshots insert payload:', payload);
+    const { error } = await supabase.from('weekly_snapshots').insert(payload);
+    if (error) console.error('[AdminPanel] weekly_snapshots insert error:', error);
+    setSubmitting(false);
+    if (!error) {
+      setSuccess('Weekly snapshot added');
+      setWeekStart(undefined); setPlacementCount(''); setEmvUsd(''); setSentimentScore('');
+      setSocialReach(''); setSovPct(''); setInfluencerRoi(''); setWowPlacementDelta('');
+      setWowEmvDelta(''); setWowReachDelta(''); setMomSentimentDelta(''); setSovDeltaPts('');
+      setNarrativeWatch('');
+      setTimeout(() => setSuccess(''), 3000);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {success && <SuccessMessage message={success} />}
+      <DateField date={weekStart} onSelect={setWeekStart} label="Week Start" />
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Placement Count"><Input type="number" value={placementCount} onChange={e => setPlacementCount(e.target.value)} placeholder="0" /></Field>
+        <Field label="EMV (USD)"><Input type="number" value={emvUsd} onChange={e => setEmvUsd(e.target.value)} placeholder="0" /></Field>
+        <Field label="Sentiment Score"><Input type="number" value={sentimentScore} onChange={e => setSentimentScore(e.target.value)} placeholder="0.0" /></Field>
+        <Field label="Social Reach"><Input type="number" value={socialReach} onChange={e => setSocialReach(e.target.value)} placeholder="0" /></Field>
+        <Field label="SOV %"><Input type="number" value={sovPct} onChange={e => setSovPct(e.target.value)} placeholder="0.0" /></Field>
+        <Field label="Influencer ROI"><Input type="number" value={influencerRoi} onChange={e => setInfluencerRoi(e.target.value)} placeholder="0.0" /></Field>
+      </div>
+      <p className="text-[10px] font-bold tracking-[0.12em] uppercase text-muted-foreground pt-2">Week-over-Week Deltas</p>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Placement Δ"><Input type="number" value={wowPlacementDelta} onChange={e => setWowPlacementDelta(e.target.value)} placeholder="0" /></Field>
+        <Field label="EMV Δ"><Input type="number" value={wowEmvDelta} onChange={e => setWowEmvDelta(e.target.value)} placeholder="0" /></Field>
+        <Field label="Reach Δ"><Input type="number" value={wowReachDelta} onChange={e => setWowReachDelta(e.target.value)} placeholder="0" /></Field>
+        <Field label="Sentiment Δ (MoM)"><Input type="number" value={momSentimentDelta} onChange={e => setMomSentimentDelta(e.target.value)} placeholder="0" /></Field>
+        <Field label="SOV Δ (pts)"><Input type="number" value={sovDeltaPts} onChange={e => setSovDeltaPts(e.target.value)} placeholder="0" /></Field>
+      </div>
+      <Field label="Narrative Watch"><Textarea value={narrativeWatch} onChange={e => setNarrativeWatch(e.target.value)} placeholder="Key narrative to watch this week…" /></Field>
+      <Button onClick={handleSubmit} disabled={submitting || !weekStart} className="w-full bg-foreground text-background hover:bg-foreground/90">
+        {submitting ? 'Submitting…' : 'Add Weekly Snapshot'}
+      </Button>
+    </div>
+  );
+}
+
 /* ── Main Panel ── */
 export default function AdminPanel({ open, onOpenChange, clientId }: AdminPanelProps) {
   return (
@@ -294,16 +374,18 @@ export default function AdminPanel({ open, onOpenChange, clientId }: AdminPanelP
         </div>
         <div className="p-6">
           <Tabs defaultValue="pipeline" className="w-full">
-            <TabsList className="w-full grid grid-cols-4 bg-muted">
+            <TabsList className="w-full grid grid-cols-5 bg-muted">
               <TabsTrigger value="pipeline" className="text-[10px] tracking-wider uppercase">Pipeline</TabsTrigger>
               <TabsTrigger value="keywins" className="text-[10px] tracking-wider uppercase">Key Wins</TabsTrigger>
               <TabsTrigger value="partnerships" className="text-[10px] tracking-wider uppercase">Partners</TabsTrigger>
               <TabsTrigger value="products" className="text-[10px] tracking-wider uppercase">Products</TabsTrigger>
+              <TabsTrigger value="snapshot" className="text-[10px] tracking-wider uppercase">Snapshot</TabsTrigger>
             </TabsList>
             <TabsContent value="pipeline" className="mt-6"><PipelineForm clientId={clientId} /></TabsContent>
             <TabsContent value="keywins" className="mt-6"><KeyWinsForm clientId={clientId} /></TabsContent>
             <TabsContent value="partnerships" className="mt-6"><PartnershipsForm clientId={clientId} /></TabsContent>
             <TabsContent value="products" className="mt-6"><ProductLaunchesForm clientId={clientId} /></TabsContent>
+            <TabsContent value="snapshot" className="mt-6"><WeeklySnapshotForm clientId={clientId} /></TabsContent>
           </Tabs>
         </div>
       </SheetContent>

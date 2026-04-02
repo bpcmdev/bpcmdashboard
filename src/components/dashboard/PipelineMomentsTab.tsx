@@ -5,6 +5,7 @@ import { useWeek } from '@/contexts/WeekContext';
 import DataStateWrapper from './DataStateWrapper';
 import PlaceholderCard from './PlaceholderCard';
 import DeleteEntryButton from './DeleteEntryButton';
+import EditPipelineDialog from './EditPipelineDialog';
 
 interface PipelineEntry {
   id: string;
@@ -96,6 +97,7 @@ const PipelineMomentsTab = () => {
                           <div className="flex items-start gap-1.5">
                             <span className="text-muted-foreground mt-0.5">●</span>
                             <p className="text-[10px] text-foreground/80 leading-snug flex-1">{e.title}{e.description ? ` — ${e.description}` : ''}</p>
+                            {isAdmin && <EditPipelineDialog entry={e} />}
                             {isAdmin && <DeleteEntryButton table="pipeline_moments" id={e.id} label="this moment" />}
                           </div>
                           <span className={`self-start text-[8px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 ${badgeStyles[e.event_type] ?? 'bg-muted text-muted-foreground'}`}>
@@ -119,6 +121,7 @@ const PipelineMomentsTab = () => {
                     <div className="flex items-center gap-2 mb-3">
                       <span className={`w-2 h-2 rounded-full ${dotColors[card.priority] ?? 'bg-muted-foreground'}`} />
                       <span className="text-[9px] font-bold tracking-[0.12em] uppercase text-muted-foreground flex-1">{card.priority}</span>
+                      {isAdmin && <EditPipelineDialog entry={card} />}
                       {isAdmin && <DeleteEntryButton table="pipeline_moments" id={card.id} label="this moment" />}
                     </div>
                     <h4 className="text-sm font-bold text-foreground mb-2">{card.title}</h4>

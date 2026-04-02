@@ -6,6 +6,7 @@ import { useWeek } from '@/contexts/WeekContext';
 import DataStateWrapper from './DataStateWrapper';
 import PlaceholderCard from './PlaceholderCard';
 import DeleteEntryButton from './DeleteEntryButton';
+import EditPartnershipDialog from './EditPartnershipDialog';
 
 interface Partnership {
   id: string;
@@ -81,6 +82,7 @@ const PartnershipsTab = () => {
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <span className={`text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 ${badge.style}`}>{badge.label}</span>
+                          {isAdmin && <EditPartnershipDialog entry={p} />}
                           {isAdmin && <DeleteEntryButton table="partnerships" id={p.id} label="this partnership" />}
                         </div>
                       </div>
@@ -123,6 +125,7 @@ const PartnershipsTab = () => {
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 bg-muted text-muted-foreground">PAST</span>
+                      {isAdmin && <EditPartnershipDialog entry={h} />}
                       {isAdmin && <DeleteEntryButton table="partnerships" id={h.id} label="this partnership" />}
                     </div>
                   </div>

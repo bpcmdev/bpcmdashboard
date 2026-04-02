@@ -5,6 +5,7 @@ import { useWeek } from '@/contexts/WeekContext';
 import DataStateWrapper from './DataStateWrapper';
 import PlaceholderCard from './PlaceholderCard';
 import DeleteEntryButton from './DeleteEntryButton';
+import EditProductDialog from './EditProductDialog';
 
 interface Product {
   id: string;
@@ -93,6 +94,7 @@ const ProductLaunchesTab = () => {
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <span className="text-[10px] font-bold tracking-[0.12em] uppercase px-2 py-0.5 border border-background/30">ACTIVE</span>
+                  {isAdmin && <EditProductDialog entry={prod} />}
                   {isAdmin && <DeleteEntryButton table="product_pipeline" id={prod.id} label="this product" />}
                 </div>
               </div>
@@ -112,7 +114,7 @@ const ProductLaunchesTab = () => {
                   const retailers = toArray(prod.retailers);
                   return (
                     <div key={prod.id} className="bg-card border border-border p-5 relative">
-                      {isAdmin && <div className="absolute top-3 right-3"><DeleteEntryButton table="product_pipeline" id={prod.id} label="this product" /></div>}
+                      {isAdmin && <div className="absolute top-3 right-3 flex items-center gap-1"><EditProductDialog entry={prod} /><DeleteEntryButton table="product_pipeline" id={prod.id} label="this product" /></div>}
                       <h4 className="text-sm font-bold text-foreground mb-2">{prod.product_name.toUpperCase()}</h4>
                       <p className="text-xs text-muted-foreground leading-relaxed mb-2">{prod.description}</p>
                       {retailers.length > 0 && (
