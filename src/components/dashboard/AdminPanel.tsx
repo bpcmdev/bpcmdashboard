@@ -487,17 +487,19 @@ export default function AdminPanel({ open, onOpenChange, clientId }: AdminPanelP
         </div>
         <div className="p-6">
           <Tabs defaultValue="pipeline" className="w-full">
-            <TabsList className="w-full grid grid-cols-5 bg-muted">
+            <TabsList className="w-full grid grid-cols-6 bg-muted">
               <TabsTrigger value="pipeline" className="text-[10px] tracking-wider uppercase">Pipeline</TabsTrigger>
               <TabsTrigger value="keywins" className="text-[10px] tracking-wider uppercase">Key Wins</TabsTrigger>
               <TabsTrigger value="partnerships" className="text-[10px] tracking-wider uppercase">Partners</TabsTrigger>
               <TabsTrigger value="products" className="text-[10px] tracking-wider uppercase">Products</TabsTrigger>
+              <TabsTrigger value="placements" className="text-[10px] tracking-wider uppercase">Placements</TabsTrigger>
               <TabsTrigger value="snapshot" className="text-[10px] tracking-wider uppercase">Snapshot</TabsTrigger>
             </TabsList>
             <TabsContent value="pipeline" className="mt-6"><PipelineForm clientId={clientId} /></TabsContent>
             <TabsContent value="keywins" className="mt-6"><KeyWinsForm clientId={clientId} /></TabsContent>
             <TabsContent value="partnerships" className="mt-6"><PartnershipsForm clientId={clientId} /></TabsContent>
             <TabsContent value="products" className="mt-6"><ProductLaunchesForm clientId={clientId} /></TabsContent>
+            <TabsContent value="placements" className="mt-6"><PlacementsForm clientId={clientId} /></TabsContent>
             <TabsContent value="snapshot" className="mt-6"><WeeklySnapshotForm clientId={clientId} /></TabsContent>
           </Tabs>
         </div>
