@@ -79,7 +79,10 @@ const PartnershipsTab = () => {
                           <h4 className="text-sm font-bold">{p.partner_name}</h4>
                           <p className="text-[11px] text-muted-foreground">{p.type}</p>
                         </div>
-                        <span className={`text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 shrink-0 ${badge.style}`}>{badge.label}</span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className={`text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 ${badge.style}`}>{badge.label}</span>
+                          {isAdmin && <DeleteEntryButton table="partnerships" id={p.id} label="this partnership" />}
+                        </div>
                       </div>
                       <p className="text-xs text-muted-foreground">{p.description}</p>
                     </div>
