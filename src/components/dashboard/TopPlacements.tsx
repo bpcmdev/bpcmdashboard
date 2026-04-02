@@ -89,6 +89,8 @@ const TopPlacements = ({ searchText = '', tierFilter = 'all', sentimentFilter = 
         query = query.eq('client_id', activeClientId);
       }
 
+      const { data, error: err } = await query;
+
       if (err) {
         console.error('Failed to fetch placements:', err);
         setError(true);
