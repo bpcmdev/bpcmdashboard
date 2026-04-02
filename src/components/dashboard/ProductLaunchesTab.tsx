@@ -4,6 +4,7 @@ import { useAdmin } from '@/hooks/useAdmin';
 import { useWeek } from '@/contexts/WeekContext';
 import DataStateWrapper from './DataStateWrapper';
 import PlaceholderCard from './PlaceholderCard';
+import DeleteEntryButton from './DeleteEntryButton';
 
 interface Product {
   id: string;
@@ -43,7 +44,7 @@ const toArray = (v: unknown): string[] => {
 
 const ProductLaunchesTab = () => {
   const { refreshKey } = useWeek();
-  const { clientId } = useAdmin();
+  const { clientId, isAdmin } = useAdmin();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -90,7 +91,10 @@ const ProductLaunchesTab = () => {
                   </p>
                   {prod.description && <p className="text-xs opacity-60 mt-1">{prod.description}</p>}
                 </div>
-                <span className="text-[10px] font-bold tracking-[0.12em] uppercase px-2 py-0.5 border border-background/30">ACTIVE</span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-[10px] font-bold tracking-[0.12em] uppercase px-2 py-0.5 border border-background/30">ACTIVE</span>
+                  {isAdmin && <DeleteEntryButton table="product_pipeline" id={prod.id} label="this product" />}
+                </div>
               </div>
             </div>
           ))}
@@ -107,7 +111,8 @@ const ProductLaunchesTab = () => {
                   const sBadge = statusBadge[prod.status] ?? { label: prod.status?.toUpperCase() ?? '', style: 'bg-muted text-muted-foreground' };
                   const retailers = toArray(prod.retailers);
                   return (
-                    <div key={prod.id} className="bg-card border border-border p-5">
+                    <div key={prod.id} className="bg-card border border-border p-5 relative">
+                      {isAdmin && <div className="absolute top-3 right-3"><DeleteEntryButton table="product_pipeline" id={prod.id} label="this product" /></div>}
                       <h4 className="text-sm font-bold text-foreground mb-2">{prod.product_name.toUpperCase()}</h4>
                       <p className="text-xs text-muted-foreground leading-relaxed mb-2">{prod.description}</p>
                       {retailers.length > 0 && (

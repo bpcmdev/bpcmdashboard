@@ -4,6 +4,7 @@ import { useAdmin } from '@/hooks/useAdmin';
 import { useWeek } from '@/contexts/WeekContext';
 import DataStateWrapper from './DataStateWrapper';
 import PlaceholderCard from './PlaceholderCard';
+import DeleteEntryButton from './DeleteEntryButton';
 
 interface PipelineEntry {
   id: string;
@@ -44,7 +45,7 @@ function groupByMonth(entries: PipelineEntry[]) {
 
 const PipelineMomentsTab = () => {
   const { refreshKey } = useWeek();
-  const { clientId } = useAdmin();
+  const { clientId, isAdmin } = useAdmin();
   const [entries, setEntries] = useState<PipelineEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -94,7 +95,8 @@ const PipelineMomentsTab = () => {
                         <div key={e.id} className="flex flex-col gap-1">
                           <div className="flex items-start gap-1.5">
                             <span className="text-muted-foreground mt-0.5">●</span>
-                            <p className="text-[10px] text-foreground/80 leading-snug">{e.title}{e.description ? ` — ${e.description}` : ''}</p>
+                            <p className="text-[10px] text-foreground/80 leading-snug flex-1">{e.title}{e.description ? ` — ${e.description}` : ''}</p>
+                            {isAdmin && <DeleteEntryButton table="pipeline_moments" id={e.id} label="this moment" />}
                           </div>
                           <span className={`self-start text-[8px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 ${badgeStyles[e.event_type] ?? 'bg-muted text-muted-foreground'}`}>
                             {e.event_type.replace('-', ' ')}
@@ -116,7 +118,8 @@ const PipelineMomentsTab = () => {
                   <div key={card.id} className="bg-card border border-border p-5">
                     <div className="flex items-center gap-2 mb-3">
                       <span className={`w-2 h-2 rounded-full ${dotColors[card.priority] ?? 'bg-muted-foreground'}`} />
-                      <span className="text-[9px] font-bold tracking-[0.12em] uppercase text-muted-foreground">{card.priority}</span>
+                      <span className="text-[9px] font-bold tracking-[0.12em] uppercase text-muted-foreground flex-1">{card.priority}</span>
+                      {isAdmin && <DeleteEntryButton table="pipeline_moments" id={card.id} label="this moment" />}
                     </div>
                     <h4 className="text-sm font-bold text-foreground mb-2">{card.title}</h4>
                     <p className="text-xs text-muted-foreground leading-relaxed mb-3">{card.description}</p>

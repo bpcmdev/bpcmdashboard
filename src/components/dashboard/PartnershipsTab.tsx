@@ -5,6 +5,7 @@ import { useAdmin } from '@/hooks/useAdmin';
 import { useWeek } from '@/contexts/WeekContext';
 import DataStateWrapper from './DataStateWrapper';
 import PlaceholderCard from './PlaceholderCard';
+import DeleteEntryButton from './DeleteEntryButton';
 
 interface Partnership {
   id: string;
@@ -24,7 +25,7 @@ const statusBadge: Record<string, { label: string; style: string }> = {
 
 const PartnershipsTab = () => {
   const { refreshKey } = useWeek();
-  const { clientId } = useAdmin();
+  const { clientId, isAdmin } = useAdmin();
   const [partnerships, setPartnerships] = useState<Partnership[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -78,7 +79,10 @@ const PartnershipsTab = () => {
                           <h4 className="text-sm font-bold">{p.partner_name}</h4>
                           <p className="text-[11px] text-muted-foreground">{p.type}</p>
                         </div>
-                        <span className={`text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 shrink-0 ${badge.style}`}>{badge.label}</span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className={`text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 ${badge.style}`}>{badge.label}</span>
+                          {isAdmin && <DeleteEntryButton table="partnerships" id={p.id} label="this partnership" />}
+                        </div>
                       </div>
                       <p className="text-xs text-muted-foreground">{p.description}</p>
                     </div>
@@ -117,7 +121,10 @@ const PartnershipsTab = () => {
                       <p className="text-[11px] text-muted-foreground">{h.description}</p>
                       {h.emv_generated && <p className="text-[10px] text-muted-foreground mt-0.5">${h.emv_generated}K EMV generated</p>}
                     </div>
-                    <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 bg-muted text-muted-foreground shrink-0">PAST</span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 bg-muted text-muted-foreground">PAST</span>
+                      {isAdmin && <DeleteEntryButton table="partnerships" id={h.id} label="this partnership" />}
+                    </div>
                   </div>
                 ))}
               </div>
