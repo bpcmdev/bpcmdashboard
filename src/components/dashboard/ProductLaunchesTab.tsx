@@ -94,6 +94,7 @@ const ProductLaunchesTab = () => {
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <span className="text-[10px] font-bold tracking-[0.12em] uppercase px-2 py-0.5 border border-background/30">ACTIVE</span>
+                  {isAdmin && <EditProductDialog entry={prod} />}
                   {isAdmin && <DeleteEntryButton table="product_pipeline" id={prod.id} label="this product" />}
                 </div>
               </div>
