@@ -97,6 +97,7 @@ const PipelineMomentsTab = () => {
                           <div className="flex items-start gap-1.5">
                             <span className="text-muted-foreground mt-0.5">●</span>
                             <p className="text-[10px] text-foreground/80 leading-snug flex-1">{e.title}{e.description ? ` — ${e.description}` : ''}</p>
+                            {isAdmin && <EditPipelineDialog entry={e} />}
                             {isAdmin && <DeleteEntryButton table="pipeline_moments" id={e.id} label="this moment" />}
                           </div>
                           <span className={`self-start text-[8px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 ${badgeStyles[e.event_type] ?? 'bg-muted text-muted-foreground'}`}>
