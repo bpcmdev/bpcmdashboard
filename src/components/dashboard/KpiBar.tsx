@@ -13,10 +13,10 @@ interface KpiCardProps {
 const KpiCard = ({ label, value, delta, deltaType }: KpiCardProps) => {
   const deltaColor = deltaType === 'positive' ? 'text-positive' : deltaType === 'negative' ? 'text-negative' : 'text-neutral-delta';
   return (
-    <div className="flex-1 px-5 py-4 text-center">
-      <p className="text-[10px] font-semibold tracking-[0.15em] uppercase text-muted-foreground mb-1">{label}</p>
-      <p className="text-2xl font-bold tracking-tight text-foreground">{value}</p>
-      <p className={`text-[11px] mt-0.5 ${deltaColor}`}>{delta}</p>
+    <div className="flex-1 px-3 md:px-5 py-3 md:py-4 text-center min-w-0">
+      <p className="text-[9px] md:text-[10px] font-semibold tracking-[0.15em] uppercase text-muted-foreground mb-1 truncate">{label}</p>
+      <p className="text-lg md:text-2xl font-bold tracking-tight text-foreground">{value}</p>
+      <p className={`text-[10px] md:text-[11px] mt-0.5 ${deltaColor} truncate`}>{delta}</p>
     </div>
   );
 };
@@ -105,12 +105,12 @@ const KpiBar = () => {
 
   if (loading) {
     return (
-      <div className="bg-card flex divide-x divide-border border-b border-border">
+      <div className="bg-card grid grid-cols-3 md:flex divide-x divide-border border-b border-border">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="flex-1 px-5 py-4 text-center space-y-2">
-            <Skeleton className="h-3 w-20 mx-auto" />
-            <Skeleton className="h-7 w-16 mx-auto" />
-            <Skeleton className="h-3 w-24 mx-auto" />
+          <div key={i} className="flex-1 px-3 md:px-5 py-3 md:py-4 text-center space-y-2">
+            <Skeleton className="h-3 w-16 md:w-20 mx-auto" />
+            <Skeleton className="h-6 md:h-7 w-12 md:w-16 mx-auto" />
+            <Skeleton className="h-3 w-20 md:w-24 mx-auto" />
           </div>
         ))}
       </div>
@@ -118,7 +118,7 @@ const KpiBar = () => {
   }
 
   return (
-    <div className="bg-card flex divide-x divide-border border-b border-border">
+    <div className="bg-card grid grid-cols-3 md:flex divide-x divide-border border-b border-border">
       {kpis.map((kpi) => (
         <KpiCard key={kpi.label} {...kpi} />
       ))}

@@ -14,6 +14,8 @@ interface WeekContextType {
   lastUpdated: Date | null;
   refreshData: () => void;
   refreshKey: number;
+  overrideClientId: string | null;
+  setOverrideClientId: (id: string | null) => void;
 }
 
 const WeekContext = createContext<WeekContextType>({
@@ -24,6 +26,8 @@ const WeekContext = createContext<WeekContextType>({
   lastUpdated: null,
   refreshData: () => {},
   refreshKey: 0,
+  overrideClientId: null,
+  setOverrideClientId: () => {},
 });
 
 export const useWeek = () => useContext(WeekContext);
@@ -53,74 +57,86 @@ function generateLast12Weeks(): WeekOption[] {
   return weeks;
 }
 
+function formatWeekLabel(weekStart: string): string {
+  const start = new Date(weekStart + 'T00:00:00');
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
+  const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
+  const startDay = start.getDate();
+  const endDay = end.getDate();
+  const year = end.getFullYear();
+  return startMonth === endMonth
+    ? `${startMonth} ${startDay}–${endDay}, ${year}`
+    : `${startMonth} ${startDay} – ${endMonth} ${endDay}, ${year}`;
+}
+
 export const WeekProvider = ({ children }: { children: ReactNode }) => {
   const [weeks, setWeeks] = useState<WeekOption[]>([]);
   const [selectedWeek, setSelectedWeek] = useState('');
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [overrideClientId, setOverrideClientId] = useState<string | null>(null);
+  const [userClientId, setUserClientId] = useState<string | null>(null);
 
   const refreshData = () => {
     setRefreshKey(k => k + 1);
     setLastUpdated(new Date());
   };
 
-  // Track when selectedWeek changes to update lastUpdated
   useEffect(() => {
     if (selectedWeek) {
       setLastUpdated(new Date());
     }
   }, [selectedWeek, refreshKey]);
 
+  // Fetch user's client_id once
   useEffect(() => {
-    const init = async () => {
-      // Get logged-in user's client_id
+    const fetchProfile = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      let userClientId: string | null = null;
       if (user) {
         const { data: profile } = await supabase
           .from('user_profiles')
           .select('client_id')
           .eq('id', user.id)
           .maybeSingle();
-        userClientId = profile?.client_id ?? null;
+        setUserClientId(profile?.client_id ?? null);
       }
+    };
+    fetchProfile();
+  }, []);
 
+  // Fetch weeks whenever active client changes
+  const activeClientId = overrideClientId ?? userClientId;
+
+  useEffect(() => {
+    if (activeClientId === null && userClientId === null) return; // still loading
+    const fetchWeeks = async () => {
+      setLoading(true);
       let query = supabase
         .from('weekly_snapshots')
         .select('week_start')
         .order('week_start', { ascending: false });
 
-      if (userClientId) {
-        query = query.eq('client_id', userClientId);
+      if (activeClientId) {
+        query = query.eq('client_id', activeClientId);
       }
 
       const { data } = await query;
 
       let weekOptions: WeekOption[];
       if (data && data.length > 0) {
-        // Deduplicate week_start values
         const seen = new Set<string>();
         const unique = data.filter((row: any) => {
           if (seen.has(row.week_start)) return false;
           seen.add(row.week_start);
           return true;
         });
-
-        weekOptions = unique.map((row: any) => {
-          const start = new Date(row.week_start + 'T00:00:00');
-          const end = new Date(start);
-          end.setDate(end.getDate() + 6);
-          const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
-          const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
-          const startDay = start.getDate();
-          const endDay = end.getDate();
-          const year = end.getFullYear();
-          const label = startMonth === endMonth
-            ? `${startMonth} ${startDay}–${endDay}, ${year}`
-            : `${startMonth} ${startDay} – ${endMonth} ${endDay}, ${year}`;
-          return { label, weekStart: row.week_start };
-        });
+        weekOptions = unique.map((row: any) => ({
+          label: formatWeekLabel(row.week_start),
+          weekStart: row.week_start,
+        }));
       } else {
         weekOptions = generateLast12Weeks();
       }
@@ -132,11 +148,11 @@ export const WeekProvider = ({ children }: { children: ReactNode }) => {
       setLastUpdated(new Date());
       setLoading(false);
     };
-    init();
-  }, []);
+    fetchWeeks();
+  }, [activeClientId, userClientId]);
 
   return (
-    <WeekContext.Provider value={{ selectedWeek, setSelectedWeek, weeks, loading, lastUpdated, refreshData, refreshKey }}>
+    <WeekContext.Provider value={{ selectedWeek, setSelectedWeek, weeks, loading, lastUpdated, refreshData, refreshKey, overrideClientId, setOverrideClientId }}>
       {children}
     </WeekContext.Provider>
   );
