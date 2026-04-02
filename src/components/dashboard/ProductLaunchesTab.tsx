@@ -91,7 +91,10 @@ const ProductLaunchesTab = () => {
                   </p>
                   {prod.description && <p className="text-xs opacity-60 mt-1">{prod.description}</p>}
                 </div>
-                <span className="text-[10px] font-bold tracking-[0.12em] uppercase px-2 py-0.5 border border-background/30">ACTIVE</span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-[10px] font-bold tracking-[0.12em] uppercase px-2 py-0.5 border border-background/30">ACTIVE</span>
+                  {isAdmin && <DeleteEntryButton table="product_pipeline" id={prod.id} label="this product" />}
+                </div>
               </div>
             </div>
           ))}
