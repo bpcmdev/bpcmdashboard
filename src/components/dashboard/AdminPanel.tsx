@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { useWeek } from '@/contexts/WeekContext';
 import { supabase } from '@/lib/supabase';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -735,6 +735,7 @@ function UserManagement() {
 
 /* ── Main Panel ── */
 export default function AdminPanel({ open, onOpenChange, clientId }: AdminPanelProps) {
+  const [adminSection, setAdminSection] = useState('pipeline');
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto bg-background border-border p-0">
