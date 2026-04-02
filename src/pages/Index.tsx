@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { WeekProvider } from '@/contexts/WeekContext';
+import { useAdmin } from '@/hooks/useAdmin';
+import { WeekProvider, useWeek } from '@/contexts/WeekContext';
 import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import NarrativeTicker from '@/components/dashboard/NarrativeTicker';
 import KpiBar from '@/components/dashboard/KpiBar';
@@ -29,26 +30,46 @@ const TAB_MAP: Record<string, React.ComponentType> = {
   'TIKTOK SHOP': TikTokShopTab,
 };
 
+/** Inner component that can access WeekContext */
+function DashboardContent() {
+  const [activeTab, setActiveTab] = useState('EARNED MEDIA');
+  const { clientColor, clientId } = useAdmin();
+  const { setOverrideClientId } = useWeek();
+  const TabContent = TAB_MAP[activeTab];
+
+  // Sync admin client override into WeekContext
+  useEffect(() => {
+    if (clientId) {
+      setOverrideClientId(clientId);
+    }
+  }, [clientId, setOverrideClientId]);
+
+  return (
+    <div
+      className="min-h-screen bg-background"
+      style={clientColor ? { '--client-accent': clientColor } as React.CSSProperties : undefined}
+    >
+      <DashboardHeader />
+      <NarrativeTicker />
+      <KpiBar />
+      <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+      {TabContent ? <TabContent /> : (
+        <div className="flex items-center justify-center py-24 text-muted-foreground text-sm">
+          {activeTab} — Coming soon
+        </div>
+      )}
+    </div>
+  );
+}
+
 const Index = () => {
   const { loading } = useAuth(true);
-  const [activeTab, setActiveTab] = useState('EARNED MEDIA');
-  const TabContent = TAB_MAP[activeTab];
 
   if (loading) return <div className="min-h-screen bg-background" />;
 
   return (
     <WeekProvider>
-      <div className="min-h-screen bg-background">
-        <DashboardHeader />
-        <NarrativeTicker />
-        <KpiBar />
-        <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
-        {TabContent ? <TabContent /> : (
-          <div className="flex items-center justify-center py-24 text-muted-foreground text-sm">
-            {activeTab} — Coming soon
-          </div>
-        )}
-      </div>
+      <DashboardContent />
     </WeekProvider>
   );
 };
