@@ -66,7 +66,8 @@ const KeyWinsTab = () => {
             {columns.map(([category, cards]) => (
               <div key={category} className="space-y-4">
                 {cards.map((card) => (
-                  <div key={card.id} className="bg-card border border-border p-5">
+                  <div key={card.id} className="bg-card border border-border p-5 relative">
+                    {isAdmin && <div className="absolute top-3 right-3"><DeleteEntryButton table="key_wins" id={card.id} label="this win" /></div>}
                     <span className="inline-block text-[10px] font-bold tracking-[0.12em] uppercase px-2 py-0.5 bg-foreground text-background mb-3">
                       {card.category}
                     </span>

@@ -111,7 +111,8 @@ const ProductLaunchesTab = () => {
                   const sBadge = statusBadge[prod.status] ?? { label: prod.status?.toUpperCase() ?? '', style: 'bg-muted text-muted-foreground' };
                   const retailers = toArray(prod.retailers);
                   return (
-                    <div key={prod.id} className="bg-card border border-border p-5">
+                    <div key={prod.id} className="bg-card border border-border p-5 relative">
+                      {isAdmin && <div className="absolute top-3 right-3"><DeleteEntryButton table="product_pipeline" id={prod.id} label="this product" /></div>}
                       <h4 className="text-sm font-bold text-foreground mb-2">{prod.product_name.toUpperCase()}</h4>
                       <p className="text-xs text-muted-foreground leading-relaxed mb-2">{prod.description}</p>
                       {retailers.length > 0 && (

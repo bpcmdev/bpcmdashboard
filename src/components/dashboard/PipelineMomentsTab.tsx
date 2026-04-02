@@ -118,7 +118,8 @@ const PipelineMomentsTab = () => {
                   <div key={card.id} className="bg-card border border-border p-5">
                     <div className="flex items-center gap-2 mb-3">
                       <span className={`w-2 h-2 rounded-full ${dotColors[card.priority] ?? 'bg-muted-foreground'}`} />
-                      <span className="text-[9px] font-bold tracking-[0.12em] uppercase text-muted-foreground">{card.priority}</span>
+                      <span className="text-[9px] font-bold tracking-[0.12em] uppercase text-muted-foreground flex-1">{card.priority}</span>
+                      {isAdmin && <DeleteEntryButton table="pipeline_moments" id={card.id} label="this moment" />}
                     </div>
                     <h4 className="text-sm font-bold text-foreground mb-2">{card.title}</h4>
                     <p className="text-xs text-muted-foreground leading-relaxed mb-3">{card.description}</p>

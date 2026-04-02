@@ -121,7 +121,10 @@ const PartnershipsTab = () => {
                       <p className="text-[11px] text-muted-foreground">{h.description}</p>
                       {h.emv_generated && <p className="text-[10px] text-muted-foreground mt-0.5">${h.emv_generated}K EMV generated</p>}
                     </div>
-                    <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 bg-muted text-muted-foreground shrink-0">PAST</span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 bg-muted text-muted-foreground">PAST</span>
+                      {isAdmin && <DeleteEntryButton table="partnerships" id={h.id} label="this partnership" />}
+                    </div>
                   </div>
                 ))}
               </div>
