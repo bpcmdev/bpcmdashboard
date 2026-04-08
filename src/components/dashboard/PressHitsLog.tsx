@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
+import { useAdmin } from '@/hooks/useAdmin';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -18,6 +19,7 @@ interface Placement {
   published_at: string | null;
   placement_type: string;
   placed_by: string;
+  dismissed: boolean;
 }
 
 function formatReach(val: number | null): string {
@@ -49,9 +51,9 @@ function placementLabel(placedBy: string, placementType: string): string {
 
 const PressHitsLog = () => {
   const { selectedWeek, refreshKey, activeClientId } = useWeek();
+  const { isAdmin } = useAdmin();
   const [placements, setPlacements] = useState<Placement[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [previewItem, setPreviewItem] = useState<Placement | null>(null);
 
   // Manual entry form
@@ -60,39 +62,46 @@ const PressHitsLog = () => {
   const [newUrl, setNewUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
+  const fetchPlacements = async () => {
     if (!selectedWeek) return;
-    const fetch = async () => {
-      setLoading(true);
-      const weekEnd = new Date(selectedWeek + 'T00:00:00');
-      weekEnd.setDate(weekEnd.getDate() + 6);
-      const endStr = weekEnd.toISOString().split('T')[0];
+    setLoading(true);
+    const weekEnd = new Date(selectedWeek + 'T00:00:00');
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    const endStr = weekEnd.toISOString().split('T')[0];
 
-      let query = supabase
-        .from('placements')
-        .select('id, headline, url, outlet_name, outlet_tier, outlet_umv, published_at, placement_type, placed_by')
-        .gte('published_at', selectedWeek)
-        .lte('published_at', endStr)
-        .order('published_at', { ascending: false });
+    let query = supabase
+      .from('placements')
+      .select('id, headline, url, outlet_name, outlet_tier, outlet_umv, published_at, placement_type, placed_by, dismissed')
+      .gte('published_at', selectedWeek)
+      .lte('published_at', endStr)
+      .order('published_at', { ascending: false });
 
-      if (activeClientId) {
-        query = query.eq('client_id', activeClientId);
-      }
+    if (activeClientId) {
+      query = query.eq('client_id', activeClientId);
+    }
 
-      const { data } = await query;
-      setPlacements(data ?? []);
-      setLoading(false);
-    };
-    fetch();
+    const { data } = await query;
+    setPlacements(data ?? []);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchPlacements();
   }, [selectedWeek, refreshKey, activeClientId]);
 
   const visible = useMemo(
-    () => placements.filter((p) => !dismissed.has(p.id)),
-    [placements, dismissed]
+    () => placements.filter((p) => !p.dismissed),
+    [placements]
   );
 
-  const dismiss = (id: string) => {
-    setDismissed((prev) => new Set(prev).add(id));
+  const dismiss = async (id: string) => {
+    // Optimistic update
+    setPlacements((prev) => prev.map((p) => (p.id === id ? { ...p, dismissed: true } : p)));
+    const { error } = await supabase.from('placements').update({ dismissed: true }).eq('id', id);
+    if (error) {
+      toast.error('Failed to dismiss placement.');
+      setPlacements((prev) => prev.map((p) => (p.id === id ? { ...p, dismissed: false } : p)));
+    }
   };
 
   const handleAddHit = async () => {
@@ -102,7 +111,6 @@ const PressHitsLog = () => {
     }
     setSubmitting(true);
 
-    // Resolve week_id
     let weekQuery = supabase
       .from('weekly_snapshots')
       .select('id')
@@ -137,19 +145,7 @@ const PressHitsLog = () => {
       setNewOutlet('');
       setNewHeadline('');
       setNewUrl('');
-      // Re-fetch
-      const weekEnd = new Date(selectedWeek + 'T00:00:00');
-      weekEnd.setDate(weekEnd.getDate() + 6);
-      const endStr = weekEnd.toISOString().split('T')[0];
-      let q = supabase
-        .from('placements')
-        .select('id, headline, url, outlet_name, outlet_tier, outlet_umv, published_at, placement_type, placed_by')
-        .gte('published_at', selectedWeek)
-        .lte('published_at', endStr)
-        .order('published_at', { ascending: false });
-      if (activeClientId) q = q.eq('client_id', activeClientId);
-      const { data } = await q;
-      setPlacements(data ?? []);
+      await fetchPlacements();
     }
     setSubmitting(false);
   };
@@ -203,55 +199,59 @@ const PressHitsLog = () => {
                 >
                   {tierLabel(p.outlet_tier)}
                 </span>
-                <button
-                  onClick={() => dismiss(p.id)}
-                  className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
-                  title="Dismiss"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
+                {isAdmin && (
+                  <button
+                    onClick={() => dismiss(p.id)}
+                    className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+                    title="Dismiss"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             ))}
           </div>
         )}
 
-        {/* Manual entry form */}
-        <div className="border-t border-border pt-4 space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-            <Input
-              placeholder="Outlet name"
-              value={newOutlet}
-              onChange={(e) => setNewOutlet(e.target.value)}
-              className="text-xs"
-            />
-            <Input
-              placeholder="Headline or article title"
-              value={newHeadline}
-              onChange={(e) => setNewHeadline(e.target.value)}
-              className="text-xs md:col-span-2"
-            />
-            <Input
-              placeholder="Article URL"
-              value={newUrl}
-              onChange={(e) => setNewUrl(e.target.value)}
-              className="text-xs"
-            />
+        {/* Manual entry form — admin only */}
+        {isAdmin && (
+          <div className="border-t border-border pt-4 space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+              <Input
+                placeholder="Outlet name"
+                value={newOutlet}
+                onChange={(e) => setNewOutlet(e.target.value)}
+                className="text-xs"
+              />
+              <Input
+                placeholder="Headline or article title"
+                value={newHeadline}
+                onChange={(e) => setNewHeadline(e.target.value)}
+                className="text-xs md:col-span-2"
+              />
+              <Input
+                placeholder="Article URL"
+                value={newUrl}
+                onChange={(e) => setNewUrl(e.target.value)}
+                className="text-xs"
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] text-muted-foreground max-w-lg">
+                Paste any article URL missed by the API — it will appear at the top of the log and open in the article preview.
+              </p>
+              <Button
+                size="sm"
+                onClick={handleAddHit}
+                disabled={submitting}
+                className="text-xs gap-1"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                {submitting ? 'Adding…' : 'ADD HIT'}
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] text-muted-foreground max-w-lg">
-              Paste any article URL missed by the API — it will appear at the top of the log and open in the article preview.
-            </p>
-            <Button
-              size="sm"
-              onClick={handleAddHit}
-              disabled={submitting}
-              className="text-xs gap-1"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              {submitting ? 'Adding…' : 'ADD HIT'}
-            </Button>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Slide-in preview panel */}
