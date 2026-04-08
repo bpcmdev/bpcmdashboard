@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Search, X } from 'lucide-react';
+import PressHitsLog from './PressHitsLog';
 
 const EarnedMediaTab = () => {
   const [searchText, setSearchText] = useState('');
@@ -112,6 +113,9 @@ const EarnedMediaTab = () => {
           typeFilter={typeFilter}
         />
       </div>
+
+      {/* All Press Hits Running Log */}
+      <PressHitsLog />
     </div>
   );
 };
