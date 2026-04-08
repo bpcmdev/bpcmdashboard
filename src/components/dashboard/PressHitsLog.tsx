@@ -7,8 +7,13 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { X, ExternalLink, Plus } from 'lucide-react';
+import { X, ExternalLink, Plus, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+
+function ensureHttps(url: string): string {
+  if (/^https?:\/\//i.test(url)) return url;
+  return `https://${url}`;
+}
 
 interface Placement {
   id: string;
