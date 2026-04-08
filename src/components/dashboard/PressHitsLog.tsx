@@ -258,9 +258,10 @@ const PressHitsLog = () => {
               <Select value={newPlacementType} onValueChange={setNewPlacementType}>
                 <SelectTrigger className="text-xs"><SelectValue placeholder="Placement type" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="earned">Earned</SelectItem>
+                  <SelectItem value="placed">BPCM Placed</SelectItem>
+                  <SelectItem value="organic">Organic</SelectItem>
                   <SelectItem value="newswire">Newswire</SelectItem>
-                  <SelectItem value="contributed">Contributed</SelectItem>
+                  <SelectItem value="corporate">Corporate</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={String(newTier)} onValueChange={(v) => setNewTier(Number(v))}>
