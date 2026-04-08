@@ -314,24 +314,36 @@ const PressHitsLog = () => {
                   {tierLabel(previewItem.outlet_tier)}
                 </span>
               </div>
-              {previewItem.url && (
-                <div className="space-y-3 pt-2">
-                  <div className="border border-border rounded overflow-hidden">
-                    <iframe
-                      src={previewItem.url}
-                      title="Article preview"
-                      className="w-full h-[50vh]"
-                      sandbox="allow-scripts allow-same-origin"
-                    />
+              {previewItem.url && (() => {
+                const safeUrl = ensureHttps(previewItem.url);
+                return (
+                  <div className="space-y-3 pt-2">
+                    <div className="border border-border rounded overflow-hidden relative">
+                      <iframe
+                        src={safeUrl}
+                        title="Article preview"
+                        className="w-full h-[50vh]"
+                        sandbox="allow-scripts allow-same-origin"
+                        onError={(e) => {
+                          (e.target as HTMLIFrameElement).style.display = 'none';
+                          const fallback = (e.target as HTMLIFrameElement).nextElementSibling;
+                          if (fallback) (fallback as HTMLElement).style.display = 'flex';
+                        }}
+                      />
+                      <div className="hidden flex-col items-center justify-center gap-2 py-10 text-center">
+                        <AlertCircle className="w-8 h-8 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">This article cannot be previewed — click Open in New Tab to read it.</p>
+                      </div>
+                    </div>
+                    <Button asChild variant="outline" size="sm" className="w-full gap-2 text-xs">
+                      <a href={safeUrl} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        Open in New Tab
+                      </a>
+                    </Button>
                   </div>
-                  <Button asChild variant="outline" size="sm" className="w-full gap-2 text-xs">
-                    <a href={previewItem.url} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      Open in New Tab
-                    </a>
-                  </Button>
-                </div>
-              )}
+                );
+              })()}
             </SheetHeader>
           )}
         </SheetContent>
