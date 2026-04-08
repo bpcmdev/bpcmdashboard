@@ -62,7 +62,7 @@ const PressHitsLog = () => {
   const [newHeadline, setNewHeadline] = useState('');
   const [newUrl, setNewUrl] = useState('');
   const [newSentiment, setNewSentiment] = useState('positive');
-  const [newPlacementType, setNewPlacementType] = useState('earned');
+  const [newPlacementType, setNewPlacementType] = useState('placed');
   const [newTier, setNewTier] = useState(1);
   const [submitting, setSubmitting] = useState(false);
 
