@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAdmin } from '@/hooks/useAdmin';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -60,6 +61,9 @@ const PressHitsLog = () => {
   const [newOutlet, setNewOutlet] = useState('');
   const [newHeadline, setNewHeadline] = useState('');
   const [newUrl, setNewUrl] = useState('');
+  const [newSentiment, setNewSentiment] = useState('positive');
+  const [newPlacementType, setNewPlacementType] = useState('earned');
+  const [newTier, setNewTier] = useState(1);
   const [submitting, setSubmitting] = useState(false);
 
   const fetchPlacements = async () => {
@@ -129,10 +133,13 @@ const PressHitsLog = () => {
       headline: newHeadline.trim(),
       url: newUrl.trim() || null,
       outlet_name: newOutlet.trim(),
-      outlet_tier: 1,
+      outlet_tier: newTier,
       published_at: today,
-      placement_type: 'earned',
-      placed_by: '',
+      placement_type: newPlacementType,
+      placed_by: 'Manual entry',
+      sentiment: newSentiment,
+      impressions: 0,
+      ad_value: 0,
       client_id: activeClientId,
       week_id: weekRow.id,
     });
@@ -145,6 +152,9 @@ const PressHitsLog = () => {
       setNewOutlet('');
       setNewHeadline('');
       setNewUrl('');
+      setNewSentiment('positive');
+      setNewPlacementType('earned');
+      setNewTier(1);
       await fetchPlacements();
     }
     setSubmitting(false);
@@ -216,7 +226,7 @@ const PressHitsLog = () => {
         {/* Manual entry form — admin only */}
         {isAdmin && (
           <div className="border-t border-border pt-4 space-y-3">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
               <Input
                 placeholder="Outlet name"
                 value={newOutlet}
@@ -235,6 +245,32 @@ const PressHitsLog = () => {
                 onChange={(e) => setNewUrl(e.target.value)}
                 className="text-xs"
               />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+              <Select value={newSentiment} onValueChange={setNewSentiment}>
+                <SelectTrigger className="text-xs"><SelectValue placeholder="Sentiment" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="positive">Positive</SelectItem>
+                  <SelectItem value="neutral">Neutral</SelectItem>
+                  <SelectItem value="negative">Negative</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={newPlacementType} onValueChange={setNewPlacementType}>
+                <SelectTrigger className="text-xs"><SelectValue placeholder="Placement type" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="earned">Earned</SelectItem>
+                  <SelectItem value="newswire">Newswire</SelectItem>
+                  <SelectItem value="contributed">Contributed</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={String(newTier)} onValueChange={(v) => setNewTier(Number(v))}>
+                <SelectTrigger className="text-xs"><SelectValue placeholder="Outlet tier" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">Tier 1</SelectItem>
+                  <SelectItem value="2">Tier 2</SelectItem>
+                  <SelectItem value="3">Tier 3</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex items-center justify-between">
               <p className="text-[10px] text-muted-foreground max-w-lg">
