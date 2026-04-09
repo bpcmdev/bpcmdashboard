@@ -445,7 +445,7 @@ const PressHitsLog = () => {
                 <span className={`shrink-0 text-[10px] font-bold tracking-wider px-2 py-0.5 ${tierBg[p.outlet_tier] ?? 'bg-tier1'}`}>
                   {tierLabel(p.outlet_tier)}
                 </span>
-                {isAdmin && (
+                {isAdmin && !p.dismissed && (
                   <div className="shrink-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={(e) => openEdit(p, e)} className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground" title="Edit">
                       <Pencil className="w-3.5 h-3.5" />
@@ -457,6 +457,16 @@ const PressHitsLog = () => {
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
+                )}
+                {isAdmin && p.dismissed && (
+                  <button
+                    onClick={(e) => restore(p.id, e)}
+                    className="shrink-0 flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover:opacity-100"
+                    title="Restore"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    Restore
+                  </button>
                 )}
               </div>
             ))}
