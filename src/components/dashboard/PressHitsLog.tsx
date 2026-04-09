@@ -301,6 +301,16 @@ const PressHitsLog = () => {
     }
   };
 
+  const restore = async (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setPlacements((prev) => prev.map((p) => (p.id === id ? { ...p, dismissed: false } : p)));
+    const { error } = await supabase.from('placements').update({ dismissed: false }).eq('id', id);
+    if (error) {
+      toast.error('Failed to restore placement.');
+      setPlacements((prev) => prev.map((p) => (p.id === id ? { ...p, dismissed: true } : p)));
+    }
+  };
+
   const handleAdd = async () => {
     if (!addForm.outletName.trim() || !addForm.headline.trim()) {
       toast.error('Outlet name and headline are required.');
