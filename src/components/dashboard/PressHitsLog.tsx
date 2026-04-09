@@ -13,9 +13,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { X, ExternalLink, Plus, AlertCircle, Pencil, Trash2, CalendarIcon } from 'lucide-react';
+import { X, ExternalLink, Plus, AlertCircle, Pencil, Trash2, CalendarIcon, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 function ensureHttps(url: string): string {
   if (/^https?:\/\//i.test(url)) return url;
@@ -282,6 +284,13 @@ const PressHitsLog = () => {
     () => placements.filter((p) => !p.dismissed),
     [placements]
   );
+
+  const dismissed = useMemo(
+    () => placements.filter((p) => p.dismissed),
+    [placements]
+  );
+
+  const displayList = showDismissed ? [...visible, ...dismissed] : visible;
 
   const dismiss = async (id: string) => {
     setPlacements((prev) => prev.map((p) => (p.id === id ? { ...p, dismissed: true } : p)));
