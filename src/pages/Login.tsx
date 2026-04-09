@@ -50,7 +50,7 @@ const Login = () => {
   const doubled = [...TICKER_PILLS, ...TICKER_PILLS, ...TICKER_PILLS];
 
   return (
-    <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#0a1628' }}>
+    <div className="h-screen relative overflow-hidden" style={{ backgroundColor: '#0a1628' }}>
       {/* Floating orbs */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="login-orb login-orb-1" />
@@ -58,7 +58,7 @@ const Login = () => {
         <div className="login-orb login-orb-3" />
       </div>
 
-      <div className="relative z-10 min-h-screen flex flex-col lg:flex-row">
+      <div className="relative z-10 h-full flex flex-col-reverse lg:flex-row overflow-auto">
         {/* Left panel */}
         <div className="flex-1 flex flex-col justify-between p-8 md:p-12 lg:p-16">
           {/* Logo */}
