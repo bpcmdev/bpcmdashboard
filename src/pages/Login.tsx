@@ -58,9 +58,9 @@ const Login = () => {
         <div className="login-orb login-orb-3" />
       </div>
 
-      <div className="relative z-10 h-full flex flex-col-reverse lg:flex-row overflow-auto">
+      <div className="relative z-10 flex h-full md:flex-row">
         {/* Left panel */}
-        <div className="flex-1 flex flex-col justify-between p-8 md:p-12 lg:p-16">
+        <div className="hidden md:flex md:w-3/5 flex-col justify-between p-8 md:p-12 lg:p-16">
           {/* Logo */}
           <div>
             <h1 className="text-[28px] font-bold text-white tracking-[0.18em]">BPCM</h1>
@@ -102,7 +102,7 @@ const Login = () => {
         </div>
 
         {/* Right panel */}
-        <div className="flex items-center justify-center p-6 md:p-12 lg:p-16 lg:w-[480px] shrink-0 min-h-[60vh] lg:min-h-0">
+        <div className="flex w-full items-center justify-center p-6 md:w-2/5 md:p-12 lg:p-16">
           <div className="w-full max-w-sm bg-white rounded-2xl p-8 space-y-6 shadow-2xl">
             <div className="space-y-1">
               <h2 className="text-xl font-semibold text-gray-900">Welcome back</h2>
