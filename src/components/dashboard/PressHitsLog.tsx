@@ -13,9 +13,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { X, ExternalLink, Plus, AlertCircle, Pencil, Trash2, CalendarIcon } from 'lucide-react';
+import { X, ExternalLink, Plus, AlertCircle, Pencil, Trash2, CalendarIcon, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 function ensureHttps(url: string): string {
   if (/^https?:\/\//i.test(url)) return url;
@@ -246,6 +248,7 @@ const PressHitsLog = () => {
 
   // Delete
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [showDismissed, setShowDismissed] = useState(false);
 
   const updateAddForm = (field: string, value: any) => setAddForm(prev => ({ ...prev, [field]: value }));
   const updateEditForm = (field: string, value: any) => setEditForm(prev => ({ ...prev, [field]: value }));
@@ -282,12 +285,29 @@ const PressHitsLog = () => {
     [placements]
   );
 
+  const dismissed = useMemo(
+    () => placements.filter((p) => p.dismissed),
+    [placements]
+  );
+
+  const displayList = showDismissed ? [...visible, ...dismissed] : visible;
+
   const dismiss = async (id: string) => {
     setPlacements((prev) => prev.map((p) => (p.id === id ? { ...p, dismissed: true } : p)));
     const { error } = await supabase.from('placements').update({ dismissed: true }).eq('id', id);
     if (error) {
       toast.error('Failed to dismiss placement.');
       setPlacements((prev) => prev.map((p) => (p.id === id ? { ...p, dismissed: false } : p)));
+    }
+  };
+
+  const restore = async (id: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setPlacements((prev) => prev.map((p) => (p.id === id ? { ...p, dismissed: false } : p)));
+    const { error } = await supabase.from('placements').update({ dismissed: false }).eq('id', id);
+    if (error) {
+      toast.error('Failed to restore placement.');
+      setPlacements((prev) => prev.map((p) => (p.id === id ? { ...p, dismissed: true } : p)));
     }
   };
 
@@ -371,6 +391,12 @@ const PressHitsLog = () => {
             All Press Hits — Running Log
           </h3>
           <div className="flex items-center gap-3">
+            {isAdmin && (
+              <div className="flex items-center gap-2">
+                <Switch id="show-dismissed" checked={showDismissed} onCheckedChange={setShowDismissed} className="scale-75" />
+                <Label htmlFor="show-dismissed" className="text-[10px] text-muted-foreground cursor-pointer">Show dismissed</Label>
+              </div>
+            )}
             {!loading && (
               <span className="text-xs font-semibold text-foreground">
                 {visible.length} hit{visible.length !== 1 ? 's' : ''}
@@ -392,14 +418,17 @@ const PressHitsLog = () => {
               <Skeleton key={i} className="h-10 w-full" />
             ))}
           </div>
-        ) : visible.length === 0 ? (
+        ) : displayList.length === 0 ? (
           <p className="text-xs text-muted-foreground text-center py-6">No placements for this week.</p>
         ) : (
           <div className="divide-y divide-border">
-            {visible.map((p) => (
+            {displayList.map((p) => (
               <div
                 key={p.id}
-                className="flex items-center gap-2 md:gap-3 py-2.5 group cursor-pointer hover:bg-accent/30 transition-colors px-1 -mx-1 rounded"
+                className={cn(
+                  "flex items-center gap-2 md:gap-3 py-2.5 group cursor-pointer hover:bg-accent/30 transition-colors px-1 -mx-1 rounded",
+                  p.dismissed && "opacity-40"
+                )}
                 onClick={() => setPreviewItem(p)}
               >
                 <span className="text-xs font-semibold w-28 md:w-36 shrink-0 truncate">{p.outlet_name}</span>
@@ -416,7 +445,7 @@ const PressHitsLog = () => {
                 <span className={`shrink-0 text-[10px] font-bold tracking-wider px-2 py-0.5 ${tierBg[p.outlet_tier] ?? 'bg-tier1'}`}>
                   {tierLabel(p.outlet_tier)}
                 </span>
-                {isAdmin && (
+                {isAdmin && !p.dismissed && (
                   <div className="shrink-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={(e) => openEdit(p, e)} className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground" title="Edit">
                       <Pencil className="w-3.5 h-3.5" />
@@ -428,6 +457,16 @@ const PressHitsLog = () => {
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
+                )}
+                {isAdmin && p.dismissed && (
+                  <button
+                    onClick={(e) => restore(p.id, e)}
+                    className="shrink-0 flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover:opacity-100"
+                    title="Restore"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    Restore
+                  </button>
                 )}
               </div>
             ))}

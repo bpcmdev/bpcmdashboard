@@ -127,3 +127,44 @@
 .animate-pulse-live {
   animation: pulse-live 2s ease-in-out infinite;
 }
+
+/* Login page */
+@keyframes ticker-login-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-33.333%); }
+}
+.animate-ticker-login {
+  animation: ticker-login-scroll 20s linear infinite;
+}
+
+@keyframes float-orb {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -40px) scale(1.05); }
+  66% { transform: translate(-20px, 20px) scale(0.95); }
+}
+
+.login-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.15;
+  animation: float-orb 12s ease-in-out infinite;
+}
+.login-orb-1 {
+  width: 400px; height: 400px;
+  top: 10%; left: 10%;
+  background: radial-gradient(circle, #3b82f6, transparent 70%);
+  animation-delay: 0s;
+}
+.login-orb-2 {
+  width: 300px; height: 300px;
+  top: 50%; right: 20%;
+  background: radial-gradient(circle, #60a5fa, transparent 70%);
+  animation-delay: -4s;
+}
+.login-orb-3 {
+  width: 350px; height: 350px;
+  bottom: 10%; left: 30%;
+  background: radial-gradient(circle, #93c5fd, transparent 70%);
+  animation-delay: -8s;
+}
