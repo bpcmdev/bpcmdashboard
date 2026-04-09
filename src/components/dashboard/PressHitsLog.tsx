@@ -246,6 +246,7 @@ const PressHitsLog = () => {
 
   // Delete
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [showDismissed, setShowDismissed] = useState(false);
 
   const updateAddForm = (field: string, value: any) => setAddForm(prev => ({ ...prev, [field]: value }));
   const updateEditForm = (field: string, value: any) => setEditForm(prev => ({ ...prev, [field]: value }));
