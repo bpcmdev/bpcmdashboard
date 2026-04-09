@@ -60,7 +60,7 @@ const Login = () => {
 
       <div className="relative z-10 h-full flex flex-col-reverse lg:flex-row overflow-auto">
         {/* Left panel */}
-        <div className="flex-1 hidden lg:flex flex-col justify-between p-8 md:p-12 lg:p-16">
+        <div className="flex-1 flex flex-col justify-between p-8 md:p-12 lg:p-16">
           {/* Logo */}
           <div>
             <h1 className="text-[28px] font-bold text-white tracking-[0.18em]">BPCM</h1>
