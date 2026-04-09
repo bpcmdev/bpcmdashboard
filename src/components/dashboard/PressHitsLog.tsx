@@ -391,6 +391,12 @@ const PressHitsLog = () => {
             All Press Hits — Running Log
           </h3>
           <div className="flex items-center gap-3">
+            {isAdmin && (
+              <div className="flex items-center gap-2">
+                <Switch id="show-dismissed" checked={showDismissed} onCheckedChange={setShowDismissed} className="scale-75" />
+                <Label htmlFor="show-dismissed" className="text-[10px] text-muted-foreground cursor-pointer">Show dismissed</Label>
+              </div>
+            )}
             {!loading && (
               <span className="text-xs font-semibold text-foreground">
                 {visible.length} hit{visible.length !== 1 ? 's' : ''}
@@ -412,14 +418,17 @@ const PressHitsLog = () => {
               <Skeleton key={i} className="h-10 w-full" />
             ))}
           </div>
-        ) : visible.length === 0 ? (
+        ) : displayList.length === 0 ? (
           <p className="text-xs text-muted-foreground text-center py-6">No placements for this week.</p>
         ) : (
           <div className="divide-y divide-border">
-            {visible.map((p) => (
+            {displayList.map((p) => (
               <div
                 key={p.id}
-                className="flex items-center gap-2 md:gap-3 py-2.5 group cursor-pointer hover:bg-accent/30 transition-colors px-1 -mx-1 rounded"
+                className={cn(
+                  "flex items-center gap-2 md:gap-3 py-2.5 group cursor-pointer hover:bg-accent/30 transition-colors px-1 -mx-1 rounded",
+                  p.dismissed && "opacity-40"
+                )}
                 onClick={() => setPreviewItem(p)}
               >
                 <span className="text-xs font-semibold w-28 md:w-36 shrink-0 truncate">{p.outlet_name}</span>
