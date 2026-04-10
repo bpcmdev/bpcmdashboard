@@ -64,12 +64,6 @@ const trendData = [
   { week: 'Mar 23', chatgpt: 74, perplexity: 68, rufus: 61, gemini: 51, claude: 43 },
 ];
 
-const topQueries = [
-  { rank: 1, query: 'Best Sephora makeup launches 2026', tag: 'PRODUCT LAUNCH', tagStyle: 'bg-positive/20 text-positive', searches: '180K searches', platforms: '5/5 platforms' },
-  { rank: 2, query: 'Best clean concealer 2026', tag: 'CLEAN BEAUTY', tagStyle: 'bg-positive/20 text-positive', searches: '110K searches', platforms: '5/5 platforms' },
-  { rank: 3, query: 'Top indie beauty brands right now', tag: 'CATEGORY', tagStyle: 'bg-muted text-muted-foreground', searches: '90K searches', platforms: '4/5 platforms' },
-  { rank: 4, query: 'Vegan cruelty-free makeup recommendations', tag: 'VALUES / ETHICS', tagStyle: 'bg-muted text-muted-foreground', searches: '74K searches', platforms: '4/5 platforms' },
-];
 
 // --- Sub-components ---
 const PlatformScorecards = ({ cards, loading }: { cards: PlatformCard[]; loading: boolean }) => {
