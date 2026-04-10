@@ -117,7 +117,7 @@ const GeoAISovTab = () => {
 
   return (
     <div className="p-6 space-y-6">
-      <PlatformScorecards />
+      <GeoScorecards />
       <ViewToggle active={view} onToggle={setView} />
 
       {/* BY PLATFORM view */}
