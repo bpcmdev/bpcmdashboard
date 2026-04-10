@@ -77,17 +77,21 @@ const PlatformScorecards = ({ cards, loading }: { cards: PlatformCard[]; loading
     );
   }
 
-  if (cards.length === 0) {
-    return (
-      <div className="bg-card border border-border p-8 text-center">
-        <p className="text-sm text-muted-foreground">No AI visibility data for this week.</p>
-      </div>
-    );
-  }
+  const cardMap = new Map(cards.map(c => [c.platform.toLowerCase(), c]));
 
   return (
-    <div className={`grid gap-4`} style={{ gridTemplateColumns: `repeat(${Math.min(cards.length, 5)}, minmax(0, 1fr))` }}>
-      {cards.map((s) => {
+    <div className="grid grid-cols-5 gap-4">
+      {ALL_PLATFORMS.map((platform) => {
+        const s = cardMap.get(platform.toLowerCase());
+        if (!s) {
+          return (
+            <div key={platform} className="bg-card border border-border p-4 opacity-50">
+              <p className="text-xs font-bold tracking-wider uppercase">{platform}</p>
+              <p className="text-[10px] text-muted-foreground mb-2">—</p>
+              <p className="text-lg font-medium text-muted-foreground mt-4">No data this week</p>
+            </div>
+          );
+        }
         const badge = statusBadge(s.status);
         const delta = deltaText(s.deltaPts);
         return (
