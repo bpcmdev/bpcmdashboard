@@ -165,8 +165,10 @@ const AIVisibilityTab = () => {
 
   const [cards, setCards] = useState<PlatformCard[]>([]);
   const [sovRows, setSovRows] = useState<SovRow[]>([]);
+  const [topQueries, setTopQueries] = useState<TopQuery[]>([]);
   const [cardsLoading, setCardsLoading] = useState(true);
   const [sovLoading, setSovLoading] = useState(true);
+  const [queriesLoading, setQueriesLoading] = useState(true);
 
   // Fetch platform scorecards
   useEffect(() => {
