@@ -22,6 +22,12 @@ interface SovRow {
   highlight: boolean;
 }
 
+interface TopQuery {
+  query_text: string;
+  category: string;
+  search_volume: number;
+}
+
 // --- Helpers ---
 function statusBadge(status: string) {
   switch (status) {
