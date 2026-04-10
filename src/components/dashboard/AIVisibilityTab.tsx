@@ -40,6 +40,8 @@ function deltaText(pts: number) {
   return { text: '— flat this month', color: 'text-neutral-delta' };
 }
 
+const ALL_PLATFORMS = ['ChatGPT', 'Perplexity', 'Rufus', 'Gemini', 'Claude'];
+
 // --- Hardcoded data kept for now ---
 const trendData = [
   { week: 'Jan 5', chatgpt: 57, perplexity: 55, rufus: 45, gemini: 48, claude: 48 },
