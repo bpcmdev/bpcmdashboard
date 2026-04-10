@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
-import { PlatformScorecards, ViewToggle } from './AIVisibilityTab';
+import { ViewToggle } from './AIVisibilityTab';
+import { supabase } from '@/lib/supabase';
+import { useWeek } from '@/contexts/WeekContext';
+import { useEffect, useState as useStateLive } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const platformCharts = [
   {
