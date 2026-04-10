@@ -237,6 +237,37 @@ const AIVisibilityTab = () => {
     fetch();
   }, [selectedWeek, activeClientId, refreshKey, clientName]);
 
+  // Fetch top queries
+  useEffect(() => {
+    if (!selectedWeek || !activeClientId) {
+      setTopQueries([]);
+      setQueriesLoading(false);
+      return;
+    }
+    const fetchQueries = async () => {
+      setQueriesLoading(true);
+      const { data, error } = await supabase
+        .from('ai_top_queries')
+        .select('*')
+        .eq('client_id', activeClientId)
+        .eq('week_start', selectedWeek)
+        .order('search_volume', { ascending: false });
+
+      if (error) {
+        console.error('Failed to fetch ai_top_queries:', error);
+        setTopQueries([]);
+      } else {
+        setTopQueries((data ?? []).map((row: any) => ({
+          query_text: row.query_text ?? '',
+          category: row.category ?? '',
+          search_volume: row.search_volume ?? 0,
+        })));
+      }
+      setQueriesLoading(false);
+    };
+    fetchQueries();
+  }, [selectedWeek, activeClientId, refreshKey]);
+
   return (
     <div className="p-6 space-y-6">
       <PlatformScorecards cards={cards} loading={cardsLoading} />
@@ -280,21 +311,30 @@ const AIVisibilityTab = () => {
         </div>
       </div>
 
-      {/* Top Queries — hardcoded for now */}
+      {/* Top Queries — live from Supabase */}
       <div className="bg-card border border-border p-5">
         <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-1">Top Queries Where {clientName ?? 'Brand'} Appears</h3>
         <p className="text-[10px] text-muted-foreground mb-4">Expand each query for per-platform detail and competitive SOV — ranked dynamically</p>
-        <div className="divide-y divide-border">
-          {topQueries.map((q) => (
-            <div key={q.rank} className="flex items-center gap-4 py-3">
-              <span className="text-sm font-bold w-6 text-right text-muted-foreground">{q.rank}</span>
-              <span className="text-sm font-medium flex-1">"{q.query}"</span>
-              <span className={`text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 ${q.tagStyle}`}>{q.tag}</span>
-              <span className="text-[11px] text-muted-foreground">{q.searches} · {q.platforms}</span>
-              <span className="text-muted-foreground text-xs">▼</span>
-            </div>
-          ))}
-        </div>
+        {queriesLoading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-10 w-full" />
+            ))}
+          </div>
+        ) : topQueries.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-6">No top query data for this week.</p>
+        ) : (
+          <div className="divide-y divide-border">
+            {topQueries.map((q, idx) => (
+              <div key={idx} className="flex items-center gap-4 py-3">
+                <span className="text-sm font-bold w-6 text-right text-muted-foreground">{idx + 1}</span>
+                <span className="text-sm font-medium flex-1">"{q.query_text}"</span>
+                <span className="text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 bg-muted text-muted-foreground">{q.category}</span>
+                <span className="text-[11px] text-muted-foreground">{q.search_volume.toLocaleString()} searches</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
