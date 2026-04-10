@@ -1,10 +1,28 @@
 import { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { ViewToggle } from './AIVisibilityTab';
-import { supabase } from '@/lib/supabase';
-import { useWeek } from '@/contexts/WeekContext';
-import { useEffect, useState as useStateLive } from 'react';
-import { Skeleton } from '@/components/ui/skeleton';
+
+const hardcodedScorecards = [
+  { platform: 'CHATGPT', subtitle: 'OpenAI · GPT-4o', score: 74, badge: 'STRONG', badgeStyle: 'bg-foreground text-background', delta: '▲ +6pts this month', deltaColor: 'text-positive' },
+  { platform: 'PERPLEXITY', subtitle: 'Perplexity AI', score: 68, badge: 'STRONG', badgeStyle: 'bg-foreground text-background', delta: '▲ +9pts this month', deltaColor: 'text-positive' },
+  { platform: 'RUFUS', subtitle: 'Amazon · Shopping AI', score: 61, badge: 'STRONG', badgeStyle: 'bg-foreground text-background', delta: '▲ +11pts this month', deltaColor: 'text-positive' },
+  { platform: 'GEMINI', subtitle: 'Google · Gemini 1.5', score: 51, badge: 'MODERATE', badgeStyle: 'bg-corp-news', delta: '— flat this month', deltaColor: 'text-neutral-delta' },
+  { platform: 'CLAUDE', subtitle: 'Anthropic', score: 43, badge: 'NEEDS WORK', badgeStyle: 'border border-destructive text-destructive bg-transparent', delta: '▼ -2pts this month', deltaColor: 'text-negative' },
+];
+
+const GeoScorecards = () => (
+  <div className="grid grid-cols-5 gap-4">
+    {hardcodedScorecards.map((s) => (
+      <div key={s.platform} className="bg-card border border-border p-4">
+        <p className="text-xs font-bold tracking-wider">{s.platform}</p>
+        <p className="text-[10px] text-muted-foreground mb-2 truncate">{s.subtitle}</p>
+        <p className="text-3xl font-bold text-foreground mb-1">{s.score}<span className="text-sm font-normal text-muted-foreground">/100</span></p>
+        <span className={`inline-block text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 mb-1 ${s.badgeStyle}`}>{s.badge}</span>
+        <p className={`text-[11px] ${s.deltaColor}`}>{s.delta}</p>
+      </div>
+    ))}
+  </div>
+);
 
 const platformCharts = [
   {
