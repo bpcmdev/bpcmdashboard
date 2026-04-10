@@ -50,7 +50,7 @@ const Login = () => {
   const doubled = [...TICKER_PILLS, ...TICKER_PILLS, ...TICKER_PILLS];
 
   return (
-    <div className="h-screen relative overflow-hidden" style={{ backgroundColor: '#0a1628' }}>
+    <div className="h-screen relative overflow-hidden flex flex-col" style={{ backgroundColor: '#0a1628' }}>
       {/* Floating orbs */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="login-orb login-orb-1" />
@@ -58,46 +58,26 @@ const Login = () => {
         <div className="login-orb login-orb-3" />
       </div>
 
-      <div className="relative z-10 flex h-full md:flex-row">
+      {/* Main content area */}
+      <div className="relative z-10 flex flex-1 min-h-0 md:flex-row">
         {/* Left panel */}
         <div className="hidden md:flex md:w-3/5 flex-col justify-between p-8 md:p-12 lg:p-16">
           {/* Logo */}
           <div>
-            <h1 className="text-[28px] font-bold text-white tracking-[0.18em]">BPCM</h1>
-            <p className="text-[10px] tracking-[0.15em] uppercase mt-1" style={{ color: '#3b82f6' }}>
+            <h1 className="text-[50px] font-bold text-white tracking-[0.18em]">BPCM</h1>
+            <p className="text-[13px] tracking-[0.22em] uppercase mt-1.5" style={{ color: '#93c5fd' }}>
               INTELLIGENCE PLATFORM
             </p>
           </div>
 
           {/* Tagline */}
-          <div className="my-auto py-12 lg:py-0 max-w-lg">
-            <h2 className="text-[28px] md:text-[32px] font-normal text-white leading-snug">
+          <div className="my-auto max-w-2xl">
+            <h2 className="text-[48px] lg:text-[54px] font-semibold text-white leading-[1.1]">
               Where <em className="not-italic italic" style={{ color: '#93c5fd' }}>stories</em> move people and markets.
             </h2>
-            <p className="mt-4 text-sm leading-relaxed" style={{ color: '#475569' }}>
+            <p className="mt-6 text-[15px] leading-[1.8]" style={{ color: '#64748b' }}>
               Intelligence built for the agencies shaping culture. See your brand's impact — earned, social, and AI — in one place.
             </p>
-          </div>
-
-          {/* Ticker */}
-          <div className="flex items-center gap-3 overflow-hidden">
-            <div className="shrink-0 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse-live" />
-              <span className="text-[9px] font-bold tracking-[0.15em] uppercase text-green-400">LIVE INTELLIGENCE</span>
-            </div>
-            <div className="overflow-hidden flex-1">
-              <div className="flex gap-2 animate-ticker-login whitespace-nowrap">
-                {doubled.map((pill, i) => (
-                  <span
-                    key={i}
-                    className="inline-block text-[10px] px-3 py-1 rounded-full border whitespace-nowrap"
-                    style={{ color: '#94a3b8', borderColor: 'rgba(148,163,184,0.2)' }}
-                  >
-                    {pill}
-                  </span>
-                ))}
-              </div>
-            </div>
           </div>
         </div>
 
@@ -167,6 +147,27 @@ const Login = () => {
               <p className="text-[11px] text-gray-400">Restricted to authorized brand accounts</p>
               <p className="text-[10px] text-gray-300">New York · Los Angeles · London</p>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Ticker — full width across bottom */}
+      <div className="relative z-10 hidden md:flex items-center gap-3 px-8 md:px-12 lg:px-16 py-4 overflow-hidden shrink-0" style={{ borderTop: '1px solid rgba(148,163,184,0.1)' }}>
+        <div className="shrink-0 flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse-live" />
+          <span className="text-[9px] font-bold tracking-[0.15em] uppercase text-green-400">LIVE INTELLIGENCE</span>
+        </div>
+        <div className="overflow-hidden flex-1">
+          <div className="flex gap-2 animate-ticker-login whitespace-nowrap">
+            {doubled.map((pill, i) => (
+              <span
+                key={i}
+                className="inline-block text-[10px] px-3 py-1 rounded-full border whitespace-nowrap"
+                style={{ color: '#94a3b8', borderColor: 'rgba(148,163,184,0.2)' }}
+              >
+                {pill}
+              </span>
+            ))}
           </div>
         </div>
       </div>
