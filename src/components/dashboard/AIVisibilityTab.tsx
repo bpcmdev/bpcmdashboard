@@ -1,14 +1,46 @@
-import { useState } from 'react';
-import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid, BarChart, Bar } from 'recharts';
+import { useState, useEffect } from 'react';
+import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from 'recharts';
+import { supabase } from '@/lib/supabase';
+import { useWeek } from '@/contexts/WeekContext';
+import { useAdmin } from '@/hooks/useAdmin';
+import { Skeleton } from '@/components/ui/skeleton';
 
-const scorecards = [
-  { platform: 'CHATGPT', subtitle: 'OpenAI · GPT-4o', score: 74, badge: 'STRONG', badgeStyle: 'bg-foreground text-background', delta: '▲ +6pts this month', deltaColor: 'text-positive' },
-  { platform: 'PERPLEXITY', subtitle: 'Perplexity AI', score: 68, badge: 'STRONG', badgeStyle: 'bg-foreground text-background', delta: '▲ +9pts this month', deltaColor: 'text-positive' },
-  { platform: 'RUFUS', subtitle: 'Amazon · Shopping AI', score: 61, badge: 'STRONG', badgeStyle: 'bg-foreground text-background', delta: '▲ +11pts this month', deltaColor: 'text-positive' },
-  { platform: 'GEMINI', subtitle: 'Google · Gemini 1.5', score: 51, badge: 'MODERATE', badgeStyle: 'bg-corp-news', delta: '— flat this month', deltaColor: 'text-neutral-delta' },
-  { platform: 'CLAUDE', subtitle: 'Anthropic', score: 43, badge: 'NEEDS WORK', badgeStyle: 'border border-destructive text-destructive bg-transparent', delta: '▼ -2pts this month', deltaColor: 'text-negative' },
-];
+// --- Types ---
+interface PlatformCard {
+  platform: string;
+  subtitle: string;
+  score: number;
+  status: string;
+  deltaPts: number;
+}
 
+interface SovRow {
+  brand: string;
+  pct: number;
+  rank: number;
+  deltaPts: number;
+  highlight: boolean;
+}
+
+// --- Helpers ---
+function statusBadge(status: string) {
+  switch (status) {
+    case 'strong':
+      return { label: 'STRONG', style: 'bg-foreground text-background' };
+    case 'needs-work':
+      return { label: 'NEEDS WORK', style: 'border border-destructive text-destructive bg-transparent' };
+    default:
+      return { label: 'MODERATE', style: 'bg-corp-news' };
+  }
+}
+
+function deltaText(pts: number) {
+  if (pts > 0) return { text: `▲ +${pts}pts this month`, color: 'text-positive' };
+  if (pts < 0) return { text: `▼ ${pts}pts this month`, color: 'text-negative' };
+  return { text: '— flat this month', color: 'text-neutral-delta' };
+}
+
+// --- Hardcoded data kept for now ---
 const trendData = [
   { week: 'Jan 5', chatgpt: 57, perplexity: 55, rufus: 45, gemini: 48, claude: 48 },
   { week: 'Jan 12', chatgpt: 58, perplexity: 56, rufus: 46, gemini: 48, claude: 47 },
@@ -24,16 +56,6 @@ const trendData = [
   { week: 'Mar 23', chatgpt: 74, perplexity: 68, rufus: 61, gemini: 51, claude: 43 },
 ];
 
-const aiSovData = [
-  { brand: 'Rhode', pct: 24 },
-  { brand: 'Glossier', pct: 21 },
-  { brand: 'Milk Makeup', pct: 18, highlight: true },
-  { brand: 'Pat McGrath Labs', pct: 14 },
-  { brand: 'Merit Beauty', pct: 10 },
-  { brand: 'Tower 28', pct: 8 },
-  { brand: 'Charlotte Tilbury', pct: 5 },
-];
-
 const topQueries = [
   { rank: 1, query: 'Best Sephora makeup launches 2026', tag: 'PRODUCT LAUNCH', tagStyle: 'bg-positive/20 text-positive', searches: '180K searches', platforms: '5/5 platforms' },
   { rank: 2, query: 'Best clean concealer 2026', tag: 'CLEAN BEAUTY', tagStyle: 'bg-positive/20 text-positive', searches: '110K searches', platforms: '5/5 platforms' },
@@ -41,19 +63,44 @@ const topQueries = [
   { rank: 4, query: 'Vegan cruelty-free makeup recommendations', tag: 'VALUES / ETHICS', tagStyle: 'bg-muted text-muted-foreground', searches: '74K searches', platforms: '4/5 platforms' },
 ];
 
-export const PlatformScorecards = () => (
-  <div className="grid grid-cols-5 gap-4">
-    {scorecards.map((s) => (
-      <div key={s.platform} className="bg-card border border-border p-4">
-        <p className="text-xs font-bold tracking-wider">{s.platform}</p>
-        <p className="text-[10px] text-muted-foreground mb-2 truncate">{s.subtitle}</p>
-        <p className="text-3xl font-bold text-foreground mb-1">{s.score}<span className="text-sm font-normal text-muted-foreground">/100</span></p>
-        <span className={`inline-block text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 mb-1 ${s.badgeStyle}`}>{s.badge}</span>
-        <p className={`text-[11px] ${s.deltaColor}`}>{s.delta}</p>
+// --- Sub-components ---
+const PlatformScorecards = ({ cards, loading }: { cards: PlatformCard[]; loading: boolean }) => {
+  if (loading) {
+    return (
+      <div className="grid grid-cols-5 gap-4">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton key={i} className="h-28 w-full" />
+        ))}
       </div>
-    ))}
-  </div>
-);
+    );
+  }
+
+  if (cards.length === 0) {
+    return (
+      <div className="bg-card border border-border p-8 text-center">
+        <p className="text-sm text-muted-foreground">No AI visibility data for this week.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`grid gap-4`} style={{ gridTemplateColumns: `repeat(${Math.min(cards.length, 5)}, minmax(0, 1fr))` }}>
+      {cards.map((s) => {
+        const badge = statusBadge(s.status);
+        const delta = deltaText(s.deltaPts);
+        return (
+          <div key={s.platform} className="bg-card border border-border p-4">
+            <p className="text-xs font-bold tracking-wider uppercase">{s.platform}</p>
+            <p className="text-[10px] text-muted-foreground mb-2 truncate">{s.subtitle}</p>
+            <p className="text-3xl font-bold text-foreground mb-1">{s.score}<span className="text-sm font-normal text-muted-foreground">/100</span></p>
+            <span className={`inline-block text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 mb-1 ${badge.style}`}>{badge.label}</span>
+            <p className={`text-[11px] ${delta.color}`}>{delta.text}</p>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
 
 export const ViewToggle = ({ active, onToggle }: { active: string; onToggle: (v: string) => void }) => (
   <div className="flex gap-0 border border-border w-fit">
@@ -65,12 +112,126 @@ export const ViewToggle = ({ active, onToggle }: { active: string; onToggle: (v:
   </div>
 );
 
+const SovSection = ({ rows, loading }: { rows: SovRow[]; loading: boolean }) => {
+  if (loading) {
+    return (
+      <div className="space-y-2.5">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton key={i} className="h-5 w-full" />
+        ))}
+      </div>
+    );
+  }
+
+  if (rows.length === 0) {
+    return <p className="text-sm text-muted-foreground text-center py-6">No competitive SOV data for this week.</p>;
+  }
+
+  const maxPct = Math.max(...rows.map(r => r.pct), 1);
+
+  return (
+    <div className="space-y-2.5">
+      {rows.map((row) => {
+        const delta = deltaText(row.deltaPts);
+        return (
+          <div key={row.brand} className="flex items-center gap-3">
+            <span className="text-[10px] text-muted-foreground w-4 text-right">#{row.rank}</span>
+            <span className={`text-xs w-32 truncate ${row.highlight ? 'font-bold text-foreground' : 'text-foreground/80'}`}>{row.brand}</span>
+            <div className="flex-1 h-4 bg-secondary">
+              <div className={`h-full ${row.highlight ? 'bg-foreground' : 'bg-foreground/40'}`} style={{ width: `${(row.pct / maxPct) * 100}%` }} />
+            </div>
+            <span className={`text-xs w-8 text-right ${row.highlight ? 'font-bold' : ''}`}>{row.pct}%</span>
+            {row.highlight && row.deltaPts !== 0 && (
+              <span className={`text-[10px] ${delta.color}`}>{row.deltaPts > 0 ? `▲ +${row.deltaPts}pts` : `▼ ${row.deltaPts}pts`}</span>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+// --- Main component ---
 const AIVisibilityTab = () => {
   const [view, setView] = useState('BY PLATFORM');
+  const { selectedWeek, refreshKey, activeClientId } = useWeek();
+  const { clientName } = useAdmin();
+
+  const [cards, setCards] = useState<PlatformCard[]>([]);
+  const [sovRows, setSovRows] = useState<SovRow[]>([]);
+  const [cardsLoading, setCardsLoading] = useState(true);
+  const [sovLoading, setSovLoading] = useState(true);
+
+  // Fetch platform scorecards
+  useEffect(() => {
+    if (!selectedWeek || !activeClientId) {
+      setCards([]);
+      setCardsLoading(false);
+      return;
+    }
+    const fetch = async () => {
+      setCardsLoading(true);
+      const { data, error } = await supabase
+        .from('ai_visibility')
+        .select('*')
+        .eq('client_id', activeClientId)
+        .eq('week_start', selectedWeek)
+        .order('visibility_score', { ascending: false });
+
+      if (error) {
+        console.error('Failed to fetch ai_visibility:', error);
+        setCards([]);
+      } else {
+        setCards((data ?? []).map((row: any) => ({
+          platform: row.platform ?? '',
+          subtitle: row.subtitle ?? '',
+          score: row.visibility_score ?? 0,
+          status: row.status ?? 'moderate',
+          deltaPts: row.delta_pts ?? 0,
+        })));
+      }
+      setCardsLoading(false);
+    };
+    fetch();
+  }, [selectedWeek, activeClientId, refreshKey]);
+
+  // Fetch competitive SOV
+  useEffect(() => {
+    if (!selectedWeek || !activeClientId) {
+      setSovRows([]);
+      setSovLoading(false);
+      return;
+    }
+    const fetch = async () => {
+      setSovLoading(true);
+      const { data, error } = await supabase
+        .from('competitive_sov')
+        .select('*')
+        .eq('client_id', activeClientId)
+        .eq('week_start', selectedWeek)
+        .order('rank', { ascending: true });
+
+      if (error) {
+        console.error('Failed to fetch competitive_sov:', error);
+        setSovRows([]);
+      } else {
+        const lowerClientName = (clientName ?? '').toLowerCase();
+        setSovRows((data ?? []).map((row: any) => ({
+          brand: row.brand_name ?? '',
+          pct: row.sov_pct ?? 0,
+          rank: row.rank ?? 0,
+          deltaPts: row.delta_pts ?? 0,
+          highlight: (row.brand_name ?? '').toLowerCase() === lowerClientName,
+        })));
+      }
+      setSovLoading(false);
+    };
+    fetch();
+  }, [selectedWeek, activeClientId, refreshKey, clientName]);
 
   return (
     <div className="p-6 space-y-6">
-      <PlatformScorecards />
+      <PlatformScorecards cards={cards} loading={cardsLoading} />
       <ViewToggle active={view} onToggle={setView} />
 
       <div className="grid grid-cols-5 gap-6">
@@ -107,25 +268,13 @@ const AIVisibilityTab = () => {
 
         <div className="col-span-2 bg-card border border-border p-5">
           <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">AI SOV vs Competitive Set</h3>
-          <div className="space-y-2.5">
-            {aiSovData.map((row, i) => (
-              <div key={row.brand} className="flex items-center gap-3">
-                <span className="text-[10px] text-muted-foreground w-4 text-right">#{i + 1}</span>
-                <span className={`text-xs w-32 truncate ${row.highlight ? 'font-bold text-foreground' : 'text-foreground/80'}`}>{row.brand}</span>
-                <div className="flex-1 h-4 bg-secondary">
-                  <div className={`h-full ${row.highlight ? 'bg-foreground' : 'bg-foreground/40'}`} style={{ width: `${(row.pct / 30) * 100}%` }} />
-                </div>
-                <span className={`text-xs w-8 text-right ${row.highlight ? 'font-bold' : ''}`}>{row.pct}%</span>
-                {row.highlight && <span className="text-[10px] text-positive">▲ +7pts</span>}
-              </div>
-            ))}
-          </div>
+          <SovSection rows={sovRows} loading={sovLoading} />
         </div>
       </div>
 
-      {/* Top Queries */}
+      {/* Top Queries — hardcoded for now */}
       <div className="bg-card border border-border p-5">
-        <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-1">Top Queries Where Milk Appears</h3>
+        <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-1">Top Queries Where {clientName ?? 'Brand'} Appears</h3>
         <p className="text-[10px] text-muted-foreground mb-4">Expand each query for per-platform detail and competitive SOV — ranked dynamically</p>
         <div className="divide-y divide-border">
           {topQueries.map((q) => (
