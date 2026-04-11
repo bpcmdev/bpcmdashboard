@@ -97,7 +97,7 @@ const ShareOfVoiceTable = () => {
       </h3>
       <div className="space-y-2.5">
         {sovData.map((row) => (
-          <div key={row.rank} className="flex items-center gap-3">
+          <div key={row.brand} className="flex items-center gap-3">
             <span className="text-[10px] text-muted-foreground w-4 text-right">#{row.rank}</span>
             <span className={`text-xs w-32 truncate ${row.highlight ? 'font-bold text-foreground' : 'text-foreground/80'}`}>
               {row.brand}
