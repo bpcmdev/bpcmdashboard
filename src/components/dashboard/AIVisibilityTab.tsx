@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
 import { useAdmin } from '@/hooks/useAdmin';
 import { Skeleton } from '@/components/ui/skeleton';
+import TopDomainsSection from './TopDomainsSection';
 
 // --- Types ---
 interface PlatformCard {
@@ -320,6 +321,8 @@ const AIVisibilityTab = () => {
           <SovSection rows={sovRows} loading={sovLoading} />
         </div>
       </div>
+
+      <TopDomainsSection />
 
       {/* Top Queries — live from Supabase */}
       <div className="bg-card border border-border p-5">
