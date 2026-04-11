@@ -104,8 +104,8 @@ const PlatformScorecards = ({ cards, loading }: { cards: PlatformCard[]; loading
         const badge = statusBadge(s.status);
         const delta = deltaText(s.deltaPts);
         return (
-          <div key={s.platform} className="bg-card border border-border p-4">
-            <p className="text-xs font-bold tracking-wider uppercase">{s.platform}</p>
+          <div key={platform} className="bg-card border border-border p-4">
+            <p className="text-xs font-bold tracking-wider uppercase">{platform}</p>
             <p className="text-[10px] text-muted-foreground mb-2 truncate">{s.subtitle}</p>
             <p className="text-3xl font-bold text-foreground mb-1">{s.score}<span className="text-sm font-normal text-muted-foreground">/100</span></p>
             <span className={`inline-block text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 mb-1 ${badge.style}`}>{badge.label}</span>
