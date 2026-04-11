@@ -5,6 +5,9 @@ import { useWeek } from '@/contexts/WeekContext';
 import { useAdmin } from '@/hooks/useAdmin';
 import { Skeleton } from '@/components/ui/skeleton';
 import TopDomainsSection from './TopDomainsSection';
+import HeatmapView from './ai-visibility/HeatmapView';
+import GapAnalysisView from './ai-visibility/GapAnalysisView';
+import TopQueriesSovView from './ai-visibility/TopQueriesSovView';
 
 // --- Types ---
 interface PlatformCard {
@@ -284,43 +287,49 @@ const AIVisibilityTab = () => {
       <PlatformScorecards cards={cards} loading={cardsLoading} />
       <ViewToggle active={view} onToggle={setView} />
 
-      <div className="grid grid-cols-5 gap-6">
-        <div className="col-span-3 bg-card border border-border p-5">
-          <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">Visibility Score Trend — 12 Weeks</h3>
-          <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={trendData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 90%)" vertical={false} />
-              <XAxis dataKey="week" tick={{ fontSize: 9, fill: 'hsl(0 0% 45%)' }} axisLine={{ stroke: 'hsl(0 0% 90%)' }} tickLine={false} />
-              <YAxis domain={[30, 85]} tick={{ fontSize: 10, fill: 'hsl(0 0% 45%)' }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ backgroundColor: 'hsl(0 0% 9%)', border: 'none', borderRadius: '2px', color: 'white', fontSize: 11 }} />
-              <Line type="monotone" dataKey="chatgpt" name="ChatGPT" stroke="hsl(0 0% 9%)" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="perplexity" name="Perplexity" stroke="hsl(0 0% 30%)" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="rufus" name="Rufus" stroke="hsl(38 80% 55%)" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="gemini" name="Gemini" stroke="hsl(0 0% 55%)" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="claude" name="Claude" stroke="hsl(0 0% 75%)" strokeWidth={2} dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
-          <div className="flex gap-4 mt-2">
-            {[
-              { name: 'ChatGPT', color: 'hsl(0 0% 9%)' },
-              { name: 'Perplexity', color: 'hsl(0 0% 30%)' },
-              { name: 'Rufus', color: 'hsl(38 80% 55%)' },
-              { name: 'Gemini', color: 'hsl(0 0% 55%)' },
-              { name: 'Claude', color: 'hsl(0 0% 75%)' },
-            ].map((l) => (
-              <div key={l.name} className="flex items-center gap-1.5">
-                <div className="w-3 h-0.5" style={{ backgroundColor: l.color }} />
-                <span className="text-[10px] text-muted-foreground">{l.name}</span>
-              </div>
-            ))}
+      {view === 'BY PLATFORM' && (
+        <div className="grid grid-cols-5 gap-6">
+          <div className="col-span-3 bg-card border border-border p-5">
+            <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">Visibility Score Trend — 12 Weeks</h3>
+            <ResponsiveContainer width="100%" height={260}>
+              <LineChart data={trendData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 90%)" vertical={false} />
+                <XAxis dataKey="week" tick={{ fontSize: 9, fill: 'hsl(0 0% 45%)' }} axisLine={{ stroke: 'hsl(0 0% 90%)' }} tickLine={false} />
+                <YAxis domain={[30, 85]} tick={{ fontSize: 10, fill: 'hsl(0 0% 45%)' }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{ backgroundColor: 'hsl(0 0% 9%)', border: 'none', borderRadius: '2px', color: 'white', fontSize: 11 }} />
+                <Line type="monotone" dataKey="chatgpt" name="ChatGPT" stroke="hsl(0 0% 9%)" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="perplexity" name="Perplexity" stroke="hsl(0 0% 30%)" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="rufus" name="Rufus" stroke="hsl(38 80% 55%)" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="gemini" name="Gemini" stroke="hsl(0 0% 55%)" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="claude" name="Claude" stroke="hsl(0 0% 75%)" strokeWidth={2} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+            <div className="flex gap-4 mt-2">
+              {[
+                { name: 'ChatGPT', color: 'hsl(0 0% 9%)' },
+                { name: 'Perplexity', color: 'hsl(0 0% 30%)' },
+                { name: 'Rufus', color: 'hsl(38 80% 55%)' },
+                { name: 'Gemini', color: 'hsl(0 0% 55%)' },
+                { name: 'Claude', color: 'hsl(0 0% 75%)' },
+              ].map((l) => (
+                <div key={l.name} className="flex items-center gap-1.5">
+                  <div className="w-3 h-0.5" style={{ backgroundColor: l.color }} />
+                  <span className="text-[10px] text-muted-foreground">{l.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="col-span-2 bg-card border border-border p-5">
+            <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">AI SOV vs Competitive Set</h3>
+            <SovSection rows={sovRows} loading={sovLoading} />
           </div>
         </div>
+      )}
 
-        <div className="col-span-2 bg-card border border-border p-5">
-          <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">AI SOV vs Competitive Set</h3>
-          <SovSection rows={sovRows} loading={sovLoading} />
-        </div>
-      </div>
+      {view === 'HEATMAP' && <HeatmapView />}
+      {view === 'GAP ANALYSIS' && <GapAnalysisView />}
+      {view === 'TOP QUERIES + SOV' && <TopQueriesSovView />}
 
       <TopDomainsSection />
 
