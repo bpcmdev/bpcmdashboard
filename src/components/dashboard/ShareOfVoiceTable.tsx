@@ -21,17 +21,18 @@ const ShareOfVoiceTable = () => {
   const [sovData, setSovData] = useState<SovRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const { selectedWeek, refreshKey } = useWeek();
+  const { selectedWeek, refreshKey, activeClientId } = useWeek();
 
   useEffect(() => {
-    if (!selectedWeek) return;
+    if (!selectedWeek || !activeClientId) return;
     const fetchSov = async () => {
       setLoading(true);
       setError(false);
       const { data, error: err } = await supabase
         .from('competitive_sov')
-        .select('*')
-        .order('rank', { ascending: true });
+        .select('brand_name, sov_pct, delta_pts')
+        .eq('client_id', activeClientId)
+        .eq('week_start', selectedWeek);
 
       if (err) {
         console.error('Failed to fetch competitive_sov:', err);
@@ -40,18 +41,39 @@ const ShareOfVoiceTable = () => {
         return;
       }
 
-      setSovData((data ?? []).map((row: Record<string, any>) => ({
-        rank: row.rank ?? 0,
-        brand: row.brand_name ?? '',
-        pct: row.sov_pct ?? 0,
-        delta: formatDeltaPts(row.delta_pts ?? 0),
-        highlight: (row.brand_name ?? '').toLowerCase().includes('milk'),
-      })));
+      // Aggregate across platforms: average sov_pct and delta_pts per brand
+      const brandMap = new Map<string, { totalPct: number; totalDelta: number; count: number }>();
+      (data ?? []).forEach((row: any) => {
+        const brand = row.brand_name ?? '';
+        const entry = brandMap.get(brand) || { totalPct: 0, totalDelta: 0, count: 0 };
+        entry.totalPct += row.sov_pct ?? 0;
+        entry.totalDelta += row.delta_pts ?? 0;
+        entry.count += 1;
+        brandMap.set(brand, entry);
+      });
+
+      const aggregated = Array.from(brandMap.entries())
+        .map(([brand, agg]) => ({
+          brand,
+          pct: Math.round((agg.totalPct / agg.count) * 10) / 10,
+          deltaPts: Math.round(agg.totalDelta / agg.count),
+          highlight: brand.toLowerCase().includes('milk'),
+        }))
+        .sort((a, b) => b.pct - a.pct)
+        .map((row, i) => ({
+          rank: i + 1,
+          brand: row.brand,
+          pct: row.pct,
+          delta: formatDeltaPts(row.deltaPts),
+          highlight: row.highlight,
+        }));
+
+      setSovData(aggregated);
       setLoading(false);
     };
 
     fetchSov();
-  }, [selectedWeek, refreshKey]);
+  }, [selectedWeek, refreshKey, activeClientId]);
 
   if (error) {
     return <p className="text-sm text-destructive text-center py-8">Unable to load data. Please try refreshing.</p>;
@@ -75,7 +97,7 @@ const ShareOfVoiceTable = () => {
       </h3>
       <div className="space-y-2.5">
         {sovData.map((row) => (
-          <div key={row.rank} className="flex items-center gap-3">
+          <div key={row.brand} className="flex items-center gap-3">
             <span className="text-[10px] text-muted-foreground w-4 text-right">#{row.rank}</span>
             <span className={`text-xs w-32 truncate ${row.highlight ? 'font-bold text-foreground' : 'text-foreground/80'}`}>
               {row.brand}
