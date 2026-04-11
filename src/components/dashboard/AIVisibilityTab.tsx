@@ -25,6 +25,7 @@ interface SovRow {
   rank: number;
   deltaPts: number;
   highlight: boolean;
+  articleCount: number;
 }
 
 interface TopQuery {
@@ -132,7 +133,10 @@ export const ViewToggle = ({ active, onToggle }: { active: string; onToggle: (v:
   </div>
 );
 
-const SovSection = ({ rows, loading }: { rows: SovRow[]; loading: boolean }) => {
+const SovSection = ({ rows, loading, clientName }: { rows: SovRow[]; loading: boolean; clientName: string }) => {
+  const [metric, setMetric] = useState<'sov' | 'articles'>('sov');
+  const [focusedBrand, setFocusedBrand] = useState<string | null>(null);
+
   if (loading) {
     return (
       <div className="space-y-2.5">
@@ -147,26 +151,71 @@ const SovSection = ({ rows, loading }: { rows: SovRow[]; loading: boolean }) => 
     return <p className="text-sm text-muted-foreground text-center py-6">No competitive SOV data for this week.</p>;
   }
 
-  const maxPct = Math.max(...rows.map(r => r.pct), 1);
+  const getValue = (r: SovRow) => metric === 'sov' ? r.pct : r.articleCount;
+  const maxVal = Math.max(...rows.map(getValue), 1);
+  const suffix = metric === 'sov' ? '%' : '';
 
   return (
-    <div className="space-y-2.5">
-      {rows.map((row) => {
-        const delta = deltaText(row.deltaPts);
-        return (
-          <div key={row.brand} className="flex items-center gap-3">
-            <span className="text-[10px] text-muted-foreground w-4 text-right">#{row.rank}</span>
-            <span className={`text-xs w-32 truncate ${row.highlight ? 'font-bold text-foreground' : 'text-foreground/80'}`}>{row.brand}</span>
-            <div className="flex-1 h-4 bg-secondary">
-              <div className={`h-full ${row.highlight ? 'bg-foreground' : 'bg-foreground/40'}`} style={{ width: `${(row.pct / maxPct) * 100}%` }} />
+    <div>
+      {/* Toggle */}
+      <div className="flex gap-0 border border-border w-fit mb-4">
+        <button onClick={() => setMetric('sov')} className={`px-2.5 py-1 text-[9px] font-semibold tracking-[0.1em] uppercase transition-colors ${metric === 'sov' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}>
+          Share of Voice
+        </button>
+        <button onClick={() => setMetric('articles')} className={`px-2.5 py-1 text-[9px] font-semibold tracking-[0.1em] uppercase transition-colors ${metric === 'articles' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}>
+          Article Count
+        </button>
+      </div>
+
+      {/* Bars */}
+      <div className="space-y-2">
+        {rows.map((row) => {
+          const delta = deltaText(row.deltaPts);
+          const val = getValue(row);
+          const isFocused = focusedBrand === null || focusedBrand === row.brand;
+          const isDimmed = focusedBrand !== null && focusedBrand !== row.brand;
+
+          return (
+            <div
+              key={row.brand}
+              className={`flex items-center gap-3 py-0.5 cursor-pointer transition-opacity ${isDimmed ? 'opacity-30' : 'opacity-100'}`}
+              onClick={() => setFocusedBrand(prev => prev === row.brand ? null : row.brand)}
+            >
+              <span className="text-[10px] text-muted-foreground w-4 text-right shrink-0">#{row.rank}</span>
+              <span className={`text-xs w-28 truncate shrink-0 ${row.highlight ? 'font-bold text-foreground' : 'text-foreground/80'}`}>{row.brand}</span>
+              <div className="flex-1 h-4 bg-secondary relative group">
+                <div
+                  className={`h-full transition-all ${row.highlight ? 'bg-foreground' : 'bg-foreground/35'}`}
+                  style={{ width: `${(val / maxVal) * 100}%`, minWidth: val > 0 ? '4px' : '0px' }}
+                />
+                {/* Tooltip */}
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block z-10">
+                  <div className="bg-foreground text-background text-[10px] px-2.5 py-1.5 whitespace-nowrap rounded-sm shadow-lg">
+                    <p className="font-bold">{row.brand}</p>
+                    <p>SOV: {row.pct}% · Articles: {row.articleCount.toLocaleString()}</p>
+                    <p>Rank #{row.rank} · {delta.text}</p>
+                  </div>
+                </div>
+              </div>
+              <span className={`text-xs w-12 text-right shrink-0 ${row.highlight ? 'font-bold' : ''}`}>
+                {val.toLocaleString()}{suffix}
+              </span>
             </div>
-            <span className={`text-xs w-8 text-right ${row.highlight ? 'font-bold' : ''}`}>{row.pct}%</span>
-            {row.highlight && row.deltaPts !== 0 && (
-              <span className={`text-[10px] ${delta.color}`}>{row.deltaPts > 0 ? `▲ +${row.deltaPts}pts` : `▼ ${row.deltaPts}pts`}</span>
-            )}
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
+
+      {/* Legend */}
+      <div className="flex items-center gap-4 mt-3 pt-2 border-t border-border">
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-2 bg-foreground" />
+          <span className="text-[10px] text-muted-foreground">{clientName || 'Brand'}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-2 bg-foreground/35" />
+          <span className="text-[10px] text-muted-foreground">Competitors</span>
+        </div>
+      </div>
     </div>
   );
 };
