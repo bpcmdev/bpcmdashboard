@@ -350,17 +350,19 @@ const AIVisibilityTab = () => {
           <p className="text-sm text-muted-foreground text-center py-6">No top query data for this week.</p>
         ) : (() => {
           const categories = ['All', ...Array.from(new Set(topQueries.map(q => q.category).filter(Boolean))).sort()];
-          const filtered = topQueries
+          const allFiltered = topQueries
             .filter(q => categoryFilter === 'All' || q.category === categoryFilter)
-            .sort((a, b) => (b.search_volume - a.search_volume) || a.query_text.localeCompare(b.query_text))
-            .slice(0, 20);
+            .sort((a, b) => (b.search_volume - a.search_volume) || a.query_text.localeCompare(b.query_text));
+          const totalPages = Math.max(1, Math.ceil(allFiltered.length / QUERY_PAGE_SIZE));
+          const safeCurrentPage = Math.min(queryPage, totalPages);
+          const paged = allFiltered.slice((safeCurrentPage - 1) * QUERY_PAGE_SIZE, safeCurrentPage * QUERY_PAGE_SIZE);
           return (
             <>
               <div className="flex flex-wrap gap-2 mb-4">
                 {categories.map((cat) => (
                   <button
                     key={cat}
-                    onClick={() => setCategoryFilter(cat)}
+                    onClick={() => { setCategoryFilter(cat); setQueryPage(1); }}
                     className={`px-3 py-1 text-[10px] font-semibold tracking-[0.05em] uppercase transition-colors border ${categoryFilter === cat ? 'bg-foreground text-background border-foreground' : 'bg-transparent text-muted-foreground border-border hover:text-foreground'}`}
                   >
                     {cat}
@@ -368,9 +370,9 @@ const AIVisibilityTab = () => {
                 ))}
               </div>
               <div className="divide-y divide-border">
-                {filtered.map((q, idx) => (
+                {paged.map((q, idx) => (
                   <div key={idx} className="flex items-center gap-4 py-3">
-                    <span className="text-sm font-bold w-6 text-right text-muted-foreground">{idx + 1}</span>
+                    <span className="text-sm font-bold w-6 text-right text-muted-foreground">{(safeCurrentPage - 1) * QUERY_PAGE_SIZE + idx + 1}</span>
                     <span className="text-sm font-medium flex-1">"{q.query_text}"</span>
                     <span className="text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 bg-muted text-muted-foreground">{q.category}</span>
                     {q.search_volume > 0 && (
@@ -379,6 +381,7 @@ const AIVisibilityTab = () => {
                   </div>
                 ))}
               </div>
+              <PaginationControls currentPage={safeCurrentPage} totalPages={totalPages} onPageChange={setQueryPage} />
             </>
           );
         })()}
