@@ -90,7 +90,8 @@ const PlatformScorecards = ({ cards, loading }: { cards: PlatformCard[]; loading
   return (
     <div className="grid grid-cols-6 gap-4">
       {ALL_PLATFORMS.map((platform) => {
-        const s = cardMap.get(platform.toLowerCase());
+        const dbKey = PLATFORM_DB_KEY[platform.toLowerCase()] || platform.toLowerCase();
+        const s = cardMap.get(dbKey);
         if (!s) {
           return (
             <div key={platform} className="bg-card border border-border p-4 opacity-50">
