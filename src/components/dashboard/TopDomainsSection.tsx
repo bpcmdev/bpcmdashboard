@@ -4,6 +4,7 @@ import { useWeek } from '@/contexts/WeekContext';
 import { useAdmin } from '@/hooks/useAdmin';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
+import PaginationControls from './PaginationControls';
 
 interface DomainRow {
   domain: string;
@@ -36,6 +37,8 @@ const TopDomainsSection = () => {
   const [rows, setRows] = useState<DomainRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState('All');
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 10;
 
   useEffect(() => {
     if (!selectedWeek || !activeClientId) {
@@ -70,9 +73,10 @@ const TopDomainsSection = () => {
   }, [selectedWeek, activeClientId, refreshKey]);
 
   const types = ['All', ...Array.from(new Set(rows.map(r => r.classification).filter(Boolean))).sort()];
-  const filtered = rows
-    .filter(r => typeFilter === 'All' || r.classification === typeFilter)
-    .slice(0, 20);
+  const allFiltered = rows.filter(r => typeFilter === 'All' || r.classification === typeFilter);
+  const totalPages = Math.max(1, Math.ceil(allFiltered.length / PAGE_SIZE));
+  const safeCurrentPage = Math.min(page, totalPages);
+  const filtered = allFiltered.slice((safeCurrentPage - 1) * PAGE_SIZE, safeCurrentPage * PAGE_SIZE);
 
   return (
     <div className="bg-card border border-border p-5">
@@ -95,7 +99,7 @@ const TopDomainsSection = () => {
             {types.map((t) => (
               <button
                 key={t}
-                onClick={() => setTypeFilter(t)}
+                onClick={() => { setTypeFilter(t); setPage(1); }}
                 className={`px-3 py-1 text-[10px] font-semibold tracking-[0.05em] uppercase transition-colors border ${typeFilter === t ? 'bg-foreground text-background border-foreground' : 'bg-transparent text-muted-foreground border-border hover:text-foreground'}`}
               >
                 {t}
@@ -135,6 +139,7 @@ const TopDomainsSection = () => {
               })}
             </TableBody>
           </Table>
+          <PaginationControls currentPage={safeCurrentPage} totalPages={totalPages} onPageChange={setPage} />
         </>
       )}
     </div>
