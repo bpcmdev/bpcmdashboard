@@ -46,7 +46,15 @@ function deltaText(pts: number) {
   return { text: '— flat this month', color: 'text-neutral-delta' };
 }
 
-const ALL_PLATFORMS = ['ChatGPT', 'Perplexity', 'Rufus', 'Gemini', 'Claude'];
+const ALL_PLATFORMS = ['ChatGPT', 'Perplexity', 'Rufus', 'Gemini', 'Claude', 'Google AI'];
+const PLATFORM_DB_KEY: Record<string, string> = {
+  'chatgpt': 'chatgpt',
+  'perplexity': 'perplexity',
+  'rufus': 'rufus',
+  'gemini': 'gemini',
+  'claude': 'claude',
+  'google ai': 'google_ai',
+};
 
 // --- Hardcoded data kept for now ---
 const trendData = [
@@ -69,8 +77,8 @@ const trendData = [
 const PlatformScorecards = ({ cards, loading }: { cards: PlatformCard[]; loading: boolean }) => {
   if (loading) {
     return (
-      <div className="grid grid-cols-5 gap-4">
-        {Array.from({ length: 5 }).map((_, i) => (
+      <div className="grid grid-cols-6 gap-4">
+        {Array.from({ length: 6 }).map((_, i) => (
           <Skeleton key={i} className="h-28 w-full" />
         ))}
       </div>
@@ -80,9 +88,10 @@ const PlatformScorecards = ({ cards, loading }: { cards: PlatformCard[]; loading
   const cardMap = new Map(cards.map(c => [c.platform.toLowerCase(), c]));
 
   return (
-    <div className="grid grid-cols-5 gap-4">
+    <div className="grid grid-cols-6 gap-4">
       {ALL_PLATFORMS.map((platform) => {
-        const s = cardMap.get(platform.toLowerCase());
+        const dbKey = PLATFORM_DB_KEY[platform.toLowerCase()] || platform.toLowerCase();
+        const s = cardMap.get(dbKey);
         if (!s) {
           return (
             <div key={platform} className="bg-card border border-border p-4 opacity-50">
