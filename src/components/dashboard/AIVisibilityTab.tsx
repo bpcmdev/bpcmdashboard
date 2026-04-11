@@ -296,6 +296,7 @@ const AIVisibilityTab = () => {
           rank: row.rank ?? 0,
           deltaPts: row.delta_pts ?? 0,
           highlight: (row.brand_name ?? '').toLowerCase() === lowerClientName,
+          articleCount: row.article_count ?? 0,
         })));
       }
       setSovLoading(false);
