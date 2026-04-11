@@ -1,231 +1,447 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
+import { supabase } from '@/lib/supabase';
+import { useWeek } from '@/contexts/WeekContext';
+import { useAdmin } from '@/hooks/useAdmin';
+import { Skeleton } from '@/components/ui/skeleton';
 import { ViewToggle } from './AIVisibilityTab';
+import PaginationControls from './PaginationControls';
 
-const hardcodedScorecards = [
-  { platform: 'CHATGPT', subtitle: 'OpenAI · GPT-4o', score: 74, badge: 'STRONG', badgeStyle: 'bg-foreground text-background', delta: '▲ +6pts this month', deltaColor: 'text-positive' },
-  { platform: 'PERPLEXITY', subtitle: 'Perplexity AI', score: 68, badge: 'STRONG', badgeStyle: 'bg-foreground text-background', delta: '▲ +9pts this month', deltaColor: 'text-positive' },
-  { platform: 'RUFUS', subtitle: 'Amazon · Shopping AI', score: 61, badge: 'STRONG', badgeStyle: 'bg-foreground text-background', delta: '▲ +11pts this month', deltaColor: 'text-positive' },
-  { platform: 'GEMINI', subtitle: 'Google · Gemini 1.5', score: 51, badge: 'MODERATE', badgeStyle: 'bg-corp-news', delta: '— flat this month', deltaColor: 'text-neutral-delta' },
-  { platform: 'CLAUDE', subtitle: 'Anthropic', score: 43, badge: 'NEEDS WORK', badgeStyle: 'border border-destructive text-destructive bg-transparent', delta: '▼ -2pts this month', deltaColor: 'text-negative' },
-];
+// --- Types ---
+interface PlatformCard {
+  platform: string;
+  score: number;
+  status: string;
+  deltaPts: number;
+}
 
-const GeoScorecards = () => (
-  <div className="grid grid-cols-5 gap-4">
-    {hardcodedScorecards.map((s) => (
-      <div key={s.platform} className="bg-card border border-border p-4">
-        <p className="text-xs font-bold tracking-wider">{s.platform}</p>
-        <p className="text-[10px] text-muted-foreground mb-2 truncate">{s.subtitle}</p>
-        <p className="text-3xl font-bold text-foreground mb-1">{s.score}<span className="text-sm font-normal text-muted-foreground">/100</span></p>
-        <span className={`inline-block text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 mb-1 ${s.badgeStyle}`}>{s.badge}</span>
-        <p className={`text-[11px] ${s.deltaColor}`}>{s.delta}</p>
-      </div>
-    ))}
-  </div>
-);
+interface SovRow {
+  brand_name: string;
+  sov_pct: number;
+  rank: number;
+  delta_pts: number;
+  article_count: number;
+}
 
-const platformCharts = [
-  {
-    title: 'CHATGPT — VISIBILITY SCORES',
-    badge: null,
-    data: [
-      { brand: 'Milk Makeup', score: 82 },
-      { brand: 'Rhode', score: 78 },
-      { brand: 'Pat McGrath', score: 70 },
-      { brand: 'Glossier', score: 65 },
-      { brand: 'Merit Beauty', score: 52 },
-      { brand: 'Tower 28', score: 45 },
-      { brand: 'Charlotte Tilbury', score: 42 },
-    ],
-  },
-  {
-    title: 'PERPLEXITY — VISIBILITY SCORES',
-    badge: null,
-    data: [
-      { brand: 'Rhode', score: 82 },
-      { brand: 'Milk Makeup', score: 75 },
-      { brand: 'Glossier', score: 68 },
-      { brand: 'Pat McGrath', score: 62 },
-      { brand: 'Merit Beauty', score: 58 },
-      { brand: 'Tower 28', score: 48 },
-      { brand: 'Charlotte Tilbury', score: 38 },
-    ],
-  },
-  {
-    title: 'RUFUS — VISIBILITY SCORES',
-    badge: 'AMAZON AI',
-    data: [
-      { brand: 'Milk Makeup', score: 61 },
-      { brand: 'Rhode', score: 52 },
-      { brand: 'Glossier', score: 48 },
-      { brand: 'Merit Beauty', score: 44 },
-      { brand: 'Pat McGrath', score: 42 },
-      { brand: 'Tower 28', score: 32 },
-      { brand: 'Charlotte Tilbury', score: 28 },
-    ],
-  },
-  {
-    title: 'GOOGLE GEMINI — VISIBILITY SCORES',
-    badge: null,
-    data: [
-      { brand: 'Rhode', score: 65 },
-      { brand: 'Glossier', score: 62 },
-      { brand: 'Milk Makeup', score: 58 },
-      { brand: 'Pat McGrath', score: 58 },
-      { brand: 'Merit Beauty', score: 52 },
-      { brand: 'Tower 28', score: 38 },
-      { brand: 'Charlotte Tilbury', score: 35 },
-    ],
-  },
-];
+interface TopQuery {
+  query_text: string;
+  category: string;
+  search_volume: number;
+  sov_pct: number | null;
+}
 
-const heatmapData = [
-  { brand: 'Milk Makeup', chatgpt: 82, perplexity: 75, rufus: 61, gemini: 58 },
-  { brand: 'Rhode', chatgpt: 78, perplexity: 82, rufus: 52, gemini: 65 },
-  { brand: 'Glossier', chatgpt: 65, perplexity: 68, rufus: 48, gemini: 62 },
-  { brand: 'Pat McGrath', chatgpt: 70, perplexity: 62, rufus: 42, gemini: 58 },
-  { brand: 'Merit Beauty', chatgpt: 52, perplexity: 58, rufus: 44, gemini: 52 },
-  { brand: 'Tower 28', chatgpt: 45, perplexity: 48, rufus: 32, gemini: 38 },
-  { brand: 'Charlotte Tilbury', chatgpt: 42, perplexity: 38, rufus: 28, gemini: 35 },
-];
+// --- Helpers ---
+const PLATFORM_LABELS: Record<string, string> = {
+  chatgpt: 'ChatGPT',
+  perplexity: 'Perplexity',
+  google_ai: 'Google AI',
+  gemini: 'Gemini',
+  claude: 'Claude',
+  rufus: 'Rufus',
+};
 
-const gapData = [
-  { platform: 'ChatGPT', milk: 82, avg: 56, gap: 26 },
-  { platform: 'Perplexity', milk: 75, avg: 59, gap: 16 },
-  { platform: 'Rufus', milk: 61, avg: 41, gap: 20 },
-  { platform: 'Gemini', milk: 58, avg: 52, gap: 6 },
-];
+const ALL_PLATFORMS = ['chatgpt', 'perplexity', 'google_ai', 'gemini', 'claude', 'rufus'];
 
-const topQueries = [
-  { rank: 1, query: 'Best Sephora makeup launches 2026', tag: 'PRODUCT LAUNCH', tagStyle: 'bg-positive/20 text-positive', searches: '180K searches', platforms: '5/5 platforms' },
-  { rank: 2, query: 'Best clean concealer 2026', tag: 'CLEAN BEAUTY', tagStyle: 'bg-positive/20 text-positive', searches: '110K searches', platforms: '5/5 platforms' },
-  { rank: 3, query: 'Top indie beauty brands right now', tag: 'CATEGORY', tagStyle: 'bg-muted text-muted-foreground', searches: '90K searches', platforms: '4/5 platforms' },
-  { rank: 4, query: 'Vegan cruelty-free makeup recommendations', tag: 'CATEGORY', tagStyle: 'bg-muted text-muted-foreground', searches: '74K searches', platforms: '4/5 platforms' },
-  { rank: 5, query: 'Amazon clean beauty bestsellers', tag: 'AMAZON / RUFUS-SPECIFIC', tagStyle: 'bg-foreground/10 text-foreground', searches: '62K searches', platforms: '3/5 platforms' },
-  { rank: 6, query: 'Affordable clean makeup dupes', tag: 'SHOULD OWN — UNDERPERFORMING', tagStyle: 'bg-corp-news/30 text-foreground', searches: '55K searches', platforms: '2/5 platforms' },
-];
+function statusBadge(status: string) {
+  switch (status) {
+    case 'strong':
+      return { label: 'STRONG', style: 'bg-foreground text-background' };
+    case 'needs-work':
+      return { label: 'NEEDS WORK', style: 'border border-destructive text-destructive bg-transparent' };
+    default:
+      return { label: 'MODERATE', style: 'bg-corp-news' };
+  }
+}
+
+function deltaText(pts: number) {
+  if (pts > 0) return { text: `▲ +${pts}pts`, color: 'text-positive' };
+  if (pts < 0) return { text: `▼ ${pts}pts`, color: 'text-negative' };
+  return { text: '— flat', color: 'text-neutral-delta' };
+}
 
 const heatmapColor = (val: number) => {
-  if (val >= 75) return 'bg-foreground text-background';
-  if (val >= 60) return 'bg-foreground/70 text-background';
-  if (val >= 45) return 'bg-foreground/40 text-background';
+  if (val >= 20) return 'bg-foreground text-background';
+  if (val >= 10) return 'bg-foreground/70 text-background';
+  if (val >= 5) return 'bg-foreground/40 text-background';
   return 'bg-muted text-muted-foreground';
 };
 
+const PAGE_SIZE = 10;
+
+// --- Main component ---
 const GeoAISovTab = () => {
   const [view, setView] = useState('BY PLATFORM');
+  const { selectedWeek, refreshKey, activeClientId } = useWeek();
+  const { clientName } = useAdmin();
+
+  const [cards, setCards] = useState<PlatformCard[]>([]);
+  const [sovRows, setSovRows] = useState<SovRow[]>([]);
+  const [topQueries, setTopQueries] = useState<TopQuery[]>([]);
+  const [cardsLoading, setCardsLoading] = useState(true);
+  const [sovLoading, setSovLoading] = useState(true);
+  const [queriesLoading, setQueriesLoading] = useState(true);
+  const [categoryFilter, setCategoryFilter] = useState('All');
+  const [queryPage, setQueryPage] = useState(1);
+
+  // Fetch platform scorecards from ai_visibility
+  useEffect(() => {
+    if (!selectedWeek || !activeClientId) { setCards([]); setCardsLoading(false); return; }
+    const run = async () => {
+      setCardsLoading(true);
+      const { data, error } = await supabase
+        .from('ai_visibility')
+        .select('*')
+        .eq('client_id', activeClientId)
+        .eq('week_start', selectedWeek)
+        .order('visibility_score', { ascending: false });
+      if (error) { console.error(error); setCards([]); }
+      else {
+        setCards((data ?? []).map((r: any) => ({
+          platform: r.platform ?? '',
+          score: r.visibility_score ?? 0,
+          status: r.status ?? 'moderate',
+          deltaPts: r.delta_pts ?? 0,
+        })));
+      }
+      setCardsLoading(false);
+    };
+    run();
+  }, [selectedWeek, activeClientId, refreshKey]);
+
+  // Fetch competitive SOV
+  useEffect(() => {
+    if (!selectedWeek || !activeClientId) { setSovRows([]); setSovLoading(false); return; }
+    const run = async () => {
+      setSovLoading(true);
+      const { data, error } = await supabase
+        .from('competitive_sov')
+        .select('*')
+        .eq('client_id', activeClientId)
+        .eq('week_start', selectedWeek)
+        .order('rank', { ascending: true });
+      if (error) { console.error(error); setSovRows([]); }
+      else { setSovRows(data ?? []); }
+      setSovLoading(false);
+    };
+    run();
+  }, [selectedWeek, activeClientId, refreshKey]);
+
+  // Fetch top queries
+  useEffect(() => {
+    if (!selectedWeek || !activeClientId) { setTopQueries([]); setQueriesLoading(false); return; }
+    const run = async () => {
+      setQueriesLoading(true);
+      const { data, error } = await supabase
+        .from('ai_top_queries')
+        .select('*')
+        .eq('client_id', activeClientId)
+        .eq('week_start', selectedWeek)
+        .order('search_volume', { ascending: false });
+      if (error) { console.error(error); setTopQueries([]); }
+      else {
+        setTopQueries((data ?? []).map((r: any) => ({
+          query_text: r.query_text ?? '',
+          category: r.category ?? '',
+          search_volume: r.search_volume ?? 0,
+          sov_pct: r.sov_pct ?? null,
+        })));
+      }
+      setQueriesLoading(false);
+    };
+    run();
+  }, [selectedWeek, activeClientId, refreshKey]);
+
+  const cardMap = new Map(cards.map(c => [c.platform, c]));
+  const lowerClient = (clientName ?? '').toLowerCase();
 
   return (
     <div className="p-6 space-y-6">
-      <GeoScorecards />
-      <ViewToggle active={view} onToggle={setView} />
-
-      {/* BY PLATFORM view */}
-      {view === 'BY PLATFORM' && (
-        <div className="grid grid-cols-2 gap-6">
-          {platformCharts.map((chart) => (
-            <div key={chart.title} className="bg-card border border-border p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground">{chart.title}</h3>
-                {chart.badge && <span className="text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[hsl(30_80%_55%)] text-background">{chart.badge}</span>}
+      {/* Scorecards */}
+      {cardsLoading ? (
+        <div className="grid grid-cols-6 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-28 w-full" />)}
+        </div>
+      ) : (
+        <div className="grid grid-cols-6 gap-4">
+          {ALL_PLATFORMS.map((key) => {
+            const c = cardMap.get(key);
+            if (!c) return (
+              <div key={key} className="bg-card border border-border p-4 opacity-50">
+                <p className="text-xs font-bold tracking-wider uppercase">{PLATFORM_LABELS[key]}</p>
+                <p className="text-lg font-medium text-muted-foreground mt-4">No data</p>
               </div>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={chart.data} layout="vertical" margin={{ left: 100, right: 20 }}>
-                  <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10, fill: 'hsl(0 0% 45%)' }} axisLine={false} tickLine={false} />
-                  <YAxis type="category" dataKey="brand" tick={{ fontSize: 10, fill: 'hsl(0 0% 30%)' }} axisLine={false} tickLine={false} width={95} />
-                  <Tooltip contentStyle={{ backgroundColor: 'hsl(0 0% 9%)', border: 'none', borderRadius: '2px', color: 'white', fontSize: 11 }} />
-                  <Bar
-                    dataKey="score"
-                    barSize={14}
-                    radius={[0, 1, 1, 0]}
-                    fill="hsl(0 0% 60%)"
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    shape={(props: any) => {
-                      const isMilk = props?.payload?.brand === 'Milk Makeup';
-                      return <rect {...props} fill={isMilk ? 'hsl(0 0% 9%)' : 'hsl(0 0% 60%)'} />;
-                    }}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          ))}
+            );
+            const badge = statusBadge(c.status);
+            const delta = deltaText(c.deltaPts);
+            return (
+              <div key={key} className="bg-card border border-border p-4">
+                <p className="text-xs font-bold tracking-wider uppercase">{PLATFORM_LABELS[key]}</p>
+                <p className="text-3xl font-bold text-foreground mb-1">{c.score}<span className="text-sm font-normal text-muted-foreground">/100</span></p>
+                <span className={`inline-block text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 mb-1 ${badge.style}`}>{badge.label}</span>
+                <p className={`text-[11px] ${delta.color}`}>{delta.text}</p>
+              </div>
+            );
+          })}
         </div>
       )}
 
-      {/* HEATMAP view */}
+      <ViewToggle active={view} onToggle={setView} />
+
+      {/* BY PLATFORM — one bar chart per platform showing competitive SOV */}
+      {view === 'BY PLATFORM' && (
+        sovLoading ? (
+          <div className="grid grid-cols-2 gap-6">
+            {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-52 w-full" />)}
+          </div>
+        ) : sovRows.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-6">No competitive SOV data for this week.</p>
+        ) : (
+          <div className="grid grid-cols-2 gap-6">
+            {cards.map((platform) => {
+              const label = PLATFORM_LABELS[platform.platform] || platform.platform;
+              const chartData = sovRows
+                .sort((a, b) => b.sov_pct - a.sov_pct)
+                .map(r => ({ brand: r.brand_name, score: r.sov_pct }));
+              return (
+                <div key={platform.platform} className="bg-card border border-border p-5">
+                  <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">
+                    {label} — Competitive SOV
+                  </h3>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <BarChart data={chartData} layout="vertical" margin={{ left: 100, right: 20 }}>
+                      <XAxis type="number" domain={[0, 'auto']} tick={{ fontSize: 10, fill: 'hsl(0 0% 45%)' }} axisLine={false} tickLine={false} />
+                      <YAxis type="category" dataKey="brand" tick={{ fontSize: 10, fill: 'hsl(0 0% 30%)' }} axisLine={false} tickLine={false} width={95} />
+                      <Tooltip contentStyle={{ backgroundColor: 'hsl(0 0% 9%)', border: 'none', borderRadius: '2px', color: 'white', fontSize: 11 }} />
+                      <Bar
+                        dataKey="score"
+                        barSize={14}
+                        radius={[0, 1, 1, 0]}
+                        fill="hsl(0 0% 60%)"
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        shape={(props: any) => {
+                          const isClient = (props?.payload?.brand ?? '').toLowerCase() === lowerClient;
+                          return <rect {...props} fill={isClient ? 'hsl(0 0% 9%)' : 'hsl(0 0% 60%)'} />;
+                        }}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              );
+            })}
+          </div>
+        )
+      )}
+
+      {/* HEATMAP — brands (rows) x platforms (columns) with sov_pct */}
       {view === 'HEATMAP' && (
-        <div className="bg-card border border-border p-5">
-          <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">Visibility Heatmap — All Platforms</h3>
-          <div className="overflow-x-auto">
+        sovLoading ? (
+          <div className="bg-card border border-border p-5 space-y-3">
+            <Skeleton className="h-5 w-48" />
+            {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
+          </div>
+        ) : sovRows.length === 0 ? (
+          <div className="bg-card border border-border p-5">
+            <p className="text-sm text-muted-foreground text-center py-6">No data available.</p>
+          </div>
+        ) : (
+          <div className="bg-card border border-border p-5 overflow-x-auto">
+            <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">SOV Heatmap — All Platforms</h3>
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-border">
                   <th className="text-left py-2 pr-4 text-[10px] font-bold tracking-[0.1em] uppercase text-muted-foreground w-36">Brand</th>
-                  <th className="text-center py-2 px-3 text-[10px] font-bold tracking-[0.1em] uppercase text-muted-foreground">ChatGPT</th>
-                  <th className="text-center py-2 px-3 text-[10px] font-bold tracking-[0.1em] uppercase text-muted-foreground">Perplexity</th>
-                  <th className="text-center py-2 px-3 text-[10px] font-bold tracking-[0.1em] uppercase text-muted-foreground">Rufus</th>
-                  <th className="text-center py-2 px-3 text-[10px] font-bold tracking-[0.1em] uppercase text-muted-foreground">Gemini</th>
+                  {cards.map(c => (
+                    <th key={c.platform} className="text-center py-2 px-3 text-[10px] font-bold tracking-[0.1em] uppercase text-muted-foreground">
+                      {PLATFORM_LABELS[c.platform] || c.platform}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {heatmapData.map((row) => (
-                  <tr key={row.brand} className={`border-b border-border ${row.brand === 'Milk Makeup' ? 'font-bold' : ''}`}>
-                    <td className="py-2 pr-4">{row.brand}</td>
-                    <td className="py-1 px-1"><div className={`text-center py-1.5 ${heatmapColor(row.chatgpt)}`}>{row.chatgpt}</div></td>
-                    <td className="py-1 px-1"><div className={`text-center py-1.5 ${heatmapColor(row.perplexity)}`}>{row.perplexity}</div></td>
-                    <td className="py-1 px-1"><div className={`text-center py-1.5 ${heatmapColor(row.rufus)}`}>{row.rufus}</div></td>
-                    <td className="py-1 px-1"><div className={`text-center py-1.5 ${heatmapColor(row.gemini)}`}>{row.gemini}</div></td>
-                  </tr>
-                ))}
+                {sovRows.sort((a, b) => a.rank - b.rank).map(row => {
+                  const isClient = row.brand_name.toLowerCase() === lowerClient;
+                  return (
+                    <tr key={row.brand_name} className={`border-b border-border ${isClient ? 'font-bold' : ''}`}>
+                      <td className="py-2 pr-4">{row.brand_name}</td>
+                      {cards.map(c => (
+                        <td key={c.platform} className="py-1 px-1">
+                          <div className={`text-center py-1.5 ${heatmapColor(row.sov_pct)}`}>{row.sov_pct.toFixed(1)}%</div>
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
-        </div>
+        )
       )}
 
-      {/* GAP ANALYSIS view */}
+      {/* GAP ANALYSIS — Milk Makeup vs #1 competitor */}
       {view === 'GAP ANALYSIS' && (
-        <div className="bg-card border border-border p-5">
-          <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">Milk Makeup vs Competitive Average — Gap Analysis</h3>
-          <div className="space-y-4">
-            {gapData.map((row) => (
-              <div key={row.platform} className="space-y-1">
+        sovLoading ? (
+          <div className="bg-card border border-border p-5 space-y-4">
+            {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
+          </div>
+        ) : sovRows.length === 0 ? (
+          <div className="bg-card border border-border p-5">
+            <p className="text-sm text-muted-foreground text-center py-6">No competitive data available.</p>
+          </div>
+        ) : (() => {
+          const clientRow = sovRows.find(r => r.brand_name.toLowerCase() === lowerClient);
+          const topCompetitor = sovRows.find(r => r.brand_name.toLowerCase() !== lowerClient && r.rank === 1)
+            || sovRows.find(r => r.brand_name.toLowerCase() !== lowerClient);
+          if (!clientRow) return <div className="bg-card border border-border p-5"><p className="text-sm text-muted-foreground text-center py-6">No client data found.</p></div>;
+
+          const gap = topCompetitor ? (clientRow.sov_pct - topCompetitor.sov_pct) : 0;
+          const maxPct = Math.max(clientRow.sov_pct, topCompetitor?.sov_pct ?? 0, 1);
+
+          return (
+            <div className="bg-card border border-border p-5 space-y-6">
+              <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground">
+                {clientName ?? 'Brand'} vs Top Competitor — Gap Analysis
+              </h3>
+
+              {/* SOV Gap */}
+              <div className="space-y-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold">{row.platform}</span>
-                  <span className={`text-[11px] font-bold ${row.gap >= 15 ? 'text-positive' : 'text-muted-foreground'}`}>+{row.gap}pts ahead</span>
+                  <span className="text-xs font-bold">Share of Voice</span>
+                  <span className={`text-[11px] font-bold ${gap >= 0 ? 'text-positive' : 'text-destructive'}`}>
+                    {gap >= 0 ? '+' : ''}{gap.toFixed(1)}pts {gap >= 0 ? 'ahead' : 'behind'}
+                  </span>
                 </div>
-                <div className="flex gap-2 items-center">
-                  <div className="flex-1 h-5 bg-secondary relative">
-                    <div className="h-full bg-foreground/30 absolute" style={{ width: `${row.avg}%` }} />
-                    <div className="h-full bg-foreground absolute" style={{ width: `${row.milk}%` }} />
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] w-28 truncate font-medium">{clientRow.brand_name}</span>
+                    <div className="flex-1 h-5 bg-secondary">
+                      <div className="h-full bg-foreground" style={{ width: `${(clientRow.sov_pct / maxPct) * 100}%` }} />
+                    </div>
+                    <span className="text-[11px] font-bold w-12 text-right">{clientRow.sov_pct}%</span>
+                  </div>
+                  {topCompetitor && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] w-28 truncate text-muted-foreground">{topCompetitor.brand_name}</span>
+                      <div className="flex-1 h-5 bg-secondary">
+                        <div className="h-full bg-foreground/30" style={{ width: `${(topCompetitor.sov_pct / maxPct) * 100}%` }} />
+                      </div>
+                      <span className="text-[11px] w-12 text-right text-muted-foreground">{topCompetitor.sov_pct}%</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Article Count Gap */}
+              {topCompetitor && (
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold">Article Count</span>
+                    <span className={`text-[11px] font-bold ${clientRow.article_count >= topCompetitor.article_count ? 'text-positive' : 'text-destructive'}`}>
+                      {clientRow.article_count >= topCompetitor.article_count ? '+' : ''}{clientRow.article_count - topCompetitor.article_count} articles
+                    </span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {(() => {
+                      const maxArt = Math.max(clientRow.article_count, topCompetitor.article_count, 1);
+                      return (
+                        <>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] w-28 truncate font-medium">{clientRow.brand_name}</span>
+                            <div className="flex-1 h-5 bg-secondary">
+                              <div className="h-full bg-foreground" style={{ width: `${(clientRow.article_count / maxArt) * 100}%` }} />
+                            </div>
+                            <span className="text-[11px] font-bold w-12 text-right">{clientRow.article_count.toLocaleString()}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] w-28 truncate text-muted-foreground">{topCompetitor.brand_name}</span>
+                            <div className="flex-1 h-5 bg-secondary">
+                              <div className="h-full bg-foreground/30" style={{ width: `${(topCompetitor.article_count / maxArt) * 100}%` }} />
+                            </div>
+                            <span className="text-[11px] w-12 text-right text-muted-foreground">{topCompetitor.article_count.toLocaleString()}</span>
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
-                <div className="flex gap-4 text-[10px] text-muted-foreground">
-                  <span>Milk Makeup: {row.milk}</span>
-                  <span>Competitive avg: {row.avg}</span>
+              )}
+
+              {/* All brands ranking */}
+              <div>
+                <h4 className="text-[10px] font-bold tracking-[0.1em] uppercase text-muted-foreground mb-2">Full Ranking</h4>
+                <div className="divide-y divide-border">
+                  {sovRows.sort((a, b) => a.rank - b.rank).map(r => {
+                    const isClient = r.brand_name.toLowerCase() === lowerClient;
+                    return (
+                      <div key={r.brand_name} className={`flex items-center gap-3 py-2 ${isClient ? 'font-bold' : ''}`}>
+                        <span className="text-[10px] text-muted-foreground w-4 text-right">#{r.rank}</span>
+                        <span className="text-xs flex-1">{r.brand_name}</span>
+                        <span className="text-xs">{r.sov_pct}%</span>
+                        <span className={`text-[10px] ${deltaText(r.delta_pts).color}`}>{deltaText(r.delta_pts).text}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
+            </div>
+          );
+        })()
       )}
 
-      {/* TOP QUERIES + SOV view */}
+      {/* TOP QUERIES + SOV */}
       {view === 'TOP QUERIES + SOV' && (
         <div className="bg-card border border-border p-5">
-          <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-1">Top Queries Where Milk Appears</h3>
-          <p className="text-[10px] text-muted-foreground mb-4">Ranked by search volume — per-platform visibility scores</p>
-          <div className="divide-y divide-border">
-            {topQueries.map((q) => (
-              <div key={q.rank} className="flex items-center gap-4 py-3">
-                <span className="text-sm font-bold w-6 text-right text-muted-foreground">{q.rank}</span>
-                <span className="text-sm font-medium flex-1">"{q.query}"</span>
-                <span className={`text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 ${q.tagStyle}`}>{q.tag}</span>
-                <span className="text-[11px] text-muted-foreground">{q.searches} · {q.platforms}</span>
-                <span className="text-muted-foreground text-xs">▼</span>
-              </div>
-            ))}
-          </div>
+          <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-1">Top Queries Where {clientName ?? 'Brand'} Appears</h3>
+          <p className="text-[10px] text-muted-foreground mb-4">Ranked by search volume — with share-of-voice data</p>
+          {queriesLoading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+            </div>
+          ) : topQueries.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">No query data for this week.</p>
+          ) : (() => {
+            const categories = ['All', ...Array.from(new Set(topQueries.map(q => q.category).filter(Boolean))).sort()];
+            const allFiltered = topQueries
+              .filter(q => categoryFilter === 'All' || q.category === categoryFilter)
+              .sort((a, b) => (b.search_volume - a.search_volume) || a.query_text.localeCompare(b.query_text));
+            const totalPages = Math.max(1, Math.ceil(allFiltered.length / PAGE_SIZE));
+            const safePage = Math.min(queryPage, totalPages);
+            const paged = allFiltered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+            return (
+              <>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {categories.map(cat => (
+                    <button key={cat} onClick={() => { setCategoryFilter(cat); setQueryPage(1); }}
+                      className={`px-3 py-1 text-[10px] font-semibold tracking-[0.05em] uppercase transition-colors border ${categoryFilter === cat ? 'bg-foreground text-background border-foreground' : 'bg-transparent text-muted-foreground border-border hover:text-foreground'}`}>
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left py-2 w-6">#</th>
+                      <th className="text-left py-2">Query</th>
+                      <th className="text-left py-2">Category</th>
+                      <th className="text-right py-2">Volume</th>
+                      <th className="text-right py-2">SOV %</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paged.map((q, idx) => (
+                      <tr key={idx} className="border-b border-border">
+                        <td className="py-2 text-muted-foreground">{(safePage - 1) * PAGE_SIZE + idx + 1}</td>
+                        <td className="py-2 font-medium">"{q.query_text}"</td>
+                        <td className="py-2"><span className="text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 bg-muted text-muted-foreground">{q.category}</span></td>
+                        <td className="py-2 text-right text-muted-foreground">{q.search_volume > 0 ? q.search_volume.toLocaleString() : '—'}</td>
+                        <td className="py-2 text-right font-medium">{q.sov_pct != null ? `${q.sov_pct}%` : '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <PaginationControls currentPage={safePage} totalPages={totalPages} onPageChange={setQueryPage} />
+              </>
+            );
+          })()}
         </div>
       )}
     </div>
