@@ -5,6 +5,7 @@ import { useWeek } from '@/contexts/WeekContext';
 import { useAdmin } from '@/hooks/useAdmin';
 import { Skeleton } from '@/components/ui/skeleton';
 import TopDomainsSection from './TopDomainsSection';
+import PaginationControls from './PaginationControls';
 import HeatmapView from './ai-visibility/HeatmapView';
 import GapAnalysisView from './ai-visibility/GapAnalysisView';
 import TopQueriesSovView from './ai-visibility/TopQueriesSovView';
@@ -174,6 +175,8 @@ const SovSection = ({ rows, loading }: { rows: SovRow[]; loading: boolean }) => 
 const AIVisibilityTab = () => {
   const [view, setView] = useState('BY PLATFORM');
   const [categoryFilter, setCategoryFilter] = useState('All');
+  const [queryPage, setQueryPage] = useState(1);
+  const QUERY_PAGE_SIZE = 10;
   const { selectedWeek, refreshKey, activeClientId } = useWeek();
   const { clientName } = useAdmin();
 
