@@ -42,6 +42,7 @@ const PLATFORM_LABELS: Record<string, string> = {
 };
 
 const ALL_PLATFORMS = ['chatgpt', 'perplexity', 'google_ai', 'gemini', 'claude', 'rufus'];
+const CHART_PLATFORMS = ['chatgpt', 'google_ai', 'perplexity'];
 
 function statusBadge(status: string) {
   switch (status) {
@@ -121,7 +122,7 @@ const GeoAISovTab = () => {
         .eq('week_start', selectedWeek)
         .order('rank', { ascending: true });
       if (error) { console.error(error); setSovRows([]); }
-      else { setSovRows(data ?? []); }
+      else { setSovRows((data ?? []).map((r: any) => ({ ...r, platform: r.platform ?? '' }))); }
       setSovLoading(false);
     };
     run();
@@ -198,13 +199,20 @@ const GeoAISovTab = () => {
           <p className="text-sm text-muted-foreground text-center py-6">No competitive SOV data for this week.</p>
         ) : (
           <div className="grid grid-cols-2 gap-6">
-            {cards.map((platform) => {
-              const label = PLATFORM_LABELS[platform.platform] || platform.platform;
-              const chartData = sovRows
-                .sort((a, b) => b.sov_pct - a.sov_pct)
-                .map(r => ({ brand: r.brand_name, score: r.sov_pct }));
+            {CHART_PLATFORMS.map((platformKey) => {
+              const label = PLATFORM_LABELS[platformKey] || platformKey;
+              const platformRows = sovRows
+                .filter(r => r.platform === platformKey)
+                .sort((a, b) => b.sov_pct - a.sov_pct);
+              if (platformRows.length === 0) return (
+                <div key={platformKey} className="bg-card border border-border p-5">
+                  <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">{label} — Competitive SOV</h3>
+                  <p className="text-sm text-muted-foreground text-center py-6">No data for this platform.</p>
+                </div>
+              );
+              const chartData = platformRows.map(r => ({ brand: r.brand_name, score: r.sov_pct }));
               return (
-                <div key={platform.platform} className="bg-card border border-border p-5">
+                <div key={platformKey} className="bg-card border border-border p-5">
                   <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">
                     {label} — Competitive SOV
                   </h3>
@@ -218,7 +226,6 @@ const GeoAISovTab = () => {
                         barSize={14}
                         radius={[0, 1, 1, 0]}
                         fill="hsl(0 0% 60%)"
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         shape={(props: any) => {
                           const isClient = (props?.payload?.brand ?? '').toLowerCase() === lowerClient;
                           return <rect {...props} fill={isClient ? 'hsl(0 0% 9%)' : 'hsl(0 0% 60%)'} />;
@@ -247,33 +254,63 @@ const GeoAISovTab = () => {
         ) : (
           <div className="bg-card border border-border p-5 overflow-x-auto">
             <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">SOV Heatmap — All Platforms</h3>
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-2 pr-4 text-[10px] font-bold tracking-[0.1em] uppercase text-muted-foreground w-36">Brand</th>
-                  {cards.map(c => (
-                    <th key={c.platform} className="text-center py-2 px-3 text-[10px] font-bold tracking-[0.1em] uppercase text-muted-foreground">
-                      {PLATFORM_LABELS[c.platform] || c.platform}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {sovRows.sort((a, b) => a.rank - b.rank).map(row => {
-                  const isClient = row.brand_name.toLowerCase() === lowerClient;
-                  return (
-                    <tr key={row.brand_name} className={`border-b border-border ${isClient ? 'font-bold' : ''}`}>
-                      <td className="py-2 pr-4">{row.brand_name}</td>
-                      {cards.map(c => (
-                        <td key={c.platform} className="py-1 px-1">
-                          <div className={`text-center py-1.5 ${heatmapColor(row.sov_pct)}`}>{row.sov_pct.toFixed(1)}%</div>
-                        </td>
+            {(() => {
+              // Get unique brands sorted by average rank
+              const brandMap = new Map<string, { totalPct: number; count: number; minRank: number }>();
+              sovRows.forEach(r => {
+                const entry = brandMap.get(r.brand_name) || { totalPct: 0, count: 0, minRank: 999 };
+                entry.totalPct += r.sov_pct;
+                entry.count += 1;
+                entry.minRank = Math.min(entry.minRank, r.rank);
+                brandMap.set(r.brand_name, entry);
+              });
+              const brands = Array.from(brandMap.entries())
+                .sort((a, b) => a[1].minRank - b[1].minRank)
+                .map(([name]) => name);
+
+              // Build lookup: brand+platform -> sov_pct
+              const lookup = new Map<string, number>();
+              sovRows.forEach(r => lookup.set(`${r.brand_name}::${r.platform}`, r.sov_pct));
+
+              const platformCols = cards.length > 0 ? cards.map(c => c.platform) : ALL_PLATFORMS;
+
+              return (
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left py-2 pr-4 text-[10px] font-bold tracking-[0.1em] uppercase text-muted-foreground w-36">Brand</th>
+                      {platformCols.map(p => (
+                        <th key={p} className="text-center py-2 px-3 text-[10px] font-bold tracking-[0.1em] uppercase text-muted-foreground">
+                          {PLATFORM_LABELS[p] || p}
+                        </th>
                       ))}
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody>
+                    {brands.map(brand => {
+                      const isClient = brand.toLowerCase() === lowerClient;
+                      return (
+                        <tr key={brand} className={`border-b border-border ${isClient ? 'font-bold' : ''}`}>
+                          <td className="py-2 pr-4">{brand}</td>
+                          {platformCols.map(p => {
+                            const val = lookup.get(`${brand}::${p}`);
+                            return (
+                              <td key={p} className="py-1 px-1">
+                                {val != null ? (
+                                  <div className={`text-center py-1.5 ${heatmapColor(val)}`}>{val.toFixed(1)}%</div>
+                                ) : (
+                                  <div className="text-center py-1.5 bg-muted text-muted-foreground">—</div>
+                                )}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              );
+            })()}
           </div>
         )
       )}
