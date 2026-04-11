@@ -46,7 +46,15 @@ function deltaText(pts: number) {
   return { text: '— flat this month', color: 'text-neutral-delta' };
 }
 
-const ALL_PLATFORMS = ['ChatGPT', 'Perplexity', 'Rufus', 'Gemini', 'Claude'];
+const ALL_PLATFORMS = ['ChatGPT', 'Perplexity', 'Rufus', 'Gemini', 'Claude', 'Google AI'];
+const PLATFORM_DB_KEY: Record<string, string> = {
+  'chatgpt': 'chatgpt',
+  'perplexity': 'perplexity',
+  'rufus': 'rufus',
+  'gemini': 'gemini',
+  'claude': 'claude',
+  'google ai': 'google_ai',
+};
 
 // --- Hardcoded data kept for now ---
 const trendData = [
