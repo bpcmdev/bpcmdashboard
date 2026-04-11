@@ -88,7 +88,7 @@ const PlatformScorecards = ({ cards, loading }: { cards: PlatformCard[]; loading
   const cardMap = new Map(cards.map(c => [c.platform.toLowerCase(), c]));
 
   return (
-    <div className="grid grid-cols-5 gap-4">
+    <div className="grid grid-cols-6 gap-4">
       {ALL_PLATFORMS.map((platform) => {
         const s = cardMap.get(platform.toLowerCase());
         if (!s) {
