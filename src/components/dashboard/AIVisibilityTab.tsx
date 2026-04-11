@@ -172,7 +172,7 @@ const SovSection = ({ rows, loading, clientName }: { rows: SovRow[]; loading: bo
         {rows.map((row) => {
           const delta = deltaText(row.deltaPts);
           const val = getValue(row);
-          const isFocused = focusedBrand === null || focusedBrand === row.brand;
+          const _isFocused = focusedBrand === null || focusedBrand === row.brand;
           const isDimmed = focusedBrand !== null && focusedBrand !== row.brand;
 
           return (
