@@ -21,6 +21,7 @@ interface SovRow {
   rank: number;
   delta_pts: number;
   article_count: number;
+  platform: string;
 }
 
 interface TopQuery {
