@@ -21,6 +21,7 @@ interface SovRow {
   rank: number;
   delta_pts: number;
   article_count: number;
+  platform: string;
 }
 
 interface TopQuery {
@@ -41,6 +42,7 @@ const PLATFORM_LABELS: Record<string, string> = {
 };
 
 const ALL_PLATFORMS = ['chatgpt', 'perplexity', 'google_ai', 'gemini', 'claude', 'rufus'];
+const CHART_PLATFORMS = ['chatgpt', 'google_ai', 'perplexity'];
 
 function statusBadge(status: string) {
   switch (status) {
@@ -120,7 +122,7 @@ const GeoAISovTab = () => {
         .eq('week_start', selectedWeek)
         .order('rank', { ascending: true });
       if (error) { console.error(error); setSovRows([]); }
-      else { setSovRows(data ?? []); }
+      else { setSovRows((data ?? []).map((r: any) => ({ ...r, platform: r.platform ?? '' }))); }
       setSovLoading(false);
     };
     run();
@@ -197,13 +199,20 @@ const GeoAISovTab = () => {
           <p className="text-sm text-muted-foreground text-center py-6">No competitive SOV data for this week.</p>
         ) : (
           <div className="grid grid-cols-2 gap-6">
-            {cards.map((platform) => {
-              const label = PLATFORM_LABELS[platform.platform] || platform.platform;
-              const chartData = sovRows
-                .sort((a, b) => b.sov_pct - a.sov_pct)
-                .map(r => ({ brand: r.brand_name, score: r.sov_pct }));
+            {CHART_PLATFORMS.map((platformKey) => {
+              const label = PLATFORM_LABELS[platformKey] || platformKey;
+              const platformRows = sovRows
+                .filter(r => r.platform === platformKey)
+                .sort((a, b) => b.sov_pct - a.sov_pct);
+              if (platformRows.length === 0) return (
+                <div key={platformKey} className="bg-card border border-border p-5">
+                  <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">{label} — Competitive SOV</h3>
+                  <p className="text-sm text-muted-foreground text-center py-6">No data for this platform.</p>
+                </div>
+              );
+              const chartData = platformRows.map(r => ({ brand: r.brand_name, score: r.sov_pct }));
               return (
-                <div key={platform.platform} className="bg-card border border-border p-5">
+                <div key={platformKey} className="bg-card border border-border p-5">
                   <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">
                     {label} — Competitive SOV
                   </h3>
@@ -217,7 +226,6 @@ const GeoAISovTab = () => {
                         barSize={14}
                         radius={[0, 1, 1, 0]}
                         fill="hsl(0 0% 60%)"
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         shape={(props: any) => {
                           const isClient = (props?.payload?.brand ?? '').toLowerCase() === lowerClient;
                           return <rect {...props} fill={isClient ? 'hsl(0 0% 9%)' : 'hsl(0 0% 60%)'} />;
@@ -246,38 +254,68 @@ const GeoAISovTab = () => {
         ) : (
           <div className="bg-card border border-border p-5 overflow-x-auto">
             <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">SOV Heatmap — All Platforms</h3>
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-2 pr-4 text-[10px] font-bold tracking-[0.1em] uppercase text-muted-foreground w-36">Brand</th>
-                  {cards.map(c => (
-                    <th key={c.platform} className="text-center py-2 px-3 text-[10px] font-bold tracking-[0.1em] uppercase text-muted-foreground">
-                      {PLATFORM_LABELS[c.platform] || c.platform}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {sovRows.sort((a, b) => a.rank - b.rank).map(row => {
-                  const isClient = row.brand_name.toLowerCase() === lowerClient;
-                  return (
-                    <tr key={row.brand_name} className={`border-b border-border ${isClient ? 'font-bold' : ''}`}>
-                      <td className="py-2 pr-4">{row.brand_name}</td>
-                      {cards.map(c => (
-                        <td key={c.platform} className="py-1 px-1">
-                          <div className={`text-center py-1.5 ${heatmapColor(row.sov_pct)}`}>{row.sov_pct.toFixed(1)}%</div>
-                        </td>
+            {(() => {
+              // Get unique brands sorted by average rank
+              const brandMap = new Map<string, { totalPct: number; count: number; minRank: number }>();
+              sovRows.forEach(r => {
+                const entry = brandMap.get(r.brand_name) || { totalPct: 0, count: 0, minRank: 999 };
+                entry.totalPct += r.sov_pct;
+                entry.count += 1;
+                entry.minRank = Math.min(entry.minRank, r.rank);
+                brandMap.set(r.brand_name, entry);
+              });
+              const brands = Array.from(brandMap.entries())
+                .sort((a, b) => a[1].minRank - b[1].minRank)
+                .map(([name]) => name);
+
+              // Build lookup: brand+platform -> sov_pct
+              const lookup = new Map<string, number>();
+              sovRows.forEach(r => lookup.set(`${r.brand_name}::${r.platform}`, r.sov_pct));
+
+              const platformCols = cards.length > 0 ? cards.map(c => c.platform) : ALL_PLATFORMS;
+
+              return (
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left py-2 pr-4 text-[10px] font-bold tracking-[0.1em] uppercase text-muted-foreground w-36">Brand</th>
+                      {platformCols.map(p => (
+                        <th key={p} className="text-center py-2 px-3 text-[10px] font-bold tracking-[0.1em] uppercase text-muted-foreground">
+                          {PLATFORM_LABELS[p] || p}
+                        </th>
                       ))}
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody>
+                    {brands.map(brand => {
+                      const isClient = brand.toLowerCase() === lowerClient;
+                      return (
+                        <tr key={brand} className={`border-b border-border ${isClient ? 'font-bold' : ''}`}>
+                          <td className="py-2 pr-4">{brand}</td>
+                          {platformCols.map(p => {
+                            const val = lookup.get(`${brand}::${p}`);
+                            return (
+                              <td key={p} className="py-1 px-1">
+                                {val != null ? (
+                                  <div className={`text-center py-1.5 ${heatmapColor(val)}`}>{val.toFixed(1)}%</div>
+                                ) : (
+                                  <div className="text-center py-1.5 bg-muted text-muted-foreground">—</div>
+                                )}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              );
+            })()}
           </div>
         )
       )}
 
-      {/* GAP ANALYSIS — Milk Makeup vs #1 competitor */}
+      {/* GAP ANALYSIS — per-platform gap vs #1 competitor */}
       {view === 'GAP ANALYSIS' && (
         sovLoading ? (
           <div className="bg-card border border-border p-5 space-y-4">
@@ -287,104 +325,55 @@ const GeoAISovTab = () => {
           <div className="bg-card border border-border p-5">
             <p className="text-sm text-muted-foreground text-center py-6">No competitive data available.</p>
           </div>
-        ) : (() => {
-          const clientRow = sovRows.find(r => r.brand_name.toLowerCase() === lowerClient);
-          const topCompetitor = sovRows.find(r => r.brand_name.toLowerCase() !== lowerClient && r.rank === 1)
-            || sovRows.find(r => r.brand_name.toLowerCase() !== lowerClient);
-          if (!clientRow) return <div className="bg-card border border-border p-5"><p className="text-sm text-muted-foreground text-center py-6">No client data found.</p></div>;
-
-          const gap = topCompetitor ? (clientRow.sov_pct - topCompetitor.sov_pct) : 0;
-          const maxPct = Math.max(clientRow.sov_pct, topCompetitor?.sov_pct ?? 0, 1);
-
-          return (
-            <div className="bg-card border border-border p-5 space-y-6">
-              <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground">
-                {clientName ?? 'Brand'} vs Top Competitor — Gap Analysis
-              </h3>
-
-              {/* SOV Gap */}
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold">Share of Voice</span>
-                  <span className={`text-[11px] font-bold ${gap >= 0 ? 'text-positive' : 'text-destructive'}`}>
-                    {gap >= 0 ? '+' : ''}{gap.toFixed(1)}pts {gap >= 0 ? 'ahead' : 'behind'}
-                  </span>
+        ) : (
+          <div className="bg-card border border-border p-5 space-y-6">
+            <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground">
+              {clientName ?? 'Brand'} vs Top Competitor — Per-Platform Gap Analysis
+            </h3>
+            {CHART_PLATFORMS.map(platformKey => {
+              const platformRows = sovRows.filter(r => r.platform === platformKey);
+              const clientRow = platformRows.find(r => r.brand_name.toLowerCase() === lowerClient);
+              const topComp = platformRows.find(r => r.brand_name.toLowerCase() !== lowerClient && r.rank === 1)
+                || platformRows.find(r => r.brand_name.toLowerCase() !== lowerClient);
+              if (!clientRow) return (
+                <div key={platformKey} className="space-y-1">
+                  <span className="text-xs font-bold">{PLATFORM_LABELS[platformKey]}</span>
+                  <p className="text-[11px] text-muted-foreground">No client data for this platform.</p>
                 </div>
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] w-28 truncate font-medium">{clientRow.brand_name}</span>
-                    <div className="flex-1 h-5 bg-secondary">
-                      <div className="h-full bg-foreground" style={{ width: `${(clientRow.sov_pct / maxPct) * 100}%` }} />
-                    </div>
-                    <span className="text-[11px] font-bold w-12 text-right">{clientRow.sov_pct}%</span>
-                  </div>
-                  {topCompetitor && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] w-28 truncate text-muted-foreground">{topCompetitor.brand_name}</span>
-                      <div className="flex-1 h-5 bg-secondary">
-                        <div className="h-full bg-foreground/30" style={{ width: `${(topCompetitor.sov_pct / maxPct) * 100}%` }} />
-                      </div>
-                      <span className="text-[11px] w-12 text-right text-muted-foreground">{topCompetitor.sov_pct}%</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Article Count Gap */}
-              {topCompetitor && (
-                <div className="space-y-1">
+              );
+              const gap = topComp ? (clientRow.sov_pct - topComp.sov_pct) : 0;
+              const maxPct = Math.max(clientRow.sov_pct, topComp?.sov_pct ?? 0, 1);
+              return (
+                <div key={platformKey} className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold">Article Count</span>
-                    <span className={`text-[11px] font-bold ${clientRow.article_count >= topCompetitor.article_count ? 'text-positive' : 'text-destructive'}`}>
-                      {clientRow.article_count >= topCompetitor.article_count ? '+' : ''}{clientRow.article_count - topCompetitor.article_count} articles
+                    <span className="text-xs font-bold">{PLATFORM_LABELS[platformKey]} — SOV</span>
+                    <span className={`text-[11px] font-bold ${gap >= 0 ? 'text-positive' : 'text-destructive'}`}>
+                      {gap >= 0 ? '+' : ''}{gap.toFixed(1)}pts {gap >= 0 ? 'ahead' : 'behind'}
                     </span>
                   </div>
                   <div className="space-y-1.5">
-                    {(() => {
-                      const maxArt = Math.max(clientRow.article_count, topCompetitor.article_count, 1);
-                      return (
-                        <>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] w-28 truncate font-medium">{clientRow.brand_name}</span>
-                            <div className="flex-1 h-5 bg-secondary">
-                              <div className="h-full bg-foreground" style={{ width: `${(clientRow.article_count / maxArt) * 100}%` }} />
-                            </div>
-                            <span className="text-[11px] font-bold w-12 text-right">{clientRow.article_count.toLocaleString()}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] w-28 truncate text-muted-foreground">{topCompetitor.brand_name}</span>
-                            <div className="flex-1 h-5 bg-secondary">
-                              <div className="h-full bg-foreground/30" style={{ width: `${(topCompetitor.article_count / maxArt) * 100}%` }} />
-                            </div>
-                            <span className="text-[11px] w-12 text-right text-muted-foreground">{topCompetitor.article_count.toLocaleString()}</span>
-                          </div>
-                        </>
-                      );
-                    })()}
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] w-28 truncate font-medium">{clientRow.brand_name}</span>
+                      <div className="flex-1 h-5 bg-secondary">
+                        <div className="h-full bg-foreground" style={{ width: `${(clientRow.sov_pct / maxPct) * 100}%` }} />
+                      </div>
+                      <span className="text-[11px] font-bold w-12 text-right">{clientRow.sov_pct}%</span>
+                    </div>
+                    {topComp && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] w-28 truncate text-muted-foreground">{topComp.brand_name}</span>
+                        <div className="flex-1 h-5 bg-secondary">
+                          <div className="h-full bg-foreground/30" style={{ width: `${(topComp.sov_pct / maxPct) * 100}%` }} />
+                        </div>
+                        <span className="text-[11px] w-12 text-right text-muted-foreground">{topComp.sov_pct}%</span>
+                      </div>
+                    )}
                   </div>
                 </div>
-              )}
-
-              {/* All brands ranking */}
-              <div>
-                <h4 className="text-[10px] font-bold tracking-[0.1em] uppercase text-muted-foreground mb-2">Full Ranking</h4>
-                <div className="divide-y divide-border">
-                  {sovRows.sort((a, b) => a.rank - b.rank).map(r => {
-                    const isClient = r.brand_name.toLowerCase() === lowerClient;
-                    return (
-                      <div key={r.brand_name} className={`flex items-center gap-3 py-2 ${isClient ? 'font-bold' : ''}`}>
-                        <span className="text-[10px] text-muted-foreground w-4 text-right">#{r.rank}</span>
-                        <span className="text-xs flex-1">{r.brand_name}</span>
-                        <span className="text-xs">{r.sov_pct}%</span>
-                        <span className={`text-[10px] ${deltaText(r.delta_pts).color}`}>{deltaText(r.delta_pts).text}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          );
-        })()
+              );
+            })}
+          </div>
+        )
       )}
 
       {/* TOP QUERIES + SOV */}

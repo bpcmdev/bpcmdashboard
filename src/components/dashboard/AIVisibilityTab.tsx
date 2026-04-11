@@ -269,7 +269,7 @@ const AIVisibilityTab = () => {
     fetch();
   }, [selectedWeek, activeClientId, refreshKey]);
 
-  // Fetch competitive SOV
+  // Fetch competitive SOV — aggregate across platforms
   useEffect(() => {
     if (!selectedWeek || !activeClientId) {
       setSovRows([]);
@@ -282,22 +282,38 @@ const AIVisibilityTab = () => {
         .from('competitive_sov')
         .select('*')
         .eq('client_id', activeClientId)
-        .eq('week_start', selectedWeek)
-        .order('rank', { ascending: true });
+        .eq('week_start', selectedWeek);
 
       if (error) {
         console.error('Failed to fetch competitive_sov:', error);
         setSovRows([]);
       } else {
+        // Aggregate: average sov_pct and sum article_count across platforms per brand
+        const brandMap = new Map<string, { totalPct: number; totalArticles: number; count: number; totalDelta: number }>();
+        (data ?? []).forEach((row: any) => {
+          const brand = row.brand_name ?? '';
+          const entry = brandMap.get(brand) || { totalPct: 0, totalArticles: 0, count: 0, totalDelta: 0 };
+          entry.totalPct += row.sov_pct ?? 0;
+          entry.totalArticles += row.article_count ?? 0;
+          entry.count += 1;
+          entry.totalDelta += row.delta_pts ?? 0;
+          brandMap.set(brand, entry);
+        });
+
         const lowerClientName = (clientName ?? '').toLowerCase();
-        setSovRows((data ?? []).map((row: any) => ({
-          brand: row.brand_name ?? '',
-          pct: row.sov_pct ?? 0,
-          rank: row.rank ?? 0,
-          deltaPts: row.delta_pts ?? 0,
-          highlight: (row.brand_name ?? '').toLowerCase() === lowerClientName,
-          articleCount: row.article_count ?? 0,
-        })));
+        const aggregated = Array.from(brandMap.entries())
+          .map(([brand, agg]) => ({
+            brand,
+            pct: Math.round((agg.totalPct / agg.count) * 10) / 10,
+            rank: 0,
+            deltaPts: Math.round((agg.totalDelta / agg.count) * 10) / 10,
+            highlight: brand.toLowerCase() === lowerClientName,
+            articleCount: agg.totalArticles,
+          }))
+          .sort((a, b) => b.pct - a.pct)
+          .map((row, idx) => ({ ...row, rank: idx + 1 }));
+
+        setSovRows(aggregated);
       }
       setSovLoading(false);
     };
