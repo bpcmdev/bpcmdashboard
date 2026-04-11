@@ -375,7 +375,7 @@ const AIVisibilityTab = () => {
 
           <div className="col-span-2 bg-card border border-border p-5">
             <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">AI SOV vs Competitive Set</h3>
-            <SovSection rows={sovRows} loading={sovLoading} />
+            <SovSection rows={sovRows} loading={sovLoading} clientName={clientName ?? 'Brand'} />
           </div>
         </div>
       )}
