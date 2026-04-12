@@ -103,6 +103,7 @@ const GeoAISovTab = () => {
   const [mentionedChats, setMentionedChats] = useState<AiChat[]>([]);
   const [chatsLoading, setChatsLoading] = useState(true);
   const [selectedChat, setSelectedChat] = useState<AiChat | null>(null);
+  const [chatPage, setChatPage] = useState(1);
 
   // Fetch AI chats
   useEffect(() => {
