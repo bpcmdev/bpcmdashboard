@@ -476,7 +476,7 @@ const GeoAISovTab = () => {
           <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground">AI Conversation Intelligence</h3>
           <div className="flex border border-border">
             {(['recent', 'mentioned'] as const).map(mode => (
-              <button key={mode} onClick={() => setChatMode(mode)}
+              <button key={mode} onClick={() => { setChatMode(mode); setChatPage(1); }}
                 className={`px-3 py-1 text-[10px] font-semibold tracking-[0.05em] uppercase transition-colors ${chatMode === mode ? 'bg-foreground text-background' : 'bg-transparent text-muted-foreground hover:text-foreground'}`}>
                 {mode === 'recent' ? 'Recent Chats' : 'Milk Makeup Mentioned'}
               </button>
