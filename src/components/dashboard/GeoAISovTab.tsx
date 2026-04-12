@@ -527,10 +527,6 @@ const GeoAISovTab = () => {
               </div>
               <PaginationControls currentPage={safeChatPage} totalPages={totalChatPages} onPageChange={setChatPage} />
             </>
-          
-                );
-              })}
-            </div>
           );
         })()}
       </div>
