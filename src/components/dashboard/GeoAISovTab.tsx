@@ -32,8 +32,18 @@ interface TopQuery {
   search_volume: number;
   sov_pct: number | null;
 }
+interface AiChat {
+  id: string;
+  platform: string;
+  prompt_text: string;
+  response_text: string;
+  brands_mentioned: string;
+  brand_position: number | null;
+  sources: string;
+  created_at: string;
+}
 
-// --- Helpers ---
+
 const PLATFORM_LABELS: Record<string, string> = {
   chatgpt: 'ChatGPT',
   perplexity: 'Perplexity',
