@@ -525,7 +525,17 @@ const GeoAISovTab = () => {
                   );
                 })}
               </div>
-              <PaginationControls currentPage={safeChatPage} totalPages={totalChatPages} onPageChange={setChatPage} />
+              <div className="flex items-center justify-center gap-3 mt-4 pt-3 border-t border-border">
+                <button onClick={() => setChatPage(safeChatPage - 1)} disabled={safeChatPage <= 1}
+                  className="px-3 py-1.5 text-[10px] font-semibold tracking-[0.05em] uppercase border border-border transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-muted">
+                  Previous
+                </button>
+                <span className="text-[11px] text-muted-foreground">Page {safeChatPage} of {totalChatPages}</span>
+                <button onClick={() => setChatPage(safeChatPage + 1)} disabled={safeChatPage >= totalChatPages}
+                  className="px-3 py-1.5 text-[10px] font-semibold tracking-[0.05em] uppercase border border-border transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-muted">
+                  Next
+                </button>
+              </div>
             </>
           );
         })()}
