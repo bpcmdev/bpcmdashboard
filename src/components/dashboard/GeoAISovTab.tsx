@@ -103,6 +103,7 @@ const GeoAISovTab = () => {
   const [mentionedChats, setMentionedChats] = useState<AiChat[]>([]);
   const [chatsLoading, setChatsLoading] = useState(true);
   const [selectedChat, setSelectedChat] = useState<AiChat | null>(null);
+  const [chatPage, setChatPage] = useState(1);
 
   // Fetch AI chats
   useEffect(() => {
@@ -110,8 +111,8 @@ const GeoAISovTab = () => {
     const run = async () => {
       setChatsLoading(true);
       const [recentRes, mentionedRes] = await Promise.all([
-        supabase.from('ai_chats').select('*').eq('client_id', CLIENT_ID).order('created_at', { ascending: false }).limit(2),
-        supabase.from('ai_chats').select('*').eq('client_id', CLIENT_ID).not('brand_position', 'is', null).order('created_at', { ascending: false }).limit(2),
+        supabase.from('ai_chats').select('*').eq('client_id', CLIENT_ID).order('created_at', { ascending: false }).limit(100),
+        supabase.from('ai_chats').select('*').eq('client_id', CLIENT_ID).not('brand_position', 'is', null).order('created_at', { ascending: false }).limit(100),
       ]);
       setRecentChats((recentRes.data ?? []) as AiChat[]);
       setMentionedChats((mentionedRes.data ?? []) as AiChat[]);
@@ -475,7 +476,7 @@ const GeoAISovTab = () => {
           <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground">AI Conversation Intelligence</h3>
           <div className="flex border border-border">
             {(['recent', 'mentioned'] as const).map(mode => (
-              <button key={mode} onClick={() => setChatMode(mode)}
+              <button key={mode} onClick={() => { setChatMode(mode); setChatPage(1); }}
                 className={`px-3 py-1 text-[10px] font-semibold tracking-[0.05em] uppercase transition-colors ${chatMode === mode ? 'bg-foreground text-background' : 'bg-transparent text-muted-foreground hover:text-foreground'}`}>
                 {mode === 'recent' ? 'Recent Chats' : 'Milk Makeup Mentioned'}
               </button>
@@ -491,35 +492,41 @@ const GeoAISovTab = () => {
         ) : (() => {
           const chats = chatMode === 'recent' ? recentChats : mentionedChats;
           if (chats.length === 0) return <p className="text-sm text-muted-foreground text-center py-6">No conversations found.</p>;
+          const totalChatPages = Math.max(1, Math.ceil(chats.length / PAGE_SIZE));
+          const safeChatPage = Math.min(chatPage, totalChatPages);
+          const pagedChats = chats.slice((safeChatPage - 1) * PAGE_SIZE, safeChatPage * PAGE_SIZE);
           return (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {chats.map(chat => {
-                const brands = parseSafe(chat.brands_mentioned);
-                const timeAgo = formatTimeAgo(chat.created_at);
-                return (
-                  <button key={chat.id} onClick={() => setSelectedChat(chat)}
-                    className="bg-secondary/30 border border-border p-4 text-left hover:bg-secondary/60 transition-colors space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 bg-foreground text-background">
-                        {PLATFORM_LABELS[chat.platform] || chat.platform}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground ml-auto">{timeAgo}</span>
-                    </div>
-                    <p className="text-xs font-semibold text-foreground line-clamp-1">{chat.prompt_text}</p>
-                    <p className="text-[11px] text-muted-foreground line-clamp-3">{chat.response_text}</p>
-                    {brands.length > 0 && (
-                      <div className="flex flex-wrap gap-1 pt-1">
-                        {brands.map((b: any, i: number) => (
-                          <span key={i} className="text-[9px] font-bold tracking-[0.05em] uppercase px-1.5 py-0.5 bg-muted text-muted-foreground">
-                            {typeof b === 'string' ? b : b.name || b.brand || JSON.stringify(b)}
-                          </span>
-                        ))}
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {pagedChats.map(chat => {
+                  const brands = parseSafe(chat.brands_mentioned);
+                  const timeAgo = formatTimeAgo(chat.created_at);
+                  return (
+                    <button key={chat.id} onClick={() => setSelectedChat(chat)}
+                      className="bg-secondary/30 border border-border p-4 text-left hover:bg-secondary/60 transition-colors space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 bg-foreground text-background">
+                          {PLATFORM_LABELS[chat.platform] || chat.platform}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground ml-auto">{timeAgo}</span>
                       </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+                      <p className="text-xs font-semibold text-foreground line-clamp-1">{chat.prompt_text}</p>
+                      <p className="text-[11px] text-muted-foreground line-clamp-3">{chat.response_text}</p>
+                      {brands.length > 0 && (
+                        <div className="flex flex-wrap gap-1 pt-1">
+                          {brands.map((b: any, i: number) => (
+                            <span key={i} className="text-[9px] font-bold tracking-[0.05em] uppercase px-1.5 py-0.5 bg-muted text-muted-foreground">
+                              {typeof b === 'string' ? b : b.name || b.brand || JSON.stringify(b)}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              <PaginationControls currentPage={safeChatPage} totalPages={totalChatPages} onPageChange={setChatPage} />
+            </>
           );
         })()}
       </div>
