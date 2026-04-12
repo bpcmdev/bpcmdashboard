@@ -6,6 +6,8 @@ import { useAdmin } from '@/hooks/useAdmin';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ViewToggle } from './AIVisibilityTab';
 import PaginationControls from './PaginationControls';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 // --- Types ---
 interface PlatformCard {
