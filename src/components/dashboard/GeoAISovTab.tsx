@@ -97,6 +97,29 @@ const GeoAISovTab = () => {
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [queryPage, setQueryPage] = useState(1);
 
+  // AI Conversation Intelligence state
+  const [chatMode, setChatMode] = useState<'recent' | 'mentioned'>('recent');
+  const [recentChats, setRecentChats] = useState<AiChat[]>([]);
+  const [mentionedChats, setMentionedChats] = useState<AiChat[]>([]);
+  const [chatsLoading, setChatsLoading] = useState(true);
+  const [selectedChat, setSelectedChat] = useState<AiChat | null>(null);
+
+  // Fetch AI chats
+  useEffect(() => {
+    const CLIENT_ID = '6808a53c-6bd4-4400-a6f2-8284fd3e6344';
+    const run = async () => {
+      setChatsLoading(true);
+      const [recentRes, mentionedRes] = await Promise.all([
+        supabase.from('ai_chats').select('*').eq('client_id', CLIENT_ID).order('created_at', { ascending: false }).limit(2),
+        supabase.from('ai_chats').select('*').eq('client_id', CLIENT_ID).not('brand_position', 'is', null).order('created_at', { ascending: false }).limit(2),
+      ]);
+      setRecentChats((recentRes.data ?? []) as AiChat[]);
+      setMentionedChats((mentionedRes.data ?? []) as AiChat[]);
+      setChatsLoading(false);
+    };
+    run();
+  }, [refreshKey]);
+
   // Fetch platform scorecards from ai_visibility
   useEffect(() => {
     if (!selectedWeek || !activeClientId) { setCards([]); setCardsLoading(false); return; }
