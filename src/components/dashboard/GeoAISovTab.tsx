@@ -468,8 +468,149 @@ const GeoAISovTab = () => {
           })()}
         </div>
       )}
+
+      {/* AI Conversation Intelligence */}
+      <div className="bg-card border border-border p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground">AI Conversation Intelligence</h3>
+          <div className="flex border border-border">
+            {(['recent', 'mentioned'] as const).map(mode => (
+              <button key={mode} onClick={() => setChatMode(mode)}
+                className={`px-3 py-1 text-[10px] font-semibold tracking-[0.05em] uppercase transition-colors ${chatMode === mode ? 'bg-foreground text-background' : 'bg-transparent text-muted-foreground hover:text-foreground'}`}>
+                {mode === 'recent' ? 'Recent Chats' : 'Milk Makeup Mentioned'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {chatsLoading ? (
+          <div className="space-y-3">
+            <Skeleton className="h-28 w-full" />
+            <Skeleton className="h-28 w-full" />
+          </div>
+        ) : (() => {
+          const chats = chatMode === 'recent' ? recentChats : mentionedChats;
+          if (chats.length === 0) return <p className="text-sm text-muted-foreground text-center py-6">No conversations found.</p>;
+          return (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {chats.map(chat => {
+                const brands = parseSafe(chat.brands_mentioned);
+                const timeAgo = formatTimeAgo(chat.created_at);
+                return (
+                  <button key={chat.id} onClick={() => setSelectedChat(chat)}
+                    className="bg-secondary/30 border border-border p-4 text-left hover:bg-secondary/60 transition-colors space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 bg-foreground text-background">
+                        {PLATFORM_LABELS[chat.platform] || chat.platform}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground ml-auto">{timeAgo}</span>
+                    </div>
+                    <p className="text-xs font-semibold text-foreground line-clamp-1">{chat.prompt_text}</p>
+                    <p className="text-[11px] text-muted-foreground line-clamp-3">{chat.response_text}</p>
+                    {brands.length > 0 && (
+                      <div className="flex flex-wrap gap-1 pt-1">
+                        {brands.map((b: any, i: number) => (
+                          <span key={i} className="text-[9px] font-bold tracking-[0.05em] uppercase px-1.5 py-0.5 bg-muted text-muted-foreground">
+                            {typeof b === 'string' ? b : b.name || b.brand || JSON.stringify(b)}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          );
+        })()}
+      </div>
+
+      {/* Chat detail panel */}
+      <Sheet open={!!selectedChat} onOpenChange={(open) => { if (!open) setSelectedChat(null); }}>
+        <SheetContent side="right" className="w-full sm:max-w-lg p-0">
+          {selectedChat && (() => {
+            const brands = parseSafe(selectedChat.brands_mentioned);
+            const sources = parseSafe(selectedChat.sources);
+            return (
+              <ScrollArea className="h-full">
+                <div className="p-6 space-y-5">
+                  <SheetHeader className="p-0">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 bg-foreground text-background">
+                        {PLATFORM_LABELS[selectedChat.platform] || selectedChat.platform}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">{formatTimeAgo(selectedChat.created_at)}</span>
+                    </div>
+                    <SheetTitle className="text-sm font-bold text-foreground leading-snug">{selectedChat.prompt_text}</SheetTitle>
+                  </SheetHeader>
+
+                  <div>
+                    <h4 className="text-[10px] font-bold tracking-[0.1em] uppercase text-muted-foreground mb-2">Response</h4>
+                    <p className="text-xs text-foreground leading-relaxed whitespace-pre-wrap">{selectedChat.response_text}</p>
+                  </div>
+
+                  {brands.length > 0 && (
+                    <div>
+                      <h4 className="text-[10px] font-bold tracking-[0.1em] uppercase text-muted-foreground mb-2">Brands Mentioned</h4>
+                      <div className="space-y-1.5">
+                        {brands.map((b: any, i: number) => {
+                          const name = typeof b === 'string' ? b : b.name || b.brand || JSON.stringify(b);
+                          const position = typeof b === 'object' && b.position != null ? b.position : null;
+                          return (
+                            <div key={i} className="flex items-center justify-between bg-secondary/30 px-3 py-1.5 border border-border">
+                              <span className="text-xs font-medium">{name}</span>
+                              {position != null && <span className="text-[10px] text-muted-foreground">Position #{position}</span>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {sources.length > 0 && (
+                    <div>
+                      <h4 className="text-[10px] font-bold tracking-[0.1em] uppercase text-muted-foreground mb-2">Sources</h4>
+                      <div className="space-y-1.5">
+                        {sources.map((s: any, i: number) => {
+                          const url = typeof s === 'string' ? s : s.url || s.link || '';
+                          const domain = typeof s === 'object' && s.domain ? s.domain : (() => { try { return new URL(url).hostname; } catch { return url; } })();
+                          return (
+                            <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                              className="flex items-center justify-between bg-secondary/30 px-3 py-1.5 border border-border hover:bg-secondary/60 transition-colors">
+                              <span className="text-xs font-medium text-foreground truncate">{domain}</span>
+                              <span className="text-[10px] text-muted-foreground shrink-0 ml-2">↗</span>
+                            </a>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            );
+          })()}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };
+
+function parseSafe(val: any): any[] {
+  if (Array.isArray(val)) return val;
+  if (typeof val === 'string') {
+    try { const parsed = JSON.parse(val); return Array.isArray(parsed) ? parsed : []; }
+    catch { return []; }
+  }
+  return [];
+}
+
+function formatTimeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins} min. ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs} hr. ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
 
 export default GeoAISovTab;
