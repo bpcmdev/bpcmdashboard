@@ -111,8 +111,8 @@ const GeoAISovTab = () => {
     const run = async () => {
       setChatsLoading(true);
       const [recentRes, mentionedRes] = await Promise.all([
-        supabase.from('ai_chats').select('*').eq('client_id', CLIENT_ID).order('created_at', { ascending: false }).limit(2),
-        supabase.from('ai_chats').select('*').eq('client_id', CLIENT_ID).not('brand_position', 'is', null).order('created_at', { ascending: false }).limit(2),
+        supabase.from('ai_chats').select('*').eq('client_id', CLIENT_ID).order('created_at', { ascending: false }).limit(100),
+        supabase.from('ai_chats').select('*').eq('client_id', CLIENT_ID).not('brand_position', 'is', null).order('created_at', { ascending: false }).limit(100),
       ]);
       setRecentChats((recentRes.data ?? []) as AiChat[]);
       setMentionedChats((mentionedRes.data ?? []) as AiChat[]);
