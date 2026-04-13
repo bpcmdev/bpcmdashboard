@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { useWeek } from '@/contexts/WeekContext';
 import { supabase } from '@/lib/supabase';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import ManageEntries from './ManageEntries';
 
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -764,6 +765,11 @@ export default function AdminPanel({ open, onOpenChange, clientId }: AdminPanelP
           {adminSection === 'placements' && <PlacementsForm clientId={clientId} />}
           {adminSection === 'snapshot' && <WeeklySnapshotForm clientId={clientId} />}
           {adminSection === 'users' && <UserManagement />}
+
+          {/* Manage Entries section */}
+          <div className="border-t border-border pt-6">
+            <ManageEntries clientId={clientId} />
+          </div>
         </div>
       </SheetContent>
     </Sheet>
