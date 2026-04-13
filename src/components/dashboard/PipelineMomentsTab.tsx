@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { List, CalendarDays } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useWeek } from '@/contexts/WeekContext';
@@ -6,6 +7,7 @@ import DataStateWrapper from './DataStateWrapper';
 import PlaceholderCard from './PlaceholderCard';
 import DeleteEntryButton from './DeleteEntryButton';
 import EditPipelineDialog from './EditPipelineDialog';
+import PipelineCalendarView from './PipelineCalendarView';
 
 interface PipelineEntry {
   id: string;
