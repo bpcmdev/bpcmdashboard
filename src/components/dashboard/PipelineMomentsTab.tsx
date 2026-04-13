@@ -52,6 +52,7 @@ const PipelineMomentsTab = () => {
   const [entries, setEntries] = useState<PipelineEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
 
   useEffect(() => {
     if (!clientId) return;
