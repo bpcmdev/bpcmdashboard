@@ -87,8 +87,32 @@ const PipelineMomentsTab = () => {
       ) : (
         <div className="p-6 space-y-8">
           <div>
-            <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-1">Marketing Calendar</h3>
-            <p className="text-[11px] text-muted-foreground mb-4">Product launches + cultural moments</p>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-1">Marketing Calendar</h3>
+                <p className="text-[11px] text-muted-foreground">Product launches + cultural moments</p>
+              </div>
+              <div className="flex items-center bg-muted rounded p-0.5 gap-0.5">
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`p-1.5 rounded transition-colors ${viewMode === 'list' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                  title="List view"
+                >
+                  <List className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={() => setViewMode('calendar')}
+                  className={`p-1.5 rounded transition-colors ${viewMode === 'calendar' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                  title="Calendar view"
+                >
+                  <CalendarDays className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {viewMode === 'calendar' ? (
+              <PipelineCalendarView entries={entries} />
+            ) : (
             <div className="overflow-x-auto">
               <div className="flex min-w-[900px]">
                 {Object.entries(monthGroups).map(([month, items]) => (
