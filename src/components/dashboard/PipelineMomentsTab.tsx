@@ -137,6 +137,7 @@ const PipelineMomentsTab = () => {
                 ))}
               </div>
             </div>
+            )}
           </div>
 
           {(monitorEntries.length > 0 || entries.length > 0) && (
