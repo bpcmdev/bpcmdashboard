@@ -525,11 +525,19 @@ function UserManagement() {
   const callEdgeFunction = useCallback(async (body: Record<string, unknown>) => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) throw new Error('Not authenticated');
-    const { data, error } = await supabase.functions.invoke('admin-users', {
-      body,
-      headers: { Authorization: `Bearer ${session.access_token}` },
-    });
-    if (error) throw error;
+    const response = await fetch(
+      'https://malstqryqfodnqlvrgmn.supabase.co/functions/v1/admin-users',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      }
+    );
+    const data = await response.json();
+    if (!response.ok) throw new Error(data?.error || `Request failed (${response.status})`);
     return data;
   }, []);
 
