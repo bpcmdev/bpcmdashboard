@@ -71,14 +71,11 @@ Deno.serve(async (req) => {
         return jsonResponse({ error: "Missing required fields" }, 400);
       }
 
-      // Create auth user with a random password (they'll reset it)
-      const tempPassword = crypto.randomUUID() + "Aa1!";
-      const { data: authUser, error: authErr } = await adminClient.auth.admin.createUser({
+      // Send invite email — user sets their own password via the link
+      const { data: authUser, error: authErr } = await adminClient.auth.admin.inviteUserByEmail(
         email,
-        password: tempPassword,
-        email_confirm: true,
-        user_metadata: { full_name },
-      });
+        { data: { full_name } },
+      );
       if (authErr) throw authErr;
 
       // Insert profile

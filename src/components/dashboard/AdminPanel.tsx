@@ -565,10 +565,10 @@ function UserManagement() {
         role: inviteRole,
         client_id: inviteClient,
       });
-      setSuccess('User invited successfully');
+      setSuccess(`Invite sent to ${inviteEmail}. They'll receive a link to set their password.`);
       setInviteName(''); setInviteEmail(''); setInviteRole(''); setInviteClient('');
       fetchUsers();
-      setTimeout(() => setSuccess(''), 3000);
+      setTimeout(() => setSuccess(''), 5000);
     } catch (err: any) {
       console.error('[UserManagement] invite error:', err);
       setSuccess('');
