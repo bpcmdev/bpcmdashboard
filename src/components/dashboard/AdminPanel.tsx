@@ -554,14 +554,18 @@ function UserManagement() {
 
   const fetchUsers = useCallback(async () => {
     try {
-      const data = await callEdgeFunction({ action: 'list' });
-      setUsers(data.users || []);
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('id, full_name, email, role, client_id, clients(name)')
+        .order('full_name');
+      if (error) throw error;
+      setUsers((data as unknown as UserRow[]) || []);
     } catch (err) {
       console.error('[UserManagement] fetch error:', err);
     } finally {
       setLoading(false);
     }
-  }, [callEdgeFunction]);
+  }, []);
 
   const fetchClients = useCallback(async () => {
     const { data } = await supabase.from('clients').select('id, name').order('name');
@@ -599,12 +603,11 @@ function UserManagement() {
     if (!editingUser) return;
     setSubmitting(true);
     try {
-      await callEdgeFunction({
-        action: 'update',
-        user_id: editingUser.id,
-        role: editRole,
-        client_id: editClient,
-      });
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ role: editRole, client_id: editClient })
+        .eq('id', editingUser.id);
+      if (error) throw error;
       setEditingUser(null);
       fetchUsers();
     } catch (err: any) {
@@ -615,7 +618,11 @@ function UserManagement() {
 
   const handleDelete = async (userId: string) => {
     try {
-      await callEdgeFunction({ action: 'delete', user_id: userId });
+      const { error } = await supabase
+        .from('user_profiles')
+        .delete()
+        .eq('id', userId);
+      if (error) throw error;
       fetchUsers();
     } catch (err: any) {
       console.error('[UserManagement] delete error:', err);
