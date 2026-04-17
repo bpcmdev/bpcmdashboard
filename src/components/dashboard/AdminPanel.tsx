@@ -559,7 +559,7 @@ function UserManagement() {
     try {
       const { data, error } = await supabase
         .from('user_profiles')
-        .select('id, full_name, email, role, client_id, clients(name)')
+        .select('id, full_name, email, role, client_id, invited_at, clients(name)')
         .order('full_name');
       if (error) throw error;
       setUsers((data as unknown as UserRow[]) || []);
