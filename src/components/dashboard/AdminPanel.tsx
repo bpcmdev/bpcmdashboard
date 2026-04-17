@@ -554,14 +554,18 @@ function UserManagement() {
 
   const fetchUsers = useCallback(async () => {
     try {
-      const data = await callEdgeFunction({ action: 'list' });
-      setUsers(data.users || []);
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('id, full_name, email, role, client_id, clients(name)')
+        .order('full_name');
+      if (error) throw error;
+      setUsers((data as unknown as UserRow[]) || []);
     } catch (err) {
       console.error('[UserManagement] fetch error:', err);
     } finally {
       setLoading(false);
     }
-  }, [callEdgeFunction]);
+  }, []);
 
   const fetchClients = useCallback(async () => {
     const { data } = await supabase.from('clients').select('id, name').order('name');
