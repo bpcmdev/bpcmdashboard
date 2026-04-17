@@ -1,3 +1,4 @@
+// admin-users edge function — manages users (list/invite/update/delete)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
