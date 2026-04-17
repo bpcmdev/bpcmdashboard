@@ -12,8 +12,10 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { CalendarIcon, Check, Pencil, Trash2 } from 'lucide-react';
+import { CalendarIcon, Check, Pencil, Trash2, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
 
 interface AdminPanelProps {
   open: boolean;
@@ -500,6 +502,7 @@ interface UserRow {
   email: string;
   role: string;
   client_id: string | null;
+  invited_at: string | null;
   clients: { name: string } | null;
 }
 
@@ -556,7 +559,7 @@ function UserManagement() {
     try {
       const { data, error } = await supabase
         .from('user_profiles')
-        .select('id, full_name, email, role, client_id, clients(name)')
+        .select('id, full_name, email, role, client_id, invited_at, clients(name)')
         .order('full_name');
       if (error) throw error;
       setUsers((data as unknown as UserRow[]) || []);
@@ -629,6 +632,23 @@ function UserManagement() {
     }
   };
 
+  const handleResend = async (user: UserRow) => {
+    try {
+      await callEdgeFunction({
+        action: 'reinvite',
+        user_id: user.id,
+        email: user.email,
+        full_name: user.full_name,
+        role: user.role,
+        client_id: user.client_id,
+      });
+      toast.success(`Invite resent to ${user.email}`);
+    } catch (err: any) {
+      console.error('[UserManagement] resend error:', err);
+      toast.error(err?.message || 'Failed to resend invite');
+    }
+  };
+
   const startEdit = (user: UserRow) => {
     setEditingUser(user);
     setEditRole(user.role);
@@ -682,13 +702,31 @@ function UserManagement() {
             {users.map(user => (
               <div key={user.id} className="flex items-center justify-between border border-border rounded-lg px-3 py-2">
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs font-semibold truncate">{user.full_name}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-semibold truncate">{user.full_name}</p>
+                    {user.invited_at && (
+                      <Badge className="bg-yellow-400 text-yellow-950 hover:bg-yellow-400 border-transparent text-[9px] px-1.5 py-0 h-4">
+                        Pending
+                      </Badge>
+                    )}
+                  </div>
                   <p className="text-[10px] text-muted-foreground truncate">{user.email}</p>
                   <p className="text-[10px] text-muted-foreground">
                     {user.role} · {user.clients?.name || '—'}
                   </p>
                 </div>
                 <div className="flex items-center gap-1 ml-2">
+                  {user.invited_at && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      title="Resend invite"
+                      onClick={() => handleResend(user)}
+                    >
+                      <Mail className="w-3 h-3" />
+                    </Button>
+                  )}
                   <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => startEdit(user)}>
                     <Pencil className="w-3 h-3" />
                   </Button>
