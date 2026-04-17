@@ -632,6 +632,23 @@ function UserManagement() {
     }
   };
 
+  const handleResend = async (user: UserRow) => {
+    try {
+      await callEdgeFunction({
+        action: 'reinvite',
+        user_id: user.id,
+        email: user.email,
+        full_name: user.full_name,
+        role: user.role,
+        client_id: user.client_id,
+      });
+      toast.success(`Invite resent to ${user.email}`);
+    } catch (err: any) {
+      console.error('[UserManagement] resend error:', err);
+      toast.error(err?.message || 'Failed to resend invite');
+    }
+  };
+
   const startEdit = (user: UserRow) => {
     setEditingUser(user);
     setEditRole(user.role);
