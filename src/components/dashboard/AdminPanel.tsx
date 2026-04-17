@@ -502,6 +502,7 @@ interface UserRow {
   email: string;
   role: string;
   client_id: string | null;
+  invited_at: string | null;
   clients: { name: string } | null;
 }
 
