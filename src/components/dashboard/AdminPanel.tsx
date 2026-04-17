@@ -541,6 +541,7 @@ function UserManagement() {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1hbHN0cXJ5cWZvZG5xbHZyZ21uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1NTIzNzUsImV4cCI6MjA5MDEyODM3NX0.o8H4SySmAG4MxBp5sEkXFmHO7MBIRXzOgjDBwl_IKFU',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(body),
