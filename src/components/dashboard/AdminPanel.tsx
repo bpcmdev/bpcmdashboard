@@ -557,12 +557,16 @@ function UserManagement() {
 
   const fetchUsers = useCallback(async () => {
     try {
+      const cacheBust = Date.now();
       const { data, error } = await supabase
         .from('user_profiles')
         .select('id, full_name, email, role, client_id, invited_at, clients(name)')
-        .order('full_name');
+        .order('full_name')
+        .limit(1000);
       if (error) throw error;
-      setUsers((data as unknown as UserRow[]) || []);
+      const rows = (data as unknown as UserRow[]) || [];
+      console.log('[UserManagement] fetch @', cacheBust, 'first user:', rows[0]);
+      setUsers(rows);
     } catch (err) {
       console.error('[UserManagement] fetch error:', err);
     } finally {
