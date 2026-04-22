@@ -361,7 +361,7 @@ function WeeklySnapshotForm({ clientId }: { clientId: string | null }) {
         <Field label="Sentiment Δ (MoM)"><Input type="number" value={momSentimentDelta} onChange={e => setMomSentimentDelta(e.target.value)} placeholder="0" /></Field>
         <Field label="SOV Δ (pts)"><Input type="number" value={sovDeltaPts} onChange={e => setSovDeltaPts(e.target.value)} placeholder="0" /></Field>
       </div>
-      <Field label="Narrative Watch"><Textarea value={narrativeWatch} onChange={e => setNarrativeWatch(e.target.value)} placeholder="Key narrative to watch this week…" /></Field>
+      <Field label="Narrative Watch"><Textarea value={narrativeWatch} onChange={e => setNarrativeWatch(e.target.value)} placeholder="e.g. Turnaround narrative gaining traction — sentiment running 71% positive on leadership story." /></Field>
       <Button onClick={handleSubmit} disabled={submitting || !weekStart} className="w-full bg-foreground text-background hover:bg-foreground/90">
         {submitting ? 'Submitting…' : 'Add Weekly Snapshot'}
       </Button>
