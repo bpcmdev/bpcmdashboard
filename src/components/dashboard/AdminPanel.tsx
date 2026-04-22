@@ -565,7 +565,7 @@ function UserManagement() {
         .limit(1000);
       if (error) throw error;
       const rows = (data as unknown as UserRow[]) || [];
-      console.log('[UserManagement] fetch @', cacheBust, 'first user:', rows[0]);
+      console.log('[UserManagement] fetch @', cacheBust, 'first user:', JSON.stringify(rows[0]));
       setUsers(rows);
     } catch (err) {
       console.error('[UserManagement] fetch error:', err);
