@@ -303,7 +303,6 @@ function WeeklySnapshotForm({ clientId }: { clientId: string | null }) {
   const [wowReachDelta, setWowReachDelta] = useState('');
   const [momSentimentDelta, setMomSentimentDelta] = useState('');
   const [sovDeltaPts, setSovDeltaPts] = useState('');
-  const [narrativeWatch, setNarrativeWatch] = useState('');
   const [success, setSuccess] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -325,7 +324,6 @@ function WeeklySnapshotForm({ clientId }: { clientId: string | null }) {
       wow_reach_delta: num(wowReachDelta),
       mom_sentiment_delta: num(momSentimentDelta),
       sov_delta_pts: num(sovDeltaPts),
-      narrative_watch: narrativeWatch || null,
     };
     console.log('[AdminPanel] weekly_snapshots insert payload:', payload);
     const { error } = await supabase.from('weekly_snapshots').insert(payload);
@@ -336,7 +334,6 @@ function WeeklySnapshotForm({ clientId }: { clientId: string | null }) {
       setWeekStart(undefined); setPlacementCount(''); setEmvUsd(''); setSentimentScore('');
       setSocialReach(''); setSovPct(''); setInfluencerRoi(''); setWowPlacementDelta('');
       setWowEmvDelta(''); setWowReachDelta(''); setMomSentimentDelta(''); setSovDeltaPts('');
-      setNarrativeWatch('');
       setTimeout(() => setSuccess(''), 3000);
     }
   };
@@ -361,7 +358,6 @@ function WeeklySnapshotForm({ clientId }: { clientId: string | null }) {
         <Field label="Sentiment Δ (MoM)"><Input type="number" value={momSentimentDelta} onChange={e => setMomSentimentDelta(e.target.value)} placeholder="0" /></Field>
         <Field label="SOV Δ (pts)"><Input type="number" value={sovDeltaPts} onChange={e => setSovDeltaPts(e.target.value)} placeholder="0" /></Field>
       </div>
-      <Field label="Narrative Watch"><Textarea value={narrativeWatch} onChange={e => setNarrativeWatch(e.target.value)} placeholder="e.g. Turnaround narrative gaining traction — sentiment running 71% positive on leadership story." /></Field>
       <Button onClick={handleSubmit} disabled={submitting || !weekStart} className="w-full bg-foreground text-background hover:bg-foreground/90">
         {submitting ? 'Submitting…' : 'Add Weekly Snapshot'}
       </Button>
