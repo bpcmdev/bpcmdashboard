@@ -1,6 +1,40 @@
-const TICKER_TEXT = "Active turnaround cycle — Mazdack Rassi named President Feb 2026, Frank B appointed Global Artistic Director Mar 20. Sentiment on leadership running 71% positive. Fall 2026 sticks relaunch + Line + Fill in pipeline — major earned media opportunities ahead.";
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
+import { useWeek } from '@/contexts/WeekContext';
+
+const FALLBACK_TEXT = "No narrative alerts this week.";
 
 const NarrativeTicker = () => {
+  const { activeClientId, refreshKey } = useWeek();
+  const [tickerText, setTickerText] = useState(FALLBACK_TEXT);
+
+  useEffect(() => {
+    if (!activeClientId) {
+      setTickerText(FALLBACK_TEXT);
+      return;
+    }
+    let cancelled = false;
+    const fetchNarrative = async () => {
+      const { data, error } = await supabase
+        .from('weekly_snapshots')
+        .select('narrative_watch, week_start')
+        .eq('client_id', activeClientId)
+        .not('narrative_watch', 'is', null)
+        .order('week_start', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (cancelled) return;
+      if (error) {
+        console.error('[NarrativeTicker] fetch error:', error);
+        setTickerText(FALLBACK_TEXT);
+        return;
+      }
+      setTickerText(data?.narrative_watch?.trim() || FALLBACK_TEXT);
+    };
+    fetchNarrative();
+    return () => { cancelled = true; };
+  }, [activeClientId, refreshKey]);
+
   return (
     <div className="dashboard-ticker px-6 py-2.5 flex items-center gap-4 overflow-hidden">
       <span className="shrink-0 text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 text-positive border border-accent/30" style={{ backgroundColor: 'hsla(145, 63%, 42%, 0.2)' }}>
@@ -8,8 +42,8 @@ const NarrativeTicker = () => {
       </span>
       <div className="overflow-hidden flex-1">
         <div className="animate-ticker whitespace-nowrap inline-block">
-          <span className="text-xs tracking-wide mr-24">{TICKER_TEXT}</span>
-          <span className="text-xs tracking-wide mr-24">{TICKER_TEXT}</span>
+          <span className="text-xs tracking-wide mr-24">{tickerText}</span>
+          <span className="text-xs tracking-wide mr-24">{tickerText}</span>
         </div>
       </div>
     </div>
