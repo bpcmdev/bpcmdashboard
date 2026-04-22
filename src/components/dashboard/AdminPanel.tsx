@@ -562,8 +562,7 @@ function UserManagement() {
         .from('user_profiles')
         .select('id, full_name, email, role, client_id, invited_at, clients(name)')
         .order('full_name')
-        .limit(1000)
-        .throwOnError();
+        .limit(1000);
       if (error) throw error;
       const rows = (data as unknown as UserRow[]) || [];
       console.log('[UserManagement] fetch @', cacheBust, 'first user:', rows[0]);
