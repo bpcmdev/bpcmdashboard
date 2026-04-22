@@ -303,7 +303,6 @@ function WeeklySnapshotForm({ clientId }: { clientId: string | null }) {
   const [wowReachDelta, setWowReachDelta] = useState('');
   const [momSentimentDelta, setMomSentimentDelta] = useState('');
   const [sovDeltaPts, setSovDeltaPts] = useState('');
-  const [narrativeWatch, setNarrativeWatch] = useState('');
   const [success, setSuccess] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -325,7 +324,6 @@ function WeeklySnapshotForm({ clientId }: { clientId: string | null }) {
       wow_reach_delta: num(wowReachDelta),
       mom_sentiment_delta: num(momSentimentDelta),
       sov_delta_pts: num(sovDeltaPts),
-      narrative_watch: narrativeWatch || null,
     };
     console.log('[AdminPanel] weekly_snapshots insert payload:', payload);
     const { error } = await supabase.from('weekly_snapshots').insert(payload);
@@ -336,7 +334,6 @@ function WeeklySnapshotForm({ clientId }: { clientId: string | null }) {
       setWeekStart(undefined); setPlacementCount(''); setEmvUsd(''); setSentimentScore('');
       setSocialReach(''); setSovPct(''); setInfluencerRoi(''); setWowPlacementDelta('');
       setWowEmvDelta(''); setWowReachDelta(''); setMomSentimentDelta(''); setSovDeltaPts('');
-      setNarrativeWatch('');
       setTimeout(() => setSuccess(''), 3000);
     }
   };
@@ -361,7 +358,6 @@ function WeeklySnapshotForm({ clientId }: { clientId: string | null }) {
         <Field label="Sentiment Δ (MoM)"><Input type="number" value={momSentimentDelta} onChange={e => setMomSentimentDelta(e.target.value)} placeholder="0" /></Field>
         <Field label="SOV Δ (pts)"><Input type="number" value={sovDeltaPts} onChange={e => setSovDeltaPts(e.target.value)} placeholder="0" /></Field>
       </div>
-      <Field label="Narrative Watch"><Textarea value={narrativeWatch} onChange={e => setNarrativeWatch(e.target.value)} placeholder="e.g. Turnaround narrative gaining traction — sentiment running 71% positive on leadership story." /></Field>
       <Button onClick={handleSubmit} disabled={submitting || !weekStart} className="w-full bg-foreground text-background hover:bg-foreground/90">
         {submitting ? 'Submitting…' : 'Add Weekly Snapshot'}
       </Button>
@@ -802,6 +798,191 @@ function UserManagement() {
   );
 }
 
+/* ── Narrative Watch Form ── */
+interface NarrativeRow {
+  id: string;
+  week_start: string;
+  narrative_watch: string | null;
+  client_id: string;
+}
+
+function NarrativeWatchForm({ defaultClientId }: { defaultClientId: string | null }) {
+  const [clients, setClients] = useState<ClientOption[]>([]);
+  const [selectedClient, setSelectedClient] = useState<string>(defaultClientId || '');
+  const [weeks, setWeeks] = useState<NarrativeRow[]>([]);
+  const [selectedWeek, setSelectedWeek] = useState<string>('');
+  const [narrativeText, setNarrativeText] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
+
+  useEffect(() => {
+    supabase.from('clients').select('id, name').order('name').then(({ data }) => {
+      setClients((data as ClientOption[]) || []);
+    });
+  }, []);
+
+  const fetchWeeks = useCallback(async () => {
+    if (!selectedClient) { setWeeks([]); return; }
+    const { data, error } = await supabase
+      .from('weekly_snapshots')
+      .select('id, week_start, narrative_watch, client_id')
+      .eq('client_id', selectedClient)
+      .order('week_start', { ascending: false });
+    if (error) { console.error('[NarrativeWatchForm] fetch error:', error); return; }
+    setWeeks((data as NarrativeRow[]) || []);
+  }, [selectedClient]);
+
+  useEffect(() => { fetchWeeks(); }, [fetchWeeks]);
+
+  const handlePost = async () => {
+    if (!selectedClient || !selectedWeek) return;
+    setSubmitting(true);
+    const { error } = await supabase
+      .from('weekly_snapshots')
+      .update({ narrative_watch: narrativeText || null })
+      .eq('client_id', selectedClient)
+      .eq('week_start', selectedWeek);
+    setSubmitting(false);
+    if (error) { console.error('[NarrativeWatchForm] post error:', error); return; }
+    setSuccess('Narrative posted');
+    setNarrativeText('');
+    setSelectedWeek('');
+    fetchWeeks();
+    setTimeout(() => setSuccess(''), 3000);
+  };
+
+  const handleSaveEdit = async (row: NarrativeRow) => {
+    const { error } = await supabase
+      .from('weekly_snapshots')
+      .update({ narrative_watch: editText || null })
+      .eq('id', row.id);
+    if (error) { console.error('[NarrativeWatchForm] edit error:', error); return; }
+    setEditingId(null);
+    setEditText('');
+    fetchWeeks();
+  };
+
+  const handleDelete = async (row: NarrativeRow) => {
+    const { error } = await supabase
+      .from('weekly_snapshots')
+      .update({ narrative_watch: null })
+      .eq('id', row.id);
+    if (error) { console.error('[NarrativeWatchForm] delete error:', error); return; }
+    fetchWeeks();
+  };
+
+  const existing = weeks.filter(w => w.narrative_watch && w.narrative_watch.trim().length > 0);
+
+  return (
+    <div className="space-y-6">
+      {success && <SuccessMessage message={success} />}
+      <div className="space-y-3 border border-border rounded-lg p-4">
+        <p className="text-[10px] font-bold tracking-[0.12em] uppercase text-muted-foreground">Post Narrative</p>
+        <Field label="Client">
+          <Select value={selectedClient} onValueChange={(v) => { setSelectedClient(v); setSelectedWeek(''); }}>
+            <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
+            <SelectContent>
+              {clients.map(c => (
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+        <Field label="Week">
+          <Select value={selectedWeek} onValueChange={setSelectedWeek} disabled={!selectedClient || weeks.length === 0}>
+            <SelectTrigger><SelectValue placeholder={selectedClient ? (weeks.length ? 'Select week' : 'No weeks available') : 'Select client first'} /></SelectTrigger>
+            <SelectContent>
+              {weeks.map(w => (
+                <SelectItem key={w.id} value={w.week_start}>
+                  {format(new Date(w.week_start + 'T00:00:00'), 'PP')}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+        <Field label="Narrative Text">
+          <Textarea
+            value={narrativeText}
+            onChange={e => setNarrativeText(e.target.value)}
+            placeholder="e.g. Turnaround narrative gaining traction — sentiment running 71% positive on leadership story."
+            rows={4}
+          />
+        </Field>
+        <Button
+          onClick={handlePost}
+          disabled={submitting || !selectedClient || !selectedWeek || !narrativeText.trim()}
+          className="w-full bg-foreground text-background hover:bg-foreground/90"
+        >
+          {submitting ? 'Posting…' : 'Post Narrative'}
+        </Button>
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-[10px] font-bold tracking-[0.12em] uppercase text-muted-foreground">Existing Narratives</p>
+        {!selectedClient ? (
+          <p className="text-xs text-muted-foreground">Select a client to view narratives.</p>
+        ) : existing.length === 0 ? (
+          <p className="text-xs text-muted-foreground">No narratives posted for this client yet.</p>
+        ) : (
+          <div className="space-y-2">
+            {existing.map(row => (
+              <div key={row.id} className="border border-border rounded-lg p-3 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-[10px] font-bold tracking-widest uppercase text-muted-foreground">
+                    {format(new Date(row.week_start + 'T00:00:00'), 'PP')}
+                  </p>
+                  <div className="flex items-center gap-1">
+                    {editingId === row.id ? (
+                      <>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSaveEdit(row)} title="Save">
+                          <Check className="w-3 h-3" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditingId(null); setEditText(''); }} title="Cancel">
+                          <span className="text-xs">×</span>
+                        </Button>
+                      </>
+                    ) : (
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditingId(row.id); setEditText(row.narrative_watch || ''); }}>
+                        <Pencil className="w-3 h-3" />
+                      </Button>
+                    )}
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive">
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Narrative</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Clear the narrative for week of {format(new Date(row.week_start + 'T00:00:00'), 'PP')}?
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDelete(row)}>Delete</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </div>
+                {editingId === row.id ? (
+                  <Textarea value={editText} onChange={e => setEditText(e.target.value)} rows={3} />
+                ) : (
+                  <p className="text-xs leading-relaxed">{row.narrative_watch}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ── Main Panel ── */
 export default function AdminPanel({ open, onOpenChange, clientId }: AdminPanelProps) {
   const [adminSection, setAdminSection] = useState('pipeline');
@@ -823,6 +1004,7 @@ export default function AdminPanel({ open, onOpenChange, clientId }: AdminPanelP
               <SelectItem value="products" className="text-xs tracking-wider uppercase">Products</SelectItem>
               <SelectItem value="placements" className="text-xs tracking-wider uppercase">Placements</SelectItem>
               <SelectItem value="snapshot" className="text-xs tracking-wider uppercase">Snapshot</SelectItem>
+              <SelectItem value="narrative" className="text-xs tracking-wider uppercase">Narrative Watch</SelectItem>
               <SelectItem value="users" className="text-xs tracking-wider uppercase">Users</SelectItem>
             </SelectContent>
           </Select>
@@ -832,6 +1014,7 @@ export default function AdminPanel({ open, onOpenChange, clientId }: AdminPanelP
           {adminSection === 'products' && <ProductLaunchesForm clientId={clientId} />}
           {adminSection === 'placements' && <PlacementsForm clientId={clientId} />}
           {adminSection === 'snapshot' && <WeeklySnapshotForm clientId={clientId} />}
+          {adminSection === 'narrative' && <NarrativeWatchForm defaultClientId={clientId} />}
           {adminSection === 'users' && <UserManagement />}
 
           {/* Manage Entries section */}
