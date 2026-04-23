@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { LayoutDashboard, Users, FileText, Database, Building2, LogOut, Plus, ExternalLink } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, Database, Building2, LogOut, Plus, ExternalLink, Activity } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { WeekProvider } from '@/contexts/WeekContext';
@@ -22,8 +22,9 @@ import {
   NarrativeWatchForm,
 } from '@/components/dashboard/AdminPanel';
 import ManageEntries from '@/components/dashboard/ManageEntries';
+import ActivityLogSection from '@/components/admin/ActivityLogSection';
 
-type SectionKey = 'overview' | 'clients' | 'users' | 'narrative' | 'data';
+type SectionKey = 'overview' | 'clients' | 'users' | 'narrative' | 'data' | 'activity';
 
 const NAV: { key: SectionKey; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { key: 'overview', label: 'Dashboard Overview', icon: LayoutDashboard },
@@ -31,6 +32,7 @@ const NAV: { key: SectionKey; label: string; icon: React.ComponentType<{ classNa
   { key: 'users', label: 'Users', icon: Users },
   { key: 'narrative', label: 'Narrative Watch', icon: FileText },
   { key: 'data', label: 'Data Entry', icon: Database },
+  { key: 'activity', label: 'Activity Log', icon: Activity },
 ];
 
 const SIDEBAR_BG = '#0a1628';
@@ -387,6 +389,7 @@ function SuperAdminContent() {
       case 'users': return <UserManagement />;
       case 'narrative': return <NarrativeWatchForm defaultClientId={null} />;
       case 'data': return <DataEntrySection />;
+      case 'activity': return <ActivityLogSection />;
     }
   }, [section]);
 
