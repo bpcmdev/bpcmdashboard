@@ -17,7 +17,6 @@ import GeoAISovTab from '@/components/dashboard/GeoAISovTab';
 import PartnershipsTab from '@/components/dashboard/PartnershipsTab';
 import TikTokShopTab from '@/components/dashboard/TikTokShopTab';
 import GettingStarted, { useIsNewClient } from '@/components/dashboard/GettingStarted';
-import AdminPanel from '@/components/dashboard/AdminPanel';
 
 const TAB_MAP: Record<string, React.ComponentType> = {
   'KEY WINS': KeyWinsTab,
@@ -39,8 +38,9 @@ function DashboardContent() {
   const { activeClientId } = useWeek();
   const { isNew } = useIsNewClient();
   const [dismissedFor, setDismissedFor] = useState<string | null>(null);
-  const [adminOpen, setAdminOpen] = useState(false);
   const TabContent = TAB_MAP[activeTab];
+
+  const openAdmin = () => window.dispatchEvent(new CustomEvent('bpcm:open-admin-panel'));
 
   // Reset dismissal when client changes so a fresh new client sees the welcome.
   useEffect(() => {
@@ -62,7 +62,7 @@ function DashboardContent() {
         <GettingStarted
           onDismiss={() => setDismissedFor(activeClientId)}
           onJumpToTab={(tab) => { setActiveTab(tab); setDismissedFor(activeClientId); }}
-          onOpenAdmin={() => setAdminOpen(true)}
+          onOpenAdmin={openAdmin}
         />
       ) : TabContent ? (
         <TabContent />
@@ -71,7 +71,6 @@ function DashboardContent() {
           {activeTab} — Coming soon
         </div>
       )}
-      <AdminPanel open={adminOpen} onOpenChange={setAdminOpen} clientId={clientId} />
     </div>
   );
 }
