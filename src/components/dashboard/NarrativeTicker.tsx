@@ -5,7 +5,7 @@ import { useWeek } from '@/contexts/WeekContext';
 const FALLBACK_TEXT = "No narrative alerts this week.";
 
 const NarrativeTicker = () => {
-  const { activeClientId, refreshKey } = useWeek();
+  const { activeClientId, selectedWeek, refreshKey } = useWeek();
   const [tickerText, setTickerText] = useState(FALLBACK_TEXT);
 
   useEffect(() => {
@@ -15,6 +15,25 @@ const NarrativeTicker = () => {
     }
     let cancelled = false;
     const fetchNarrative = async () => {
+      // 1. Try the currently selected week first
+      if (selectedWeek) {
+        const { data: weekData, error: weekErr } = await supabase
+          .from('weekly_snapshots')
+          .select('narrative_watch')
+          .eq('client_id', activeClientId)
+          .eq('week_start', selectedWeek)
+          .maybeSingle();
+        if (cancelled) return;
+        if (weekErr) {
+          console.error('[NarrativeTicker] selected-week fetch error:', weekErr);
+        }
+        const text = weekData?.narrative_watch?.trim();
+        if (text) {
+          setTickerText(text);
+          return;
+        }
+      }
+      // 2. Fall back to most recent non-null narrative_watch for this client
       const { data, error } = await supabase
         .from('weekly_snapshots')
         .select('narrative_watch, week_start')
@@ -25,7 +44,7 @@ const NarrativeTicker = () => {
         .maybeSingle();
       if (cancelled) return;
       if (error) {
-        console.error('[NarrativeTicker] fetch error:', error);
+        console.error('[NarrativeTicker] fallback fetch error:', error);
         setTickerText(FALLBACK_TEXT);
         return;
       }
@@ -33,7 +52,7 @@ const NarrativeTicker = () => {
     };
     fetchNarrative();
     return () => { cancelled = true; };
-  }, [activeClientId, refreshKey]);
+  }, [activeClientId, selectedWeek, refreshKey]);
 
   return (
     <div className="dashboard-ticker px-6 py-2.5 flex items-center gap-4 overflow-hidden">
