@@ -61,7 +61,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 /* ── Pipeline Form ── */
-function PipelineForm({ clientId }: { clientId: string | null }) {
+export function PipelineForm({ clientId }: { clientId: string | null }) {
   const [title, setTitle] = useState('');
   const [eventDate, setEventDate] = useState<Date>();
   const [eventType, setEventType] = useState('');
@@ -121,7 +121,7 @@ function PipelineForm({ clientId }: { clientId: string | null }) {
 }
 
 /* ── Key Wins Form ── */
-function KeyWinsForm({ clientId }: { clientId: string | null }) {
+export function KeyWinsForm({ clientId }: { clientId: string | null }) {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
@@ -179,7 +179,7 @@ function KeyWinsForm({ clientId }: { clientId: string | null }) {
 }
 
 /* ── Partnerships Form ── */
-function PartnershipsForm({ clientId }: { clientId: string | null }) {
+export function PartnershipsForm({ clientId }: { clientId: string | null }) {
   const [partnerName, setPartnerName] = useState('');
   const [type, setType] = useState('');
   const [status, setStatus] = useState('');
@@ -230,7 +230,7 @@ function PartnershipsForm({ clientId }: { clientId: string | null }) {
 }
 
 /* ── Product Launches Form ── */
-function ProductLaunchesForm({ clientId }: { clientId: string | null }) {
+export function ProductLaunchesForm({ clientId }: { clientId: string | null }) {
   const [productName, setProductName] = useState('');
   const [launchType, setLaunchType] = useState('');
   const [description, setDescription] = useState('');
@@ -290,7 +290,7 @@ function ProductLaunchesForm({ clientId }: { clientId: string | null }) {
 }
 
 /* ── Weekly Snapshot Form ── */
-function WeeklySnapshotForm({ clientId }: { clientId: string | null }) {
+export function WeeklySnapshotForm({ clientId }: { clientId: string | null }) {
   const [weekStart, setWeekStart] = useState<Date>();
   const [placementCount, setPlacementCount] = useState('');
   const [emvUsd, setEmvUsd] = useState('');
@@ -366,7 +366,7 @@ function WeeklySnapshotForm({ clientId }: { clientId: string | null }) {
 }
 
 /* ── Placements Form ── */
-function PlacementsForm({ clientId }: { clientId: string | null }) {
+export function PlacementsForm({ clientId }: { clientId: string | null }) {
   const { selectedWeek } = useWeek();
   const [headline, setHeadline] = useState('');
   const [url, setUrl] = useState('');
@@ -507,7 +507,7 @@ interface ClientOption {
   name: string;
 }
 
-function UserManagement() {
+export function UserManagement() {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -808,7 +808,7 @@ interface NarrativeRow {
   client_id: string;
 }
 
-function NarrativeWatchForm({ defaultClientId }: { defaultClientId: string | null }) {
+export function NarrativeWatchForm({ defaultClientId }: { defaultClientId: string | null }) {
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [selectedClient, setSelectedClient] = useState<string>(defaultClientId || '');
   const [weeks, setWeeks] = useState<NarrativeRow[]>([]);
