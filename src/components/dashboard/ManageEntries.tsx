@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import { supabase } from '@/lib/supabase';
+import { logActivity, ActivityEntityType } from '@/lib/activityLog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,13 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { CalendarIcon, Pencil, Trash2, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+const TABLE_TO_ENTITY: Record<string, ActivityEntityType> = {
+  key_wins: 'key_win',
+  pipeline_moments: 'pipeline_moment',
+  partnerships: 'partnership',
+  product_pipeline: 'product_launch',
+};
 
 const PAGE_SIZE = 20;
 
@@ -188,6 +196,10 @@ export default function ManageEntries({ clientId }: ManageEntriesProps) {
     if (error) console.error(`[ManageEntries] update ${config.table} error:`, error);
     setSaving(false);
     if (!error) {
+      const entityType = TABLE_TO_ENTITY[config.table];
+      if (entityType) {
+        logActivity({ client_id: clientId, action: 'updated', entity_type: entityType, entity_id: editEntry.id, entity_title: String(editForm[config.titleField] ?? '') });
+      }
       setEditEntry(null);
       fetchEntries();
     }
@@ -195,10 +207,17 @@ export default function ManageEntries({ clientId }: ManageEntriesProps) {
 
   const handleDelete = async () => {
     if (!deleteId) return;
+    const target = entries.find(e => e.id === deleteId);
     const { error } = await supabase.from(config.table).delete().eq('id', deleteId);
     if (error) console.error(`[ManageEntries] delete ${config.table} error:`, error);
     setDeleteId(null);
-    if (!error) fetchEntries();
+    if (!error) {
+      const entityType = TABLE_TO_ENTITY[config.table];
+      if (entityType) {
+        logActivity({ client_id: clientId, action: 'deleted', entity_type: entityType, entity_id: deleteId, entity_title: target ? String(target[config.titleField] ?? '') : '' });
+      }
+      fetchEntries();
+    }
   };
 
   const renderFieldInput = (field: typeof config.fields[0]) => {

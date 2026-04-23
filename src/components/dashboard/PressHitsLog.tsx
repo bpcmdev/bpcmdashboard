@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { format } from 'date-fns';
 import { supabase } from '@/lib/supabase';
+import { logActivity } from '@/lib/activityLog';
 import { useWeek } from '@/contexts/WeekContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -329,12 +330,13 @@ const PressHitsLog = () => {
     }
 
     const payload = { ...formToPayload(addForm), client_id: activeClientId, week_id: weekRow.id };
-    const { error } = await supabase.from('placements').insert(payload);
+    const { data: inserted, error } = await supabase.from('placements').insert(payload).select('id').single();
 
     if (error) {
       toast.error('Failed to add placement.');
       console.error(error);
     } else {
+      logActivity({ client_id: activeClientId, action: 'created', entity_type: 'placement', entity_id: inserted?.id, entity_title: payload.headline, metadata: { outlet_name: payload.outlet_name } });
       toast.success('Hit added successfully.');
       setAddForm(defaultFormValues());
       setShowAddForm(false);
@@ -352,6 +354,7 @@ const PressHitsLog = () => {
       toast.error('Failed to update placement.');
       console.error(error);
     } else {
+      logActivity({ client_id: activeClientId, action: 'updated', entity_type: 'placement', entity_id: editItem.id, entity_title: payload.headline, metadata: { outlet_name: payload.outlet_name } });
       toast.success('Placement updated.');
       setEditItem(null);
       await fetchPlacements();
@@ -361,10 +364,12 @@ const PressHitsLog = () => {
 
   const handleDelete = async () => {
     if (!deleteId) return;
+    const target = placements.find(p => p.id === deleteId);
     const { error } = await supabase.from('placements').delete().eq('id', deleteId);
     if (error) {
       toast.error('Failed to delete placement.');
     } else {
+      logActivity({ client_id: activeClientId, action: 'deleted', entity_type: 'placement', entity_id: deleteId, entity_title: target?.headline ?? 'Placement' });
       toast.success('Placement deleted.');
       setDeleteId(null);
       await fetchPlacements();
