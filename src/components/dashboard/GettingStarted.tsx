@@ -72,7 +72,20 @@ export function useIsNewClient(): { isNew: boolean | null; checklist: ChecklistS
 
 const GettingStarted = ({ onDismiss, onJumpToTab, onOpenAdmin }: GettingStartedProps) => {
   const { isNew, checklist } = useIsNewClient();
-  const { isAdmin, clientName } = useAdmin();
+  const { isAdmin } = useAdmin();
+  const { activeClientId } = useWeek();
+  const [clientName, setClientName] = useState<string | null>(null);
+
+  // Resolve the currently selected/active client (respects admin client switcher),
+  // not the logged-in user's own client from useAdmin().
+  useEffect(() => {
+    if (!activeClientId) { setClientName(null); return; }
+    let cancelled = false;
+    supabase.from('clients').select('name').eq('id', activeClientId).maybeSingle().then(({ data }) => {
+      if (!cancelled) setClientName(data?.name ?? null);
+    });
+    return () => { cancelled = true; };
+  }, [activeClientId]);
 
   if (isNew === null || !checklist) {
     return (
