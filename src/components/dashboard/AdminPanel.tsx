@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import { useWeek } from '@/contexts/WeekContext';
 import { supabase } from '@/lib/supabase';
+import { logActivity } from '@/lib/activityLog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import ManageEntries from './ManageEntries';
 
@@ -76,10 +77,11 @@ export function PipelineForm({ clientId }: { clientId: string | null }) {
     setSubmitting(true);
     const payload = { client_id: clientId, title, event_date: eventDate ? format(eventDate, 'yyyy-MM-dd') : null, event_type: eventType, description, monitor_strings: monitorStrings ? monitorStrings.split(',').map(s => s.trim()).filter(Boolean) : [], priority };
     console.log('[AdminPanel] pipeline_moments insert payload:', payload);
-    const { error } = await supabase.from('pipeline_moments').insert(payload);
+    const { data: inserted, error } = await supabase.from('pipeline_moments').insert(payload).select('id').single();
     if (error) console.error('[AdminPanel] pipeline_moments insert error:', error);
     setSubmitting(false);
     if (!error) {
+      logActivity({ client_id: clientId, action: 'created', entity_type: 'pipeline_moment', entity_id: inserted?.id, entity_title: title, metadata: { event_type: eventType, priority } });
       setSuccess('Pipeline moment added');
       setTitle(''); setEventDate(undefined); setEventType(''); setDescription(''); setMonitorStrings(''); setPriority('');
       setTimeout(() => setSuccess(''), 3000);
@@ -135,10 +137,11 @@ export function KeyWinsForm({ clientId }: { clientId: string | null }) {
     setSubmitting(true);
     const payload = { client_id: clientId, title, category, description, reach, tier };
     console.log('[AdminPanel] key_wins insert payload:', payload);
-    const { error } = await supabase.from('key_wins').insert(payload);
+    const { data: inserted, error } = await supabase.from('key_wins').insert(payload).select('id').single();
     if (error) console.error('[AdminPanel] key_wins insert error:', error);
     setSubmitting(false);
     if (!error) {
+      logActivity({ client_id: clientId, action: 'created', entity_type: 'key_win', entity_id: inserted?.id, entity_title: title, metadata: { category, tier } });
       setSuccess('Key win added');
       setTitle(''); setCategory(''); setDescription(''); setReach(''); setTier('');
       setTimeout(() => setSuccess(''), 3000);
@@ -194,10 +197,11 @@ export function PartnershipsForm({ clientId }: { clientId: string | null }) {
     setSubmitting(true);
     const payload = { client_id: clientId, partner_name: partnerName, type, status, description, emv_generated: emv ? Number(emv) : null, notes };
     console.log('[AdminPanel] partnerships insert payload:', payload);
-    const { error } = await supabase.from('partnerships').insert(payload);
+    const { data: inserted, error } = await supabase.from('partnerships').insert(payload).select('id').single();
     if (error) console.error('[AdminPanel] partnerships insert error:', error);
     setSubmitting(false);
     if (!error) {
+      logActivity({ client_id: clientId, action: 'created', entity_type: 'partnership', entity_id: inserted?.id, entity_title: partnerName, metadata: { type, status } });
       setSuccess('Partnership added');
       setPartnerName(''); setType(''); setStatus(''); setDescription(''); setEmv(''); setNotes('');
       setTimeout(() => setSuccess(''), 3000);
@@ -245,10 +249,11 @@ export function ProductLaunchesForm({ clientId }: { clientId: string | null }) {
     setSubmitting(true);
     const payload = { client_id: clientId, product_name: productName, launch_type: launchType, description, launch_date: launchDate ? format(launchDate, 'yyyy-MM-dd') : null, retailers: retailers ? retailers.split(',').map(s => s.trim()).filter(Boolean) : [], status };
     console.log('[AdminPanel] product_pipeline insert payload:', payload);
-    const { error } = await supabase.from('product_pipeline').insert(payload);
+    const { data: inserted, error } = await supabase.from('product_pipeline').insert(payload).select('id').single();
     if (error) console.error('[AdminPanel] product_pipeline insert error:', error);
     setSubmitting(false);
     if (!error) {
+      logActivity({ client_id: clientId, action: 'created', entity_type: 'product_launch', entity_id: inserted?.id, entity_title: productName, metadata: { launch_type: launchType, status } });
       setSuccess('Product launch added');
       setProductName(''); setLaunchType(''); setDescription(''); setLaunchDate(undefined); setRetailers(''); setStatus('');
       setTimeout(() => setSuccess(''), 3000);
@@ -326,10 +331,11 @@ export function WeeklySnapshotForm({ clientId }: { clientId: string | null }) {
       sov_delta_pts: num(sovDeltaPts),
     };
     console.log('[AdminPanel] weekly_snapshots insert payload:', payload);
-    const { error } = await supabase.from('weekly_snapshots').insert(payload);
+    const { data: inserted, error } = await supabase.from('weekly_snapshots').insert(payload).select('id').single();
     if (error) console.error('[AdminPanel] weekly_snapshots insert error:', error);
     setSubmitting(false);
     if (!error) {
+      logActivity({ client_id: clientId, action: 'created', entity_type: 'weekly_snapshot', entity_id: inserted?.id, entity_title: `Week of ${format(weekStart, 'PP')}`, metadata: { week_start: format(weekStart, 'yyyy-MM-dd') } });
       setSuccess('Weekly snapshot added');
       setWeekStart(undefined); setPlacementCount(''); setEmvUsd(''); setSentimentScore('');
       setSocialReach(''); setSovPct(''); setInfluencerRoi(''); setWowPlacementDelta('');
@@ -421,10 +427,11 @@ export function PlacementsForm({ clientId }: { clientId: string | null }) {
       tags: tags ? tags.split(',').map(s => s.trim()).filter(Boolean) : [],
     };
     console.log('[AdminPanel] placements insert payload:', payload);
-    const { error } = await supabase.from('placements').insert(payload);
+    const { data: inserted, error } = await supabase.from('placements').insert(payload).select('id').single();
     if (error) console.error('[AdminPanel] placements insert error:', error);
     setSubmitting(false);
     if (!error) {
+      logActivity({ client_id: clientId, action: 'created', entity_type: 'placement', entity_id: inserted?.id, entity_title: headline, metadata: { outlet_name: outletName, outlet_tier: outletTier } });
       setSuccess('Placement added');
       setHeadline(''); setUrl(''); setOutletName(''); setOutletTier(''); setOutletUmv('');
       setAuthorName(''); setPublishedAt(undefined); setSentiment(''); setAdValue('');
@@ -591,6 +598,7 @@ export function UserManagement() {
         role: inviteRole,
         client_id: inviteClient,
       });
+      logActivity({ client_id: inviteClient, action: 'invited', entity_type: 'user', entity_title: inviteName, metadata: { email: inviteEmail, role: inviteRole } });
       setSuccess(`Invite sent to ${inviteEmail}. They'll receive a link to set their password.`);
       setInviteName(''); setInviteEmail(''); setInviteRole(''); setInviteClient('');
       fetchUsers();
@@ -613,6 +621,7 @@ export function UserManagement() {
         role: editRole,
         client_id: editClient,
       });
+      logActivity({ client_id: editClient || editingUser.client_id, action: 'updated', entity_type: 'user', entity_id: editingUser.id, entity_title: editingUser.full_name, metadata: { role: editRole } });
       setEditingUser(null);
       fetchUsers();
     } catch (err: any) {
@@ -623,11 +632,13 @@ export function UserManagement() {
 
   const handleDelete = async (userId: string) => {
     console.log('[UserManagement] delete clicked for user:', userId);
+    const target = users.find(u => u.id === userId);
     try {
       await callEdgeFunction({
         action: 'delete',
         user_id: userId,
       });
+      logActivity({ client_id: target?.client_id, action: 'deleted', entity_type: 'user', entity_id: userId, entity_title: target?.full_name ?? 'User' });
       fetchUsers();
     } catch (err: any) {
       console.error('[UserManagement] delete error:', err);
@@ -848,6 +859,7 @@ export function NarrativeWatchForm({ defaultClientId }: { defaultClientId: strin
       .eq('week_start', selectedWeek);
     setSubmitting(false);
     if (error) { console.error('[NarrativeWatchForm] post error:', error); return; }
+    logActivity({ client_id: selectedClient, action: 'created', entity_type: 'narrative_watch', entity_title: `Narrative for ${selectedWeek}`, metadata: { week_start: selectedWeek, text: narrativeText } });
     setSuccess('Narrative posted');
     setNarrativeText('');
     setSelectedWeek('');
@@ -861,6 +873,7 @@ export function NarrativeWatchForm({ defaultClientId }: { defaultClientId: strin
       .update({ narrative_watch: editText || null })
       .eq('id', row.id);
     if (error) { console.error('[NarrativeWatchForm] edit error:', error); return; }
+    logActivity({ client_id: row.client_id, action: 'updated', entity_type: 'narrative_watch', entity_id: row.id, entity_title: `Narrative for ${row.week_start}`, metadata: { week_start: row.week_start, text: editText } });
     setEditingId(null);
     setEditText('');
     fetchWeeks();
@@ -872,6 +885,7 @@ export function NarrativeWatchForm({ defaultClientId }: { defaultClientId: strin
       .update({ narrative_watch: null })
       .eq('id', row.id);
     if (error) { console.error('[NarrativeWatchForm] delete error:', error); return; }
+    logActivity({ client_id: row.client_id, action: 'deleted', entity_type: 'narrative_watch', entity_id: row.id, entity_title: `Narrative for ${row.week_start}` });
     fetchWeeks();
   };
 

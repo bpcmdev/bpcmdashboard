@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { logActivity, ActivityEntityType } from '@/lib/activityLog';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
@@ -13,6 +14,14 @@ interface DeleteEntryButtonProps {
   label?: string;
 }
 
+const TABLE_TO_ENTITY: Record<string, ActivityEntityType> = {
+  placements: 'placement',
+  key_wins: 'key_win',
+  pipeline_moments: 'pipeline_moment',
+  partnerships: 'partnership',
+  product_pipeline: 'product_launch',
+};
+
 const DeleteEntryButton = ({ table, id, label = 'this entry' }: DeleteEntryButtonProps) => {
   const { refreshData } = useWeek();
   const [deleting, setDeleting] = useState(false);
@@ -24,6 +33,10 @@ const DeleteEntryButton = ({ table, id, label = 'this entry' }: DeleteEntryButto
       console.error(`[DeleteEntry] ${table} delete error:`, error);
     } else {
       console.log(`[DeleteEntry] deleted ${id} from ${table}`);
+      const entityType = TABLE_TO_ENTITY[table];
+      if (entityType) {
+        logActivity({ action: 'deleted', entity_type: entityType, entity_id: id, entity_title: label });
+      }
       refreshData();
     }
     setDeleting(false);

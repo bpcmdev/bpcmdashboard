@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { format } from 'date-fns';
 import { Pencil, CalendarIcon } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { logActivity } from '@/lib/activityLog';
 import { useWeek } from '@/contexts/WeekContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -77,7 +78,10 @@ export default function EditProductDialog({ entry }: { entry: Product }) {
     const { error } = await supabase.from('product_pipeline').update(payload).eq('id', entry.id);
     if (error) console.error('[EditProduct] update error:', error);
     setSubmitting(false);
-    if (!error) { setOpen(false); setConfirming(false); refreshData(); }
+    if (!error) {
+      logActivity({ action: 'updated', entity_type: 'product_launch', entity_id: entry.id, entity_title: productName, metadata: { launch_type: launchType, status } });
+      setOpen(false); setConfirming(false); refreshData();
+    }
   };
 
   return (
