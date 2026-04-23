@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import { useWeek } from '@/contexts/WeekContext';
 import { supabase } from '@/lib/supabase';
+import { logActivity } from '@/lib/activityLog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import ManageEntries from './ManageEntries';
 
@@ -76,10 +77,11 @@ export function PipelineForm({ clientId }: { clientId: string | null }) {
     setSubmitting(true);
     const payload = { client_id: clientId, title, event_date: eventDate ? format(eventDate, 'yyyy-MM-dd') : null, event_type: eventType, description, monitor_strings: monitorStrings ? monitorStrings.split(',').map(s => s.trim()).filter(Boolean) : [], priority };
     console.log('[AdminPanel] pipeline_moments insert payload:', payload);
-    const { error } = await supabase.from('pipeline_moments').insert(payload);
+    const { data: inserted, error } = await supabase.from('pipeline_moments').insert(payload).select('id').single();
     if (error) console.error('[AdminPanel] pipeline_moments insert error:', error);
     setSubmitting(false);
     if (!error) {
+      logActivity({ client_id: clientId, action: 'created', entity_type: 'pipeline_moment', entity_id: inserted?.id, entity_title: title, metadata: { event_type: eventType, priority } });
       setSuccess('Pipeline moment added');
       setTitle(''); setEventDate(undefined); setEventType(''); setDescription(''); setMonitorStrings(''); setPriority('');
       setTimeout(() => setSuccess(''), 3000);
@@ -135,10 +137,11 @@ export function KeyWinsForm({ clientId }: { clientId: string | null }) {
     setSubmitting(true);
     const payload = { client_id: clientId, title, category, description, reach, tier };
     console.log('[AdminPanel] key_wins insert payload:', payload);
-    const { error } = await supabase.from('key_wins').insert(payload);
+    const { data: inserted, error } = await supabase.from('key_wins').insert(payload).select('id').single();
     if (error) console.error('[AdminPanel] key_wins insert error:', error);
     setSubmitting(false);
     if (!error) {
+      logActivity({ client_id: clientId, action: 'created', entity_type: 'key_win', entity_id: inserted?.id, entity_title: title, metadata: { category, tier } });
       setSuccess('Key win added');
       setTitle(''); setCategory(''); setDescription(''); setReach(''); setTier('');
       setTimeout(() => setSuccess(''), 3000);
@@ -194,10 +197,11 @@ export function PartnershipsForm({ clientId }: { clientId: string | null }) {
     setSubmitting(true);
     const payload = { client_id: clientId, partner_name: partnerName, type, status, description, emv_generated: emv ? Number(emv) : null, notes };
     console.log('[AdminPanel] partnerships insert payload:', payload);
-    const { error } = await supabase.from('partnerships').insert(payload);
+    const { data: inserted, error } = await supabase.from('partnerships').insert(payload).select('id').single();
     if (error) console.error('[AdminPanel] partnerships insert error:', error);
     setSubmitting(false);
     if (!error) {
+      logActivity({ client_id: clientId, action: 'created', entity_type: 'partnership', entity_id: inserted?.id, entity_title: partnerName, metadata: { type, status } });
       setSuccess('Partnership added');
       setPartnerName(''); setType(''); setStatus(''); setDescription(''); setEmv(''); setNotes('');
       setTimeout(() => setSuccess(''), 3000);
@@ -245,10 +249,11 @@ export function ProductLaunchesForm({ clientId }: { clientId: string | null }) {
     setSubmitting(true);
     const payload = { client_id: clientId, product_name: productName, launch_type: launchType, description, launch_date: launchDate ? format(launchDate, 'yyyy-MM-dd') : null, retailers: retailers ? retailers.split(',').map(s => s.trim()).filter(Boolean) : [], status };
     console.log('[AdminPanel] product_pipeline insert payload:', payload);
-    const { error } = await supabase.from('product_pipeline').insert(payload);
+    const { data: inserted, error } = await supabase.from('product_pipeline').insert(payload).select('id').single();
     if (error) console.error('[AdminPanel] product_pipeline insert error:', error);
     setSubmitting(false);
     if (!error) {
+      logActivity({ client_id: clientId, action: 'created', entity_type: 'product_launch', entity_id: inserted?.id, entity_title: productName, metadata: { launch_type: launchType, status } });
       setSuccess('Product launch added');
       setProductName(''); setLaunchType(''); setDescription(''); setLaunchDate(undefined); setRetailers(''); setStatus('');
       setTimeout(() => setSuccess(''), 3000);
@@ -421,10 +426,11 @@ export function PlacementsForm({ clientId }: { clientId: string | null }) {
       tags: tags ? tags.split(',').map(s => s.trim()).filter(Boolean) : [],
     };
     console.log('[AdminPanel] placements insert payload:', payload);
-    const { error } = await supabase.from('placements').insert(payload);
+    const { data: inserted, error } = await supabase.from('placements').insert(payload).select('id').single();
     if (error) console.error('[AdminPanel] placements insert error:', error);
     setSubmitting(false);
     if (!error) {
+      logActivity({ client_id: clientId, action: 'created', entity_type: 'placement', entity_id: inserted?.id, entity_title: headline, metadata: { outlet_name: outletName, outlet_tier: outletTier } });
       setSuccess('Placement added');
       setHeadline(''); setUrl(''); setOutletName(''); setOutletTier(''); setOutletUmv('');
       setAuthorName(''); setPublishedAt(undefined); setSentiment(''); setAdValue('');
