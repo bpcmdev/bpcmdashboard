@@ -34,7 +34,7 @@ const TAB_MAP: Record<string, React.ComponentType> = {
 /** Inner component that can access WeekContext */
 function DashboardContent() {
   const [activeTab, setActiveTab] = useState('EARNED MEDIA');
-  const { clientColor, clientId } = useAdmin();
+  const { clientColor, clientId, isAdmin } = useAdmin();
   const { activeClientId } = useWeek();
   const { isNew } = useIsNewClient();
   const [dismissedFor, setDismissedFor] = useState<string | null>(null);
@@ -47,7 +47,8 @@ function DashboardContent() {
     setDismissedFor(null);
   }, [activeClientId]);
 
-  const showWelcome = isNew === true && dismissedFor !== activeClientId;
+  // Getting Started checklist is an internal BPCM setup task — admins only.
+  const showWelcome = isAdmin && isNew === true && dismissedFor !== activeClientId;
 
   return (
     <div
