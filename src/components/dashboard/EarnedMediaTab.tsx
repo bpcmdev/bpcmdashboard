@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { format, parseISO } from 'date-fns';
 import PlacementVolumeChart from './PlacementVolumeChart';
 import ShareOfVoiceTable from './ShareOfVoiceTable';
 import SentimentBreakdown from './SentimentBreakdown';
@@ -12,7 +13,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Search, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Search, X, CalendarIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useWeek } from '@/contexts/WeekContext';
 import PressHitsLog from './PressHitsLog';
 
 const EarnedMediaTab = () => {
@@ -20,6 +27,29 @@ const EarnedMediaTab = () => {
   const [tierFilter, setTierFilter] = useState('all');
   const [sentimentFilter, setSentimentFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
+
+  const {
+    rangeMode, setRangeMode, rangeFrom, rangeTo, setRangeFrom, setRangeTo,
+    selectedWeek,
+  } = useWeek();
+
+  // When entering Range mode for the first time, seed dates from the active week.
+  useEffect(() => {
+    if (rangeMode === 'range' && (!rangeFrom || !rangeTo) && selectedWeek) {
+      const start = selectedWeek;
+      const end = new Date(selectedWeek + 'T00:00:00');
+      end.setDate(end.getDate() + 6);
+      setRangeFrom(start);
+      setRangeTo(end.toISOString().split('T')[0]);
+    }
+  }, [rangeMode, rangeFrom, rangeTo, selectedWeek, setRangeFrom, setRangeTo]);
+
+  const fromDate = rangeFrom ? parseISO(rangeFrom) : undefined;
+  const toDate = rangeTo ? parseISO(rangeTo) : undefined;
+
+  const rangeBadgeText = rangeMode === 'range' && fromDate && toDate
+    ? `${format(fromDate, 'MMM d')} – ${format(toDate, 'MMM d, yyyy')}`
+    : null;
 
   const hasFilters = searchText || tierFilter !== 'all' || sentimentFilter !== 'all' || typeFilter !== 'all';
 
@@ -32,6 +62,75 @@ const EarnedMediaTab = () => {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
+      {/* Date scope controls */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="inline-flex border border-border bg-card">
+          <button
+            onClick={() => setRangeMode('week')}
+            className={cn(
+              'text-[10px] font-bold tracking-[0.15em] uppercase px-3 py-1.5 transition-colors',
+              rangeMode === 'week' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            Week View
+          </button>
+          <button
+            onClick={() => setRangeMode('range')}
+            className={cn(
+              'text-[10px] font-bold tracking-[0.15em] uppercase px-3 py-1.5 transition-colors border-l border-border',
+              rangeMode === 'range' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            Custom Range
+          </button>
+        </div>
+
+        {rangeMode === 'range' && (
+          <>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className={cn('text-xs justify-start gap-2', !fromDate && 'text-muted-foreground')}>
+                  <CalendarIcon className="h-3.5 w-3.5" />
+                  {fromDate ? format(fromDate, 'MMM d, yyyy') : 'From'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={fromDate}
+                  onSelect={(d) => d && setRangeFrom(format(d, 'yyyy-MM-dd'))}
+                  initialFocus
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+            <span className="text-xs text-muted-foreground">to</span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className={cn('text-xs justify-start gap-2', !toDate && 'text-muted-foreground')}>
+                  <CalendarIcon className="h-3.5 w-3.5" />
+                  {toDate ? format(toDate, 'MMM d, yyyy') : 'To'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={toDate}
+                  onSelect={(d) => d && setRangeTo(format(d, 'yyyy-MM-dd'))}
+                  initialFocus
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+            {rangeBadgeText && (
+              <Badge variant="outline" className="text-[10px] tracking-wider uppercase font-bold">
+                {rangeBadgeText}
+              </Badge>
+            )}
+          </>
+        )}
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-6">
         <div className="md:col-span-3 bg-card p-4 md:p-5 border border-border">
           <PlacementVolumeChart />

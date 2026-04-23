@@ -6,6 +6,8 @@ interface WeekOption {
   weekStart: string;
 }
 
+export type DateRangeMode = 'week' | 'range';
+
 interface WeekContextType {
   selectedWeek: string;
   setSelectedWeek: (week: string) => void;
@@ -17,6 +19,16 @@ interface WeekContextType {
   overrideClientId: string | null;
   setOverrideClientId: (id: string | null) => void;
   activeClientId: string | null;
+  /** Earned Media date-range mode + bounds (YYYY-MM-DD). When mode='week', range mirrors selected week. */
+  rangeMode: DateRangeMode;
+  setRangeMode: (m: DateRangeMode) => void;
+  rangeFrom: string;
+  rangeTo: string;
+  setRangeFrom: (d: string) => void;
+  setRangeTo: (d: string) => void;
+  /** Effective start/end derived from week or custom range — use these in queries. */
+  effectiveFrom: string;
+  effectiveTo: string;
 }
 
 const WeekContext = createContext<WeekContextType>({
@@ -30,6 +42,14 @@ const WeekContext = createContext<WeekContextType>({
   overrideClientId: null,
   setOverrideClientId: () => {},
   activeClientId: null,
+  rangeMode: 'week',
+  setRangeMode: () => {},
+  rangeFrom: '',
+  rangeTo: '',
+  setRangeFrom: () => {},
+  setRangeTo: () => {},
+  effectiveFrom: '',
+  effectiveTo: '',
 });
 
 export const useWeek = () => useContext(WeekContext);
@@ -81,6 +101,9 @@ export const WeekProvider = ({ children }: { children: ReactNode }) => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [overrideClientId, setOverrideClientId] = useState<string | null>(null);
   const [userClientId, setUserClientId] = useState<string | null>(null);
+  const [rangeMode, setRangeMode] = useState<DateRangeMode>('week');
+  const [rangeFrom, setRangeFrom] = useState('');
+  const [rangeTo, setRangeTo] = useState('');
 
   const refreshData = () => {
     setRefreshKey(k => k + 1);
@@ -93,7 +116,6 @@ export const WeekProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [selectedWeek, refreshKey]);
 
-  // Fetch user's client_id once
   useEffect(() => {
     const fetchProfile = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -109,11 +131,10 @@ export const WeekProvider = ({ children }: { children: ReactNode }) => {
     fetchProfile();
   }, []);
 
-  // Fetch weeks whenever active client changes
   const activeClientId = overrideClientId ?? userClientId;
 
   useEffect(() => {
-    if (activeClientId === null && userClientId === null) return; // still loading
+    if (activeClientId === null && userClientId === null) return;
     const fetchWeeks = async () => {
       setLoading(true);
       let query = supabase
@@ -153,8 +174,25 @@ export const WeekProvider = ({ children }: { children: ReactNode }) => {
     fetchWeeks();
   }, [activeClientId, userClientId]);
 
+  let effectiveFrom = '';
+  let effectiveTo = '';
+  if (rangeMode === 'range' && rangeFrom && rangeTo) {
+    effectiveFrom = rangeFrom;
+    effectiveTo = rangeTo;
+  } else if (selectedWeek) {
+    const end = new Date(selectedWeek + 'T00:00:00');
+    end.setDate(end.getDate() + 6);
+    effectiveFrom = selectedWeek;
+    effectiveTo = end.toISOString().split('T')[0];
+  }
+
   return (
-    <WeekContext.Provider value={{ selectedWeek, setSelectedWeek, weeks, loading, lastUpdated, refreshData, refreshKey, overrideClientId, setOverrideClientId, activeClientId }}>
+    <WeekContext.Provider value={{
+      selectedWeek, setSelectedWeek, weeks, loading, lastUpdated, refreshData, refreshKey,
+      overrideClientId, setOverrideClientId, activeClientId,
+      rangeMode, setRangeMode, rangeFrom, rangeTo, setRangeFrom, setRangeTo,
+      effectiveFrom, effectiveTo,
+    }}>
       {children}
     </WeekContext.Provider>
   );

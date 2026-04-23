@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ChevronDown, LogOut, Shield, ShieldCheck, Menu, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useWeek } from '@/contexts/WeekContext';
@@ -25,6 +25,13 @@ const DashboardHeader = () => {
   const { isAdmin, clientId, clientName, clientLogo, clientColor, allClients, switchClient } = useAdmin();
   const [adminOpen, setAdminOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Allow other parts of the app (e.g. Getting Started checklist) to open the admin panel.
+  useEffect(() => {
+    const handler = () => setAdminOpen(true);
+    window.addEventListener('bpcm:open-admin-panel', handler);
+    return () => window.removeEventListener('bpcm:open-admin-panel', handler);
+  }, []);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const currentLabel = weeks.find(w => w.weekStart === selectedWeek)?.label ?? 'Loading…';

@@ -21,18 +21,28 @@ const ShareOfVoiceTable = () => {
   const [sovData, setSovData] = useState<SovRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const { selectedWeek, refreshKey, activeClientId } = useWeek();
+  const { selectedWeek, refreshKey, activeClientId, rangeMode, rangeFrom, rangeTo } = useWeek();
 
   useEffect(() => {
-    if (!selectedWeek || !activeClientId) return;
+    if (!activeClientId) return;
+    if (rangeMode === 'week' && !selectedWeek) return;
+    if (rangeMode === 'range' && (!rangeFrom || !rangeTo)) return;
+
     const fetchSov = async () => {
       setLoading(true);
       setError(false);
-      const { data, error: err } = await supabase
+
+      let query = supabase
         .from('competitive_sov')
         .select('brand_name, sov_pct, delta_pts')
-        .eq('client_id', activeClientId)
-        .eq('week_start', selectedWeek);
+        .eq('client_id', activeClientId);
+      if (rangeMode === 'range') {
+        query = query.gte('week_start', rangeFrom).lte('week_start', rangeTo);
+      } else {
+        query = query.eq('week_start', selectedWeek);
+      }
+
+      const { data, error: err } = await query;
 
       if (err) {
         console.error('Failed to fetch competitive_sov:', err);
@@ -41,7 +51,7 @@ const ShareOfVoiceTable = () => {
         return;
       }
 
-      // Aggregate across platforms: average sov_pct and delta_pts per brand
+      // Aggregate across platforms (and weeks if range): average sov_pct and delta_pts per brand
       const brandMap = new Map<string, { totalPct: number; totalDelta: number; count: number }>();
       (data ?? []).forEach((row: any) => {
         const brand = row.brand_name ?? '';
@@ -73,7 +83,7 @@ const ShareOfVoiceTable = () => {
     };
 
     fetchSov();
-  }, [selectedWeek, refreshKey, activeClientId]);
+  }, [selectedWeek, refreshKey, activeClientId, rangeMode, rangeFrom, rangeTo]);
 
   if (error) {
     return <p className="text-sm text-destructive text-center py-8">Unable to load data. Please try refreshing.</p>;
