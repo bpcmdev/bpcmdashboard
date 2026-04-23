@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, LogOut, Shield, Menu, X } from 'lucide-react';
+import { ChevronDown, LogOut, Shield, ShieldCheck, Menu, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useWeek } from '@/contexts/WeekContext';
 import { supabase } from '@/lib/supabase';
@@ -139,6 +139,15 @@ const DashboardHeader = () => {
               Admin
             </button>
           )}
+          {isAdmin && (
+            <button
+              onClick={() => navigate('/admin')}
+              className="flex items-center gap-1.5 text-xs font-medium tracking-wider uppercase px-3 py-1.5 border border-white/20 hover:bg-white/10 transition-colors"
+            >
+              <ShieldCheck className="w-3 h-3" />
+              Super Admin
+            </button>
+          )}
           <button
             onClick={handleLogout}
             className="flex items-center gap-1.5 text-xs font-medium tracking-wider uppercase px-3 py-1.5 border border-white/20 hover:bg-white/10 transition-colors"
@@ -208,6 +217,15 @@ const DashboardHeader = () => {
               >
                 <Shield className="w-3 h-3" />
                 Admin
+              </button>
+            )}
+            {isAdmin && (
+              <button
+                onClick={() => { navigate('/admin'); setMobileMenuOpen(false); }}
+                className="flex items-center gap-1.5 text-xs font-medium tracking-wider uppercase px-3 py-1.5 border border-white/20 hover:bg-white/10 transition-colors"
+              >
+                <ShieldCheck className="w-3 h-3" />
+                Super Admin
               </button>
             )}
             <button
