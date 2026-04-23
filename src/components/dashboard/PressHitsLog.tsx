@@ -231,7 +231,7 @@ function formToPayload(v: ReturnType<typeof defaultFormValues>) {
 
 /* ─── Main Component ─── */
 const PressHitsLog = () => {
-  const { selectedWeek, refreshKey, activeClientId } = useWeek();
+  const { selectedWeek, refreshKey, activeClientId, effectiveFrom, effectiveTo, rangeMode } = useWeek();
   const { isAdmin } = useAdmin();
   const [placements, setPlacements] = useState<Placement[]>([]);
   const [loading, setLoading] = useState(true);
@@ -255,17 +255,14 @@ const PressHitsLog = () => {
   const updateEditForm = (field: string, value: any) => setEditForm(prev => ({ ...prev, [field]: value }));
 
   const fetchPlacements = async () => {
-    if (!selectedWeek) return;
+    if (!effectiveFrom || !effectiveTo) return;
     setLoading(true);
-    const weekEnd = new Date(selectedWeek + 'T00:00:00');
-    weekEnd.setDate(weekEnd.getDate() + 6);
-    const endStr = weekEnd.toISOString().split('T')[0];
 
     let query = supabase
       .from('placements')
       .select('id, headline, url, outlet_name, outlet_tier, outlet_umv, author_name, published_at, placement_type, placed_by, sentiment, ad_value, impressions, tags, dismissed')
-      .gte('published_at', selectedWeek)
-      .lte('published_at', endStr)
+      .gte('published_at', effectiveFrom)
+      .lte('published_at', effectiveTo)
       .order('published_at', { ascending: false });
 
     if (activeClientId) {
@@ -279,7 +276,7 @@ const PressHitsLog = () => {
 
   useEffect(() => {
     fetchPlacements();
-  }, [selectedWeek, refreshKey, activeClientId]);
+  }, [effectiveFrom, effectiveTo, refreshKey, activeClientId, rangeMode]);
 
   const visible = useMemo(
     () => placements.filter((p) => !p.dismissed),

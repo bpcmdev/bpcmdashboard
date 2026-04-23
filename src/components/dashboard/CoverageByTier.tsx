@@ -14,22 +14,22 @@ const CoverageByTier = () => {
   const [data, setData] = useState<TierData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const { selectedWeek, refreshKey } = useWeek();
+  const { refreshKey, activeClientId, effectiveFrom, effectiveTo } = useWeek();
 
   useEffect(() => {
-    if (!selectedWeek) return;
+    if (!effectiveFrom || !effectiveTo) return;
     const fetchTiers = async () => {
       setLoading(true);
       setError(false);
-      const weekEnd = new Date(selectedWeek + 'T00:00:00');
-      weekEnd.setDate(weekEnd.getDate() + 6);
-      const endStr = weekEnd.toISOString().split('T')[0];
 
-      const { data: placements, error: err } = await supabase
+      let query = supabase
         .from('placements')
         .select('outlet_tier')
-        .gte('published_at', selectedWeek)
-        .lte('published_at', endStr);
+        .gte('published_at', effectiveFrom)
+        .lte('published_at', effectiveTo);
+      if (activeClientId) query = query.eq('client_id', activeClientId);
+
+      const { data: placements, error: err } = await query;
 
       if (err) {
         console.error('Failed to fetch tier data:', err);
@@ -59,7 +59,7 @@ const CoverageByTier = () => {
       setLoading(false);
     };
     fetchTiers();
-  }, [selectedWeek, refreshKey]);
+  }, [effectiveFrom, effectiveTo, refreshKey, activeClientId]);
 
   if (error) {
     return <p className="text-sm text-destructive text-center py-8">Unable to load data. Please try refreshing.</p>;
