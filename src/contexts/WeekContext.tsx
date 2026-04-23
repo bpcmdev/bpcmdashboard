@@ -6,6 +6,8 @@ interface WeekOption {
   weekStart: string;
 }
 
+export type DateRangeMode = 'week' | 'range';
+
 interface WeekContextType {
   selectedWeek: string;
   setSelectedWeek: (week: string) => void;
@@ -17,6 +19,16 @@ interface WeekContextType {
   overrideClientId: string | null;
   setOverrideClientId: (id: string | null) => void;
   activeClientId: string | null;
+  /** Earned Media date-range mode + bounds (YYYY-MM-DD). When mode='week', range mirrors selected week. */
+  rangeMode: DateRangeMode;
+  setRangeMode: (m: DateRangeMode) => void;
+  rangeFrom: string;
+  rangeTo: string;
+  setRangeFrom: (d: string) => void;
+  setRangeTo: (d: string) => void;
+  /** Effective start/end derived from week or custom range — use these in queries. */
+  effectiveFrom: string;
+  effectiveTo: string;
 }
 
 const WeekContext = createContext<WeekContextType>({
@@ -30,6 +42,14 @@ const WeekContext = createContext<WeekContextType>({
   overrideClientId: null,
   setOverrideClientId: () => {},
   activeClientId: null,
+  rangeMode: 'week',
+  setRangeMode: () => {},
+  rangeFrom: '',
+  rangeTo: '',
+  setRangeFrom: () => {},
+  setRangeTo: () => {},
+  effectiveFrom: '',
+  effectiveTo: '',
 });
 
 export const useWeek = () => useContext(WeekContext);
