@@ -331,10 +331,11 @@ export function WeeklySnapshotForm({ clientId }: { clientId: string | null }) {
       sov_delta_pts: num(sovDeltaPts),
     };
     console.log('[AdminPanel] weekly_snapshots insert payload:', payload);
-    const { error } = await supabase.from('weekly_snapshots').insert(payload);
+    const { data: inserted, error } = await supabase.from('weekly_snapshots').insert(payload).select('id').single();
     if (error) console.error('[AdminPanel] weekly_snapshots insert error:', error);
     setSubmitting(false);
     if (!error) {
+      logActivity({ client_id: clientId, action: 'created', entity_type: 'weekly_snapshot', entity_id: inserted?.id, entity_title: `Week of ${format(weekStart, 'PP')}`, metadata: { week_start: format(weekStart, 'yyyy-MM-dd') } });
       setSuccess('Weekly snapshot added');
       setWeekStart(undefined); setPlacementCount(''); setEmvUsd(''); setSentimentScore('');
       setSocialReach(''); setSovPct(''); setInfluencerRoi(''); setWowPlacementDelta('');
@@ -597,6 +598,7 @@ export function UserManagement() {
         role: inviteRole,
         client_id: inviteClient,
       });
+      logActivity({ client_id: inviteClient, action: 'invited', entity_type: 'user', entity_title: inviteName, metadata: { email: inviteEmail, role: inviteRole } });
       setSuccess(`Invite sent to ${inviteEmail}. They'll receive a link to set their password.`);
       setInviteName(''); setInviteEmail(''); setInviteRole(''); setInviteClient('');
       fetchUsers();
@@ -619,6 +621,7 @@ export function UserManagement() {
         role: editRole,
         client_id: editClient,
       });
+      logActivity({ client_id: editClient || editingUser.client_id, action: 'updated', entity_type: 'user', entity_id: editingUser.id, entity_title: editingUser.full_name, metadata: { role: editRole } });
       setEditingUser(null);
       fetchUsers();
     } catch (err: any) {
@@ -629,11 +632,13 @@ export function UserManagement() {
 
   const handleDelete = async (userId: string) => {
     console.log('[UserManagement] delete clicked for user:', userId);
+    const target = users.find(u => u.id === userId);
     try {
       await callEdgeFunction({
         action: 'delete',
         user_id: userId,
       });
+      logActivity({ client_id: target?.client_id, action: 'deleted', entity_type: 'user', entity_id: userId, entity_title: target?.full_name ?? 'User' });
       fetchUsers();
     } catch (err: any) {
       console.error('[UserManagement] delete error:', err);
@@ -854,6 +859,7 @@ export function NarrativeWatchForm({ defaultClientId }: { defaultClientId: strin
       .eq('week_start', selectedWeek);
     setSubmitting(false);
     if (error) { console.error('[NarrativeWatchForm] post error:', error); return; }
+    logActivity({ client_id: selectedClient, action: 'created', entity_type: 'narrative_watch', entity_title: `Narrative for ${selectedWeek}`, metadata: { week_start: selectedWeek, text: narrativeText } });
     setSuccess('Narrative posted');
     setNarrativeText('');
     setSelectedWeek('');
@@ -867,6 +873,7 @@ export function NarrativeWatchForm({ defaultClientId }: { defaultClientId: strin
       .update({ narrative_watch: editText || null })
       .eq('id', row.id);
     if (error) { console.error('[NarrativeWatchForm] edit error:', error); return; }
+    logActivity({ client_id: row.client_id, action: 'updated', entity_type: 'narrative_watch', entity_id: row.id, entity_title: `Narrative for ${row.week_start}`, metadata: { week_start: row.week_start, text: editText } });
     setEditingId(null);
     setEditText('');
     fetchWeeks();
@@ -878,6 +885,7 @@ export function NarrativeWatchForm({ defaultClientId }: { defaultClientId: strin
       .update({ narrative_watch: null })
       .eq('id', row.id);
     if (error) { console.error('[NarrativeWatchForm] delete error:', error); return; }
+    logActivity({ client_id: row.client_id, action: 'deleted', entity_type: 'narrative_watch', entity_id: row.id, entity_title: `Narrative for ${row.week_start}` });
     fetchWeeks();
   };
 
