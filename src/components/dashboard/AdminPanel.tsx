@@ -604,13 +604,15 @@ function UserManagement() {
 
   const handleUpdate = async () => {
     if (!editingUser) return;
+    console.log('[UserManagement] update clicked for user:', editingUser.id);
     setSubmitting(true);
     try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ role: editRole, client_id: editClient })
-        .eq('id', editingUser.id);
-      if (error) throw error;
+      await callEdgeFunction({
+        action: 'update',
+        user_id: editingUser.id,
+        role: editRole,
+        client_id: editClient,
+      });
       setEditingUser(null);
       fetchUsers();
     } catch (err: any) {
@@ -620,12 +622,12 @@ function UserManagement() {
   };
 
   const handleDelete = async (userId: string) => {
+    console.log('[UserManagement] delete clicked for user:', userId);
     try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .delete()
-        .eq('id', userId);
-      if (error) throw error;
+      await callEdgeFunction({
+        action: 'delete',
+        user_id: userId,
+      });
       fetchUsers();
     } catch (err: any) {
       console.error('[UserManagement] delete error:', err);
