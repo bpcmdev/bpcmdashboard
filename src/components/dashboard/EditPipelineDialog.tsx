@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { format } from 'date-fns';
 import { Pencil } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { logActivity } from '@/lib/activityLog';
 import { useWeek } from '@/contexts/WeekContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -70,6 +71,7 @@ export default function EditPipelineDialog({ entry }: { entry: PipelineEntry }) 
     if (error) console.error('[EditPipeline] update error:', error);
     setSubmitting(false);
     if (!error) {
+      logActivity({ action: 'updated', entity_type: 'pipeline_moment', entity_id: entry.id, entity_title: title, metadata: { event_type: eventType, priority } });
       setOpen(false);
       setConfirming(false);
       refreshData();

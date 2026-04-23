@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { format } from 'date-fns';
 import { Pencil, CalendarIcon } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { logActivity } from '@/lib/activityLog';
 import { useWeek } from '@/contexts/WeekContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -99,6 +100,7 @@ export default function EditPlacementDialog({ entry }: { entry: PlacementEntry }
     if (error) console.error('[EditPlacement] update error:', error);
     setSubmitting(false);
     if (!error) {
+      logActivity({ action: 'updated', entity_type: 'placement', entity_id: entry.id, entity_title: headline, metadata: { outlet_name: outletName, outlet_tier: outletTier } });
       setOpen(false);
       setConfirming(false);
       refreshData();

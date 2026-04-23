@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pencil } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { logActivity } from '@/lib/activityLog';
 import { useWeek } from '@/contexts/WeekContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -57,7 +58,10 @@ export default function EditPartnershipDialog({ entry }: { entry: Partnership })
     const { error } = await supabase.from('partnerships').update(payload).eq('id', entry.id);
     if (error) console.error('[EditPartnership] update error:', error);
     setSubmitting(false);
-    if (!error) { setOpen(false); setConfirming(false); refreshData(); }
+    if (!error) {
+      logActivity({ action: 'updated', entity_type: 'partnership', entity_id: entry.id, entity_title: partnerName, metadata: { type, status } });
+      setOpen(false); setConfirming(false); refreshData();
+    }
   };
 
   return (

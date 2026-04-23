@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pencil } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { logActivity } from '@/lib/activityLog';
 import { useWeek } from '@/contexts/WeekContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -54,7 +55,10 @@ export default function EditKeyWinDialog({ entry }: { entry: KeyWin }) {
     const { error } = await supabase.from('key_wins').update(payload).eq('id', entry.id);
     if (error) console.error('[EditKeyWin] update error:', error);
     setSubmitting(false);
-    if (!error) { setOpen(false); setConfirming(false); refreshData(); }
+    if (!error) {
+      logActivity({ action: 'updated', entity_type: 'key_win', entity_id: entry.id, entity_title: title, metadata: { category, tier } });
+      setOpen(false); setConfirming(false); refreshData();
+    }
   };
 
   return (
