@@ -53,14 +53,21 @@ const DashboardHeader = () => {
   };
 
   return (
-    <header className="dashboard-header px-4 md:px-6 py-3">
+    <header
+      className="dashboard-header px-4 md:px-6 py-3 backdrop-blur-xl border-b border-white/5 sticky top-0 z-40"
+      style={{
+        background:
+          'linear-gradient(180deg, hsl(var(--dashboard-header) / 0.92) 0%, hsl(var(--dashboard-header) / 0.78) 100%)',
+        WebkitBackdropFilter: 'blur(16px)',
+      }}
+    >
       {/* Top row */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           {clientLogo && (
-            <img src={clientLogo} alt={clientName ?? ''} className="h-6 w-auto" />
+            <img src={clientLogo} alt={clientName ?? ''} className="h-7 w-auto" />
           )}
-          <span className="text-base md:text-lg font-extrabold tracking-wider uppercase">
+          <span className="text-lg md:text-2xl font-extrabold tracking-[0.08em] uppercase text-white">
             {clientName ?? 'Loading…'}
           </span>
         </div>
