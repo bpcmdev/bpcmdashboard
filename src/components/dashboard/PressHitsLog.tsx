@@ -479,7 +479,8 @@ const PressHitsLog = () => {
                   </button>
                 )}
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
