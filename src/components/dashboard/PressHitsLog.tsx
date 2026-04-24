@@ -423,17 +423,25 @@ const PressHitsLog = () => {
         ) : displayList.length === 0 ? (
           <p className="text-xs text-muted-foreground text-center py-6">No placements for this week.</p>
         ) : (
-          <div className="divide-y divide-border">
-            {displayList.map((p) => (
+          <div className="space-y-1.5">
+            {displayList.map((p) => {
+              const sentimentBorder =
+                p.sentiment === 'positive'
+                  ? 'border-l-[hsl(145_63%_42%)]'
+                  : p.sentiment === 'negative'
+                  ? 'border-l-[hsl(0_72%_51%)]'
+                  : 'border-l-[hsl(0_0%_70%)]';
+              return (
               <div
                 key={p.id}
                 className={cn(
-                  "flex items-center gap-2 md:gap-3 py-2.5 group cursor-pointer hover:bg-accent/30 transition-colors px-1 -mx-1 rounded",
+                  "flex items-center gap-2 md:gap-3 py-2.5 pl-3 pr-2 group cursor-pointer rounded-sm bg-card border-l-[3px] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_-12px_hsl(var(--chart-navy)/0.25)] hover:bg-accent/30",
+                  sentimentBorder,
                   p.dismissed && "opacity-40"
                 )}
                 onClick={() => setPreviewItem(p)}
               >
-                <span className="text-xs font-semibold w-28 md:w-36 shrink-0 truncate">{p.outlet_name}</span>
+                <span className="text-[13px] font-bold w-28 md:w-36 shrink-0 truncate text-foreground">{p.outlet_name}</span>
                 <span className="text-xs text-primary flex-1 text-left truncate">{p.headline}</span>
                 <span className="text-[11px] text-muted-foreground shrink-0 hidden md:inline">
                   {p.published_at ? formatDate(p.published_at) : ''}
