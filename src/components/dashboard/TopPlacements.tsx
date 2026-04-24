@@ -171,7 +171,7 @@ const TopPlacements = ({ searchText = '', tierFilter = 'all', sentimentFilter = 
           <span className="ml-2 text-muted-foreground font-normal">({filtered.length} of {rawPlacements.length})</span>
         )}
       </h3>
-      <div className="divide-y divide-border">
+      <div className="divide-y divide-white/[0.07]">
         {filtered.map((p) => {
           const tier = formatTier(p.outlet_tier, p.placement_type, p.headline);
           return (

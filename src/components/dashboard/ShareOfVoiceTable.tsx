@@ -102,25 +102,35 @@ const ShareOfVoiceTable = () => {
 
   return (
     <div>
-      <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">
+      <h3 className="text-[10px] font-bold tracking-[0.14em] uppercase text-white/40 mb-4">
         Share of Voice — Competitive Set
       </h3>
-      <div className="space-y-2.5">
+      <div className="space-y-1">
         {sovData.map((row) => (
-          <div key={row.brand} className="flex items-center gap-3">
-            <span className="text-[10px] text-muted-foreground w-4 text-right">#{row.rank}</span>
-            <span className={`text-xs w-32 truncate ${row.highlight ? 'font-bold text-foreground' : 'text-foreground/80'}`}>
+          <div
+            key={row.brand}
+            className={`flex items-center gap-3 px-2 py-1.5 rounded-sm ${
+              row.highlight ? 'bg-[hsl(42_64%_55%/0.12)]' : ''
+            }`}
+          >
+            <span className={`text-[10px] w-4 text-right ${row.highlight ? 'text-[hsl(var(--chart-gold))] font-bold' : 'text-white/40'}`}>
+              #{row.rank}
+            </span>
+            <span className={`text-xs w-32 truncate ${row.highlight ? 'font-bold text-white' : 'text-white/70'}`}>
               {row.brand}
             </span>
-            <div className="flex-1 h-4 bg-secondary relative">
+            <div className="flex-1 h-4 bg-white/[0.06] relative rounded-sm overflow-hidden">
               <div
-                className={`h-full ${row.highlight ? 'bg-foreground' : 'bg-foreground/40'}`}
-                style={{ width: `${(row.pct / 25) * 100}%` }}
+                className="h-full"
+                style={{
+                  width: `${(row.pct / 25) * 100}%`,
+                  backgroundColor: row.highlight ? 'hsl(218 60% 47%)' : 'hsl(0 0% 100% / 0.15)',
+                }}
               />
             </div>
-            <span className={`text-xs w-8 text-right ${row.highlight ? 'font-bold' : ''}`}>{row.pct}%</span>
+            <span className={`text-xs w-10 text-right ${row.highlight ? 'font-bold text-white' : 'text-white/70'}`}>{row.pct}%</span>
             <span className={`text-[10px] w-14 text-right ${
-              row.delta.includes('▲') ? 'text-positive' : row.delta.includes('-') ? 'text-negative' : 'text-neutral-delta'
+              row.delta.includes('▲') ? 'text-positive' : row.delta.includes('-') ? 'text-negative' : 'text-white/40'
             }`}>
               {row.delta}
             </span>
