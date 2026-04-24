@@ -17,6 +17,10 @@ export default {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
       },
       colors: {
+        // Premium chart palette
+        "chart-navy": "hsl(var(--chart-navy))",
+        "chart-gold": "hsl(var(--chart-gold))",
+        "chart-soft": "hsl(var(--chart-soft))",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
