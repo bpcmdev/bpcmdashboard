@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -10,13 +11,69 @@ interface KpiCardProps {
   deltaType: 'positive' | 'negative' | 'neutral';
 }
 
+/** Animate a numeric value from 0 → target over `duration` ms. Non-numeric values are returned as-is. */
+function useCountUp(target: string, duration = 900): string {
+  const [display, setDisplay] = useState(target);
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    // Extract a leading number (handles "$1.2M", "78/100", "45%", "3.2x", "0")
+    const match = target.match(/^([^\d-]*)(-?[\d.]+)(.*)$/);
+    if (!match) {
+      setDisplay(target);
+      return;
+    }
+    const prefix = match[1];
+    const end = parseFloat(match[2]);
+    const suffix = match[3];
+    if (Number.isNaN(end)) {
+      setDisplay(target);
+      return;
+    }
+    const decimals = (match[2].split('.')[1] ?? '').length;
+    const start = performance.now();
+
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
+      const cur = end * eased;
+      setDisplay(`${prefix}${cur.toFixed(decimals)}${suffix}`);
+      if (t < 1) rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [target, duration]);
+
+  return display;
+}
+
 const KpiCard = ({ label, value, delta, deltaType }: KpiCardProps) => {
-  const deltaColor = deltaType === 'positive' ? 'text-positive' : deltaType === 'negative' ? 'text-negative' : 'text-neutral-delta';
+  const animated = useCountUp(value);
+  const isPos = deltaType === 'positive';
+  const isNeg = deltaType === 'negative';
+  const TrendIcon = isPos ? ArrowUpRight : isNeg ? ArrowDownRight : Minus;
+  const trendColor = isPos ? 'text-positive' : isNeg ? 'text-negative' : 'text-neutral-delta';
+
   return (
-    <div className="flex-1 px-3 md:px-5 py-3 md:py-4 text-center min-w-0">
-      <p className="text-[9px] md:text-[10px] font-semibold tracking-[0.15em] uppercase text-muted-foreground mb-1 truncate">{label}</p>
-      <p className="text-lg md:text-2xl font-bold tracking-tight text-foreground">{value}</p>
-      <p className={`text-[10px] md:text-[11px] mt-0.5 ${deltaColor} truncate`}>{delta}</p>
+    <div
+      className="flex-1 px-3 md:px-5 py-4 md:py-5 text-center min-w-0 relative overflow-hidden animate-fade-in"
+      style={{
+        background:
+          'linear-gradient(160deg, hsl(var(--chart-navy)) 0%, hsl(var(--chart-navy-soft)) 100%)',
+      }}
+    >
+      <p className="text-[9px] md:text-[10px] font-semibold tracking-[0.18em] uppercase text-white/55 mb-1.5 truncate">
+        {label}
+      </p>
+      <p className="text-2xl md:text-3xl font-bold tracking-tight text-white tabular-nums">
+        {animated}
+      </p>
+      <div className={`flex items-center justify-center gap-1 mt-1.5 ${trendColor}`}>
+        <TrendIcon className="w-3 h-3 md:w-3.5 md:h-3.5" strokeWidth={2.5} />
+        <span className="text-[10px] md:text-[11px] font-medium truncate">{delta.replace(/^[▲▼]\s?/, '')}</span>
+      </div>
     </div>
   );
 };
@@ -37,9 +94,9 @@ function formatCompact(n: number): string {
 }
 
 function formatDelta(val: number, suffix: string): { delta: string; deltaType: 'positive' | 'negative' | 'neutral' } {
-  if (val > 0) return { delta: `▲ ${val}${suffix}`, deltaType: 'positive' };
-  if (val < 0) return { delta: `▼ ${Math.abs(val)}${suffix}`, deltaType: 'negative' };
-  return { delta: '— stable', deltaType: 'neutral' };
+  if (val > 0) return { delta: `${val}${suffix}`, deltaType: 'positive' };
+  if (val < 0) return { delta: `${Math.abs(val)}${suffix}`, deltaType: 'negative' };
+  return { delta: 'stable', deltaType: 'neutral' };
 }
 
 const KpiBar = () => {
@@ -92,7 +149,7 @@ const KpiBar = () => {
         { label: 'Sentiment Score', value: `${r.sentiment_score ?? 0}/100`, ...sentimentDelta },
         { label: 'Social Reach', value: formatCompact(r.social_reach ?? 0), ...reachDelta },
         { label: 'Share of Voice', value: `${r.sov_pct ?? 0}%`, ...sovDelta },
-        { label: 'Influencer ROI', value: `${roiVal}x`, delta: '— stable', deltaType: 'neutral' },
+        { label: 'Influencer ROI', value: `${roiVal}x`, delta: 'stable', deltaType: 'neutral' },
       ]);
       setLoading(false);
     };
@@ -110,12 +167,12 @@ const KpiBar = () => {
 
   if (loading) {
     return (
-      <div className="bg-card grid grid-cols-3 md:flex divide-x divide-border border-b border-border">
+      <div className="grid grid-cols-3 md:flex divide-x divide-white/5 border-b border-border" style={{ background: 'hsl(var(--chart-navy))' }}>
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="flex-1 px-3 md:px-5 py-3 md:py-4 text-center space-y-2">
-            <Skeleton className="h-3 w-16 md:w-20 mx-auto" />
-            <Skeleton className="h-6 md:h-7 w-12 md:w-16 mx-auto" />
-            <Skeleton className="h-3 w-20 md:w-24 mx-auto" />
+          <div key={i} className="flex-1 px-3 md:px-5 py-4 md:py-5 text-center space-y-2">
+            <Skeleton className="h-3 w-16 md:w-20 mx-auto bg-white/10" />
+            <Skeleton className="h-7 md:h-8 w-14 md:w-20 mx-auto bg-white/10" />
+            <Skeleton className="h-3 w-20 md:w-24 mx-auto bg-white/10" />
           </div>
         ))}
       </div>
@@ -123,7 +180,7 @@ const KpiBar = () => {
   }
 
   return (
-    <div className="bg-card grid grid-cols-3 md:flex divide-x divide-border border-b border-border">
+    <div className="grid grid-cols-3 md:flex divide-x divide-white/5 border-b border-border">
       {kpis.map((kpi) => (
         <KpiCard key={kpi.label} {...kpi} />
       ))}
