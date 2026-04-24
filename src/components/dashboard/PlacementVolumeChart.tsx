@@ -121,11 +121,17 @@ const PlacementVolumeChart = () => {
       ) : (
         <ResponsiveContainer width="100%" height={240}>
           <BarChart data={buckets} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 90%)" vertical={false} />
+            <defs>
+              <linearGradient id="barNavy" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="hsl(var(--chart-navy-soft))" />
+                <stop offset="100%" stopColor="hsl(var(--chart-navy))" />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="2 4" stroke="hsl(var(--chart-grid))" vertical={false} />
             <XAxis
               dataKey="label"
               tick={{ fontSize: 10, fill: 'hsl(0 0% 45%)' }}
-              axisLine={{ stroke: 'hsl(0 0% 90%)' }}
+              axisLine={false}
               tickLine={false}
             />
             <YAxis
@@ -136,15 +142,17 @@ const PlacementVolumeChart = () => {
               allowDecimals={false}
             />
             <Tooltip
+              cursor={{ fill: 'hsl(var(--chart-soft) / 0.4)' }}
               contentStyle={{
-                backgroundColor: 'hsl(0 0% 9%)',
+                backgroundColor: 'hsl(var(--chart-navy))',
                 border: 'none',
-                borderRadius: '2px',
+                borderRadius: '4px',
                 color: 'white',
                 fontSize: 11,
+                boxShadow: '0 4px 16px hsl(var(--chart-navy) / 0.25)',
               }}
             />
-            <Bar dataKey="placements" fill="hsl(0 0% 9%)" radius={[1, 1, 0, 0]} />
+            <Bar dataKey="placements" fill="url(#barNavy)" radius={[3, 3, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       )}
