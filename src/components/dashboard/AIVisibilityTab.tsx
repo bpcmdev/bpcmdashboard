@@ -362,15 +362,15 @@ const AIVisibilityTab = () => {
             <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">Visibility Score Trend — 12 Weeks</h3>
             <ResponsiveContainer width="100%" height={260}>
               <LineChart data={trendData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 90%)" vertical={false} />
-                <XAxis dataKey="week" tick={{ fontSize: 9, fill: 'hsl(0 0% 45%)' }} axisLine={{ stroke: 'hsl(0 0% 90%)' }} tickLine={false} />
+                <CartesianGrid strokeDasharray="2 4" stroke="hsl(var(--chart-grid))" vertical={false} />
+                <XAxis dataKey="week" tick={{ fontSize: 9, fill: 'hsl(0 0% 45%)' }} axisLine={false} tickLine={false} />
                 <YAxis domain={[30, 85]} tick={{ fontSize: 10, fill: 'hsl(0 0% 45%)' }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{ backgroundColor: 'hsl(0 0% 9%)', border: 'none', borderRadius: '2px', color: 'white', fontSize: 11 }} />
-                <Line type="monotone" dataKey="chatgpt" name="ChatGPT" stroke="hsl(0 0% 9%)" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="perplexity" name="Perplexity" stroke="hsl(0 0% 30%)" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="rufus" name="Rufus" stroke="hsl(38 80% 55%)" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="gemini" name="Gemini" stroke="hsl(0 0% 55%)" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="claude" name="Claude" stroke="hsl(0 0% 75%)" strokeWidth={2} dot={false} />
+                <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--chart-navy))', border: 'none', borderRadius: '4px', color: 'white', fontSize: 11, boxShadow: '0 4px 16px hsl(var(--chart-navy) / 0.25)' }} />
+                <Line type="monotone" dataKey="chatgpt" name="ChatGPT" stroke="hsl(var(--chart-navy))" strokeWidth={2.25} dot={false} />
+                <Line type="monotone" dataKey="perplexity" name="Perplexity" stroke="hsl(var(--chart-gold))" strokeWidth={2.25} dot={false} />
+                <Line type="monotone" dataKey="rufus" name="Rufus" stroke="hsl(213 40% 45%)" strokeWidth={1.75} dot={false} />
+                <Line type="monotone" dataKey="gemini" name="Gemini" stroke="hsl(0 0% 55%)" strokeWidth={1.75} dot={false} />
+                <Line type="monotone" dataKey="claude" name="Claude" stroke="hsl(220 13% 75%)" strokeWidth={1.75} dot={false} />
               </LineChart>
             </ResponsiveContainer>
             <div className="flex gap-4 mt-2">

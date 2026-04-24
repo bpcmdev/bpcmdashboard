@@ -51,6 +51,13 @@
     --dashboard-tier3: 0 0% 70%;
     --dashboard-corp: 38 50% 55%;
 
+    /* Premium chart palette */
+    --chart-navy: 213 60% 9%;        /* #0a1628 deep navy */
+    --chart-navy-soft: 213 40% 22%;  /* lighter navy for gradient */
+    --chart-gold: 43 53% 54%;        /* #C9A84C accent gold */
+    --chart-soft: 220 13% 91%;       /* #E5E7EB soft gray */
+    --chart-grid: 220 13% 91%;
+
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;

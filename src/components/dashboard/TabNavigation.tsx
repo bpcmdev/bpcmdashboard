@@ -54,9 +54,9 @@ const TabNavigation = ({ activeTab, onTabChange }: TabNavigationProps) => {
           <button
             key={tab}
             onClick={() => onTabChange(tab)}
-            className={`px-4 py-3 text-[11px] font-semibold tracking-[0.1em] uppercase whitespace-nowrap transition-colors relative
+            className={`px-4 py-3 text-[11px] font-bold tracking-[0.1em] uppercase whitespace-nowrap transition-colors relative
               ${activeTab === tab
-                ? 'text-foreground after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-[var(--client-accent,hsl(var(--foreground)))]'
+                ? 'text-foreground after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-[var(--client-accent,hsl(var(--chart-navy)))]'
                 : 'text-muted-foreground hover:text-foreground'
               }`}
           >
