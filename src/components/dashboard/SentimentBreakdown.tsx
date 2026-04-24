@@ -80,35 +80,35 @@ const SentimentBreakdown = () => {
   }
 
   const bars = [
-    { label: 'Positive', pct: data.positive, barClass: 'bg-foreground' },
-    { label: 'Neutral', pct: data.neutral, barClass: 'bg-muted-foreground/50' },
-    { label: 'Negative', pct: data.negative, barClass: 'bg-destructive' },
+    { label: 'Positive', pct: data.positive, barClass: 'bg-[hsl(218_60%_47%)]' },
+    { label: 'Neutral', pct: data.neutral, barClass: 'bg-white/20' },
+    { label: 'Negative', pct: data.negative, barClass: 'bg-[hsl(0_70%_61%)]' },
   ];
 
   return (
     <div>
-      <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">
+      <h3 className="text-[10px] font-bold tracking-[0.14em] uppercase text-white/40 mb-4">
         Sentiment Breakdown
       </h3>
       <div className="space-y-3">
         {bars.map((b) => (
           <div key={b.label}>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-medium">{b.label}</span>
-              <span className="text-xs font-bold">{b.pct}%</span>
+              <span className="text-xs font-medium text-white">{b.label}</span>
+              <span className="text-xs font-bold text-white">{b.pct}%</span>
             </div>
-            <div className="h-5 bg-secondary w-full">
+            <div className="h-5 bg-white/10 w-full rounded-sm overflow-hidden">
               <div className={`h-full ${b.barClass}`} style={{ width: `${b.pct}%` }} />
             </div>
           </div>
         ))}
       </div>
       <div className="mt-4 space-y-1">
-        <p className="text-[11px] text-muted-foreground">
-          <span className="font-semibold text-foreground">Positive drivers:</span> {data.positiveDrivers}
+        <p className="text-[11px] text-white/50">
+          <span className="font-semibold text-white">Positive drivers:</span> {data.positiveDrivers}
         </p>
-        <p className="text-[11px] text-muted-foreground">
-          <span className="font-semibold text-foreground">Negative themes:</span> {data.negativeThemes}
+        <p className="text-[11px] text-white/50">
+          <span className="font-semibold text-white">Negative themes:</span> {data.negativeThemes}
         </p>
       </div>
     </div>

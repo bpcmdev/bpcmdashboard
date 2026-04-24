@@ -57,14 +57,8 @@ const KpiCard = ({ label, value, delta, deltaType }: KpiCardProps) => {
   const trendColor = isPos ? 'text-positive' : isNeg ? 'text-negative' : 'text-neutral-delta';
 
   return (
-    <div
-      className="flex-1 px-3 md:px-5 py-4 md:py-5 text-center min-w-0 relative overflow-hidden animate-fade-in"
-      style={{
-        background:
-          'linear-gradient(160deg, hsl(var(--chart-navy)) 0%, hsl(var(--chart-navy-soft)) 100%)',
-      }}
-    >
-      <p className="text-[9px] md:text-[10px] font-semibold tracking-[0.18em] uppercase text-white/55 mb-1.5 truncate">
+    <div className="flex-1 px-3 md:px-5 py-4 md:py-5 text-center min-w-0 relative overflow-hidden animate-fade-in bg-background">
+      <p className="text-[9px] md:text-[10px] font-semibold tracking-[0.18em] uppercase text-white/45 mb-1.5 truncate">
         {label}
       </p>
       <p className="text-2xl md:text-3xl font-bold tracking-tight text-white tabular-nums">
@@ -167,7 +161,7 @@ const KpiBar = () => {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-3 md:flex divide-x divide-white/5 border-b border-border" style={{ background: 'hsl(var(--chart-navy))' }}>
+      <div className="grid grid-cols-3 md:flex divide-x divide-white/[0.08] border-b border-white/[0.08] bg-background">
         {Array.from({ length: 6 }).map((_, i) => (
           <div key={i} className="flex-1 px-3 md:px-5 py-4 md:py-5 text-center space-y-2">
             <Skeleton className="h-3 w-16 md:w-20 mx-auto bg-white/10" />
@@ -180,7 +174,7 @@ const KpiBar = () => {
   }
 
   return (
-    <div className="grid grid-cols-3 md:flex divide-x divide-white/5 border-b border-border">
+    <div className="grid grid-cols-3 md:flex divide-x divide-white/[0.08] border-b border-white/[0.08] bg-background">
       {kpis.map((kpi) => (
         <KpiCard key={kpi.label} {...kpi} />
       ))}

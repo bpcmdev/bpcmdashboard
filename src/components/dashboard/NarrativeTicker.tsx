@@ -56,13 +56,13 @@ const NarrativeTicker = () => {
 
   return (
     <div className="dashboard-ticker px-6 py-2.5 flex items-center gap-4 overflow-hidden">
-      <span className="shrink-0 text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 text-positive border border-accent/30" style={{ backgroundColor: 'hsla(145, 63%, 42%, 0.2)' }}>
+      <span className="shrink-0 text-[10px] font-bold tracking-widest uppercase text-[hsl(var(--chart-gold))]">
         NARRATIVE WATCH
       </span>
       <div className="overflow-hidden flex-1">
         <div className="animate-ticker whitespace-nowrap inline-block">
-          <span className="text-xs tracking-wide mr-24">{tickerText}</span>
-          <span className="text-xs tracking-wide mr-24">{tickerText}</span>
+          <span className="text-xs tracking-wide mr-24 text-white/70">{tickerText}</span>
+          <span className="text-xs tracking-wide mr-24 text-white/70">{tickerText}</span>
         </div>
       </div>
     </div>

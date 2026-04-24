@@ -427,15 +427,15 @@ const PressHitsLog = () => {
             {displayList.map((p) => {
               const sentimentBorder =
                 p.sentiment === 'positive'
-                  ? 'border-l-[hsl(145_63%_42%)]'
+                  ? '!border-l-[hsl(218_60%_47%)]'
                   : p.sentiment === 'negative'
-                  ? 'border-l-[hsl(0_72%_51%)]'
-                  : 'border-l-[hsl(0_0%_70%)]';
+                  ? '!border-l-[hsl(0_70%_61%)]'
+                  : '!border-l-white/20';
               return (
               <div
                 key={p.id}
                 className={cn(
-                  "flex items-center gap-2 md:gap-3 py-2.5 pl-3 pr-2 group cursor-pointer rounded-sm bg-card border-l-[3px] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_-12px_hsl(var(--chart-navy)/0.25)] hover:bg-accent/30",
+                  "flex items-center gap-2 md:gap-3 py-2.5 pl-3 pr-2 group cursor-pointer rounded-sm bg-card border-l-[3px] border-transparent transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/[0.04] hover:!border-l-[hsl(var(--chart-gold))]",
                   sentimentBorder,
                   p.dismissed && "opacity-40"
                 )}

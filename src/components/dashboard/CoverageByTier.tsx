@@ -38,6 +38,9 @@ const CoverageByTier = () => {
         return;
       }
 
+      const tier1Color = 'hsl(218 60% 47%)';
+      const tier2Color = 'hsl(42 64% 55%)';
+      const tier3Color = 'hsl(0 0% 100% / 0.2)';
       if (placements && placements.length > 0) {
         const counts: Record<number, number> = {};
         placements.forEach((p: any) => {
@@ -45,15 +48,15 @@ const CoverageByTier = () => {
           counts[tier] = (counts[tier] || 0) + 1;
         });
         setData([
-          { name: 'Tier 1', value: counts[1] || 0, color: 'hsl(0 0% 9%)' },
-          { name: 'Tier 2', value: counts[2] || 0, color: 'hsl(0 0% 35%)' },
-          { name: 'Tier 3', value: counts[3] || 0, color: 'hsl(0 0% 70%)' },
+          { name: 'Tier 1', value: counts[1] || 0, color: tier1Color },
+          { name: 'Tier 2', value: counts[2] || 0, color: tier2Color },
+          { name: 'Tier 3', value: counts[3] || 0, color: tier3Color },
         ]);
       } else {
         setData([
-          { name: 'Tier 1', value: 0, color: 'hsl(0 0% 9%)' },
-          { name: 'Tier 2', value: 0, color: 'hsl(0 0% 35%)' },
-          { name: 'Tier 3', value: 0, color: 'hsl(0 0% 70%)' },
+          { name: 'Tier 1', value: 0, color: tier1Color },
+          { name: 'Tier 2', value: 0, color: tier2Color },
+          { name: 'Tier 3', value: 0, color: tier3Color },
         ]);
       }
       setLoading(false);
@@ -76,7 +79,7 @@ const CoverageByTier = () => {
 
   return (
     <div>
-      <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">
+      <h3 className="text-[10px] font-bold tracking-[0.14em] uppercase text-white/40 mb-4">
         Coverage by Outlet Tier
       </h3>
       <div className="flex items-center gap-6">
@@ -87,15 +90,15 @@ const CoverageByTier = () => {
                 <Cell key={index} fill={entry.color} />
               ))}
             </Pie>
-            <Tooltip contentStyle={{ backgroundColor: 'hsl(0 0% 9%)', border: 'none', borderRadius: '2px', color: 'white', fontSize: 11 }} />
+            <Tooltip contentStyle={{ backgroundColor: 'hsl(213 56% 12%)', border: '1px solid hsl(42 64% 55%)', borderRadius: '2px', color: 'white', fontSize: 11 }} />
           </PieChart>
         </ResponsiveContainer>
         <div className="space-y-2">
           {data.map((item) => (
             <div key={item.name} className="flex items-center gap-2">
               <div className="w-3 h-3" style={{ backgroundColor: item.color }} />
-              <span className="text-xs">{item.name}</span>
-              <span className="text-xs font-bold ml-1">{item.value}</span>
+              <span className="text-xs text-white/70">{item.name}</span>
+              <span className="text-xs font-bold ml-1 text-white">{item.value}</span>
             </div>
           ))}
         </div>

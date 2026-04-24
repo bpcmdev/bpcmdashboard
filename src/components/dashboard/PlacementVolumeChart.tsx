@@ -109,50 +109,50 @@ const PlacementVolumeChart = () => {
 
   return (
     <div>
-      <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">
+      <h3 className="text-[10px] font-bold tracking-[0.14em] uppercase text-white/40 mb-4">
         {title}
       </h3>
       {loading ? (
         <Skeleton className="h-[240px] w-full" />
       ) : buckets.length === 0 ? (
-        <div className="h-[240px] flex items-center justify-center text-xs text-muted-foreground">
+        <div className="h-[240px] flex items-center justify-center text-xs text-white/40">
           No placements in selected range.
         </div>
       ) : (
         <ResponsiveContainer width="100%" height={240}>
           <BarChart data={buckets} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
             <defs>
-              <linearGradient id="barNavy" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="hsl(var(--chart-navy-soft))" />
-                <stop offset="100%" stopColor="hsl(var(--chart-navy))" />
+              <linearGradient id="barClientBlue" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="hsl(218 60% 55%)" />
+                <stop offset="100%" stopColor="hsl(218 60% 42%)" />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="2 4" stroke="hsl(var(--chart-grid))" vertical={false} />
+            <CartesianGrid strokeDasharray="2 4" stroke="hsl(0 0% 100% / 0.06)" vertical={false} />
             <XAxis
               dataKey="label"
-              tick={{ fontSize: 10, fill: 'hsl(0 0% 45%)' }}
+              tick={{ fontSize: 10, fill: 'hsl(0 0% 100% / 0.35)' }}
               axisLine={false}
               tickLine={false}
             />
             <YAxis
               domain={[0, yMax]}
-              tick={{ fontSize: 10, fill: 'hsl(0 0% 45%)' }}
+              tick={{ fontSize: 10, fill: 'hsl(0 0% 100% / 0.35)' }}
               axisLine={false}
               tickLine={false}
               allowDecimals={false}
             />
             <Tooltip
-              cursor={{ fill: 'hsl(var(--chart-soft) / 0.4)' }}
+              cursor={{ fill: 'hsl(0 0% 100% / 0.04)' }}
               contentStyle={{
-                backgroundColor: 'hsl(var(--chart-navy))',
-                border: 'none',
+                backgroundColor: 'hsl(213 56% 12%)',
+                border: '1px solid hsl(42 64% 55%)',
                 borderRadius: '4px',
                 color: 'white',
                 fontSize: 11,
-                boxShadow: '0 4px 16px hsl(var(--chart-navy) / 0.25)',
+                boxShadow: '0 4px 16px hsl(0 0% 0% / 0.4)',
               }}
             />
-            <Bar dataKey="placements" fill="url(#barNavy)" radius={[3, 3, 0, 0]} />
+            <Bar dataKey="placements" fill="url(#barClientBlue)" radius={[3, 3, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       )}
