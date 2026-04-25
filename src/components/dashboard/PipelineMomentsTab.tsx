@@ -19,10 +19,10 @@ interface PipelineEntry {
   priority: string;
 }
 
-const dotColors: Record<string, string> = {
-  active: 'bg-[hsl(145_63%_42%)]',
-  watch: 'bg-[hsl(38_80%_55%)]',
-  upcoming: 'bg-muted-foreground',
+const dotStyles: Record<string, React.CSSProperties> = {
+  active:   { background: '#2ECC71', boxShadow: '0 0 6px rgba(46,204,113,0.5)' },
+  watch:    { background: '#C9A03C', boxShadow: '0 0 6px rgba(201,160,60,0.4)' },
+  upcoming: { background: 'rgba(255,255,255,0.4)' },
 };
 
 const badgeStyles: Record<string, string> = {
@@ -142,13 +142,19 @@ const PipelineMomentsTab = () => {
 
           {(monitorEntries.length > 0 || entries.length > 0) && (
             <div>
-              <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">Agent Intelligence — What to Monitor Now</h3>
+              <div className="flex items-center justify-between mb-4">
+                <span className="section-label">Agent Intelligence — What to Monitor Now</span>
+                <span className="section-count text-base">{monitorEntries.length}</span>
+              </div>
               <div className="grid grid-cols-3 gap-4">
                 {monitorEntries.map((card) => (
-                  <div key={card.id} className="bg-card border border-border p-5">
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className={`w-2 h-2 rounded-full ${dotColors[card.priority] ?? 'bg-muted-foreground'}`} />
-                      <span className="text-[9px] font-bold tracking-[0.12em] uppercase text-muted-foreground flex-1">{card.priority}</span>
+                  <div key={card.id} className="entry-card cat-default bg-card border border-border p-5 relative">
+                    <span
+                      className="absolute top-3 left-3 inline-block rounded-full"
+                      style={{ width: 8, height: 8, ...(dotStyles[card.priority] ?? dotStyles.upcoming) }}
+                    />
+                    <div className="flex items-center gap-2 mb-3 pl-5">
+                      <span className="font-mono-ui text-[9px] font-medium tracking-[0.18em] uppercase text-white/55 flex-1">{card.priority}</span>
                       {isAdmin && <EditPipelineDialog entry={card} />}
                       {isAdmin && <DeleteEntryButton table="pipeline_moments" id={card.id} label="this moment" />}
                     </div>

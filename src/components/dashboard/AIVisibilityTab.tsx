@@ -109,11 +109,18 @@ const PlatformScorecards = ({ cards, loading }: { cards: PlatformCard[]; loading
         }
         const badge = statusBadge(s.status);
         const delta = deltaText(s.deltaPts);
+        const scoreColor = s.score >= 60 ? '#6EE7A0' : s.score >= 30 ? 'hsl(var(--chart-gold))' : '#FCA5A5';
+        const pct = Math.max(0, Math.min(100, s.score));
         return (
           <div key={platform} className="bg-card border border-border p-4">
-            <p className="text-xs font-bold tracking-wider uppercase">{platform}</p>
+            <p className="font-mono-ui text-[10px] font-medium tracking-[0.18em] uppercase text-white/55">{platform}</p>
             <p className="text-[10px] text-muted-foreground mb-2 truncate">{s.subtitle}</p>
-            <p className="text-3xl font-bold text-foreground mb-1">{s.score}<span className="text-sm font-normal text-muted-foreground">/100</span></p>
+            <p className="font-display text-3xl font-bold mb-1" style={{ color: scoreColor }}>
+              {s.score}<span className="text-sm font-normal text-muted-foreground">/100</span>
+            </p>
+            <div className="w-full h-[3px] bg-white/[0.06] mb-2 overflow-hidden">
+              <div className="h-full transition-all" style={{ width: `${pct}%`, background: scoreColor }} />
+            </div>
             <span className={`inline-block text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 mb-1 ${badge.style}`}>{badge.label}</span>
             <p className={`text-[11px] ${delta.color}`}>{delta.text}</p>
           </div>

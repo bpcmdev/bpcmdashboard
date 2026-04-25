@@ -69,24 +69,44 @@ const PartnershipsTab = () => {
         <div className="p-6 space-y-6">
           <div className="grid grid-cols-2 gap-6">
             <div className="bg-card border border-border p-5">
-              <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">Active & Pipeline Partnerships</h3>
+              <div className="flex items-center justify-between mb-4">
+                <span className="section-label">Active &amp; Pipeline Partnerships</span>
+                <span className="section-count text-base">{active.length}</span>
+              </div>
               <div className="space-y-4">
                 {active.map((p) => {
                   const badge = statusBadge[p.status] ?? { label: p.status.toUpperCase(), style: 'bg-muted text-muted-foreground' };
+                  const initials = p.partner_name.split(/\s+/).map(s => s[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
                   return (
-                    <div key={p.id} className="border border-border p-4">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <h4 className="text-sm font-bold">{p.partner_name}</h4>
-                          <p className="text-[11px] text-muted-foreground">{p.type}</p>
+                    <div key={p.id} className="entry-card cat-partnership bg-card border border-border p-4">
+                      <div className="flex items-start gap-3">
+                        <div
+                          className="w-9 h-9 flex items-center justify-center text-[11px] font-bold text-white shrink-0 rounded-sm"
+                          style={{ background: 'linear-gradient(135deg, #2E5FBF 0%, #2ECC71 100%)' }}
+                        >
+                          {initials || '—'}
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className={`text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 ${badge.style}`}>{badge.label}</span>
-                          {isAdmin && <EditPartnershipDialog entry={p} />}
-                          {isAdmin && <DeleteEntryButton table="partnerships" id={p.id} label="this partnership" />}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <div className="min-w-0">
+                              <h4 className="text-sm font-bold text-white truncate">{p.partner_name}</h4>
+                              <p className="text-[11px] text-white/45">{p.type}</p>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className={`font-mono-ui text-[9px] font-medium tracking-[0.12em] uppercase px-1.5 py-0.5 ${badge.style}`}>{badge.label}</span>
+                              {isAdmin && <EditPartnershipDialog entry={p} />}
+                              {isAdmin && <DeleteEntryButton table="partnerships" id={p.id} label="this partnership" />}
+                            </div>
+                          </div>
+                          <p className="text-xs text-white/55 mt-1">{p.description}</p>
+                          {p.emv_generated ? (
+                            <div className="flex items-baseline gap-1.5 mt-2">
+                              <span className="font-mono-ui text-[8px] tracking-[0.18em] uppercase text-white/40">EMV</span>
+                              <span className="font-display text-base font-bold" style={{ color: 'hsl(var(--chart-gold))' }}>${p.emv_generated}K</span>
+                            </div>
+                          ) : null}
                         </div>
                       </div>
-                      <p className="text-xs text-muted-foreground">{p.description}</p>
                     </div>
                   );
                 })}

@@ -67,7 +67,7 @@ const DashboardHeader = () => {
           {clientLogo && (
             <img src={clientLogo} alt={clientName ?? ''} className="h-7 w-auto" />
           )}
-          <span className="text-lg md:text-2xl font-extrabold tracking-[0.08em] uppercase text-white">
+          <span className="font-display text-xl md:text-2xl font-bold tracking-[0.04em] uppercase text-white">
             {clientName ?? 'Loading…'}
           </span>
         </div>
@@ -80,7 +80,7 @@ const DashboardHeader = () => {
             <>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="inline-flex items-center gap-1.5 hover:opacity-100 transition-opacity uppercase tracking-widest text-xs font-semibold border border-white/20 px-2 py-1 rounded">
+                  <button className="header-chip">
                     Switch Client
                     <ChevronDown className="w-3 h-3 opacity-60" />
                   </button>
@@ -104,7 +104,7 @@ const DashboardHeader = () => {
           )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="inline-flex items-center gap-1.5 hover:opacity-100 transition-opacity uppercase tracking-widest text-xs">
+              <button className="header-chip">
                 Week of {currentLabel}
                 <ChevronDown className="w-3 h-3 opacity-60" />
               </button>
@@ -138,34 +138,25 @@ const DashboardHeader = () => {
               </span>
             )}
           </div>
-          <button className="text-xs font-medium tracking-wider uppercase px-3 py-1.5 border border-white/20 hover:bg-white/10 transition-colors">
+          <button className="header-chip">
             Export PDF
           </button>
-          <button onClick={refreshData} className="text-xs font-medium tracking-wider uppercase px-3 py-1.5 border border-white/20 hover:bg-white/10 transition-colors">
+          <button onClick={refreshData} className="header-chip">
             Refresh
           </button>
           {isAdmin && (
-            <button
-              onClick={() => setAdminOpen(true)}
-              className="flex items-center gap-1.5 text-xs font-medium tracking-wider uppercase px-3 py-1.5 border border-white/20 hover:bg-white/10 transition-colors"
-            >
+            <button onClick={() => setAdminOpen(true)} className="header-chip">
               <Shield className="w-3 h-3" />
               Admin
             </button>
           )}
           {isAdmin && (
-            <button
-              onClick={() => navigate('/admin')}
-              className="flex items-center gap-1.5 text-xs font-medium tracking-wider uppercase px-3 py-1.5 border border-white/20 hover:bg-white/10 transition-colors"
-            >
+            <button onClick={() => navigate('/admin')} className="header-chip">
               <ShieldCheck className="w-3 h-3" />
               Super Admin
             </button>
           )}
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-1.5 text-xs font-medium tracking-wider uppercase px-3 py-1.5 border border-white/20 hover:bg-white/10 transition-colors"
-          >
+          <button onClick={handleLogout} className="header-chip">
             <LogOut className="w-3 h-3" />
             Logout
           </button>

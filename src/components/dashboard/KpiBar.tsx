@@ -58,15 +58,15 @@ const KpiCard = ({ label, value, delta, deltaType }: KpiCardProps) => {
 
   return (
     <div className="flex-1 px-3 md:px-5 py-4 md:py-5 text-center min-w-0 relative overflow-hidden animate-fade-in bg-background">
-      <p className="text-[9px] md:text-[10px] font-semibold tracking-[0.18em] uppercase text-white/45 mb-1.5 truncate">
+      <p className="font-mono-ui text-[9px] md:text-[10px] font-medium tracking-[0.18em] uppercase text-white/45 mb-1.5 truncate">
         {label}
       </p>
-      <p className="text-2xl md:text-3xl font-bold tracking-tight text-white tabular-nums">
+      <p className="font-display text-3xl md:text-4xl font-bold tracking-tight text-white tabular-nums leading-none">
         {animated}
       </p>
-      <div className={`flex items-center justify-center gap-1 mt-1.5 ${trendColor}`}>
+      <div className={`flex items-center justify-center gap-1 mt-2 ${trendColor}`}>
         <TrendIcon className="w-3 h-3 md:w-3.5 md:h-3.5" strokeWidth={2.5} />
-        <span className="text-[10px] md:text-[11px] font-medium truncate">{delta.replace(/^[▲▼]\s?/, '')}</span>
+        <span className="font-mono-ui text-[9px] md:text-[10px] font-medium tracking-[0.18em] uppercase truncate">{delta.replace(/^[▲▼]\s?/, '')}</span>
       </div>
     </div>
   );
