@@ -67,7 +67,7 @@ const DashboardHeader = () => {
           {clientLogo && (
             <img src={clientLogo} alt={clientName ?? ''} className="h-7 w-auto" />
           )}
-          <span className="text-lg md:text-2xl font-extrabold tracking-[0.08em] uppercase text-white">
+          <span className="font-display text-xl md:text-2xl font-bold tracking-[0.04em] uppercase text-white">
             {clientName ?? 'Loading…'}
           </span>
         </div>
