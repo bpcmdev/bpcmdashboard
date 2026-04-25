@@ -82,20 +82,54 @@ const InfluencerSocialTab = () => {
 
       {/* Active Influencer Activations */}
       <div className="bg-card border border-border p-5">
-        <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-3">Active Influencer Activations</h3>
-        <div className="divide-y divide-border">
-          {influencers.map((inf, i) => (
-            <div key={i} className="flex items-center gap-4 py-3">
-              <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-[10px] font-bold text-muted-foreground shrink-0">{inf.initials}</div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold">{inf.name}</p>
-                <p className="text-[11px] text-muted-foreground">{inf.handle}</p>
+        <div className="flex items-center justify-between mb-4">
+          <span className="section-label">Active Influencer Activations</span>
+          <span className="section-count text-base">{influencers.length}</span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {influencers.map((inf, i) => {
+            const engMatch = inf.stats.match(/([\d.]+)%\s*eng/);
+            const engPct = engMatch ? parseFloat(engMatch[1]) : 0;
+            const roiMatch = inf.stats.match(/([\d.]+)x\s*ROI/);
+            const roi = roiMatch ? roiMatch[1] : '—';
+            const isHighEng = engPct > 5;
+            return (
+              <div key={i} className="entry-card cat-influencer bg-card border border-border p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0"
+                    style={{ background: 'linear-gradient(135deg, #2E5FBF 0%, #E879F9 100%)' }}
+                  >
+                    {inf.initials}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-white truncate">{inf.name}</p>
+                    <p className="text-[11px] text-white/45 truncate">{inf.handle}</p>
+                  </div>
+                  <span className={`font-mono-ui text-[9px] font-medium tracking-[0.12em] uppercase px-2 py-0.5 text-background shrink-0 ${inf.platformColor}`}>{inf.platform}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 pt-3 border-t border-white/[0.07]">
+                  <div>
+                    <p className="font-mono-ui text-[8px] tracking-[0.18em] uppercase text-white/40 mb-0.5">Reach</p>
+                    <p className="font-display text-sm font-bold text-white">{inf.reach.split(' ')[0]}</p>
+                  </div>
+                  <div>
+                    <p className="font-mono-ui text-[8px] tracking-[0.18em] uppercase text-white/40 mb-0.5">Engagement</p>
+                    <span
+                      className={`inline-block font-display text-sm font-bold px-1.5 py-0.5 rounded-sm ${isHighEng ? 'border' : ''}`}
+                      style={isHighEng ? { background: 'rgba(232,121,249,0.12)', color: '#F0ABFC', borderColor: 'rgba(232,121,249,0.2)' } : { color: 'white' }}
+                    >
+                      {engPct}%
+                    </span>
+                  </div>
+                  <div>
+                    <p className="font-mono-ui text-[8px] tracking-[0.18em] uppercase text-white/40 mb-0.5">ROI</p>
+                    <p className="font-display text-sm font-bold" style={{ color: 'hsl(var(--chart-gold))' }}>{roi}x</p>
+                  </div>
+                </div>
               </div>
-              <span className={`text-[9px] font-bold tracking-[0.1em] uppercase px-2 py-0.5 text-background shrink-0 ${inf.platformColor}`}>{inf.platform}</span>
-              <span className="text-xs text-foreground shrink-0 w-24 text-right">{inf.reach}</span>
-              <span className="text-xs text-muted-foreground shrink-0 w-36 text-right">{inf.stats}</span>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
