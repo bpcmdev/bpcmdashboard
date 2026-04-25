@@ -78,9 +78,16 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'DM Sans', 'Inter', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  .font-display {
+    font-family: 'Playfair Display', Georgia, serif;
+  }
+  .font-mono-ui {
+    font-family: 'DM Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   }
 
   /* Scrollbar — navy track, subtle thumb, gold hover */
