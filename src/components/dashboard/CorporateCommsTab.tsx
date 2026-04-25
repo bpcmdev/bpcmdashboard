@@ -69,10 +69,13 @@ const CorporateCommsTab = () => {
 
       {/* Communications Log */}
       <div className="bg-card border border-border p-5">
-        <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-3">Corporate Communications Log</h3>
-        <div className="divide-y divide-border">
+        <div className="flex items-center justify-between mb-3">
+          <span className="section-label">Corporate Communications Log</span>
+          <span className="section-count text-base">{commsLog.length}</span>
+        </div>
+        <div className="space-y-3">
           {commsLog.map((row, i) => (
-            <div key={i} className="flex items-center gap-4 py-3">
+            <div key={i} className="entry-card cat-corporate bg-card border border-border flex items-center gap-4 p-4">
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-foreground">{row.title}</p>
                 <p className="text-[11px] text-muted-foreground mt-0.5">{row.detail}</p>

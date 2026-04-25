@@ -6,6 +6,7 @@ import DataStateWrapper from './DataStateWrapper';
 import PlaceholderCard from './PlaceholderCard';
 import DeleteEntryButton from './DeleteEntryButton';
 import EditKeyWinDialog from './EditKeyWinDialog';
+import CategoryLabel, { categoryClass } from './CategoryLabel';
 
 interface KeyWin {
   id: string;
@@ -63,15 +64,19 @@ const KeyWinsTab = () => {
         </div>
       ) : (
         <div className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <span className="section-label">Key Wins This Week</span>
+            <span className="section-count text-base">{wins.length}</span>
+          </div>
           <div className="grid gap-6" style={{ gridTemplateColumns: `repeat(${Math.min(Math.max(columns.length, 1), 3)}, 1fr)` }}>
             {columns.map(([category, cards]) => (
               <div key={category} className="space-y-4">
                 {cards.map((card) => (
-                  <div key={card.id} className="bg-card border border-border p-5 relative">
+                  <div key={card.id} className={`entry-card ${categoryClass(card.category)} bg-card border border-border p-5 relative`}>
                     {isAdmin && <div className="absolute top-3 right-3 flex items-center gap-1"><EditKeyWinDialog entry={card} /><DeleteEntryButton table="key_wins" id={card.id} label="this win" /></div>}
-                    <span className="inline-block text-[10px] font-bold tracking-[0.12em] uppercase px-2 py-0.5 bg-foreground text-background mb-3">
-                      {card.category}
-                    </span>
+                    <div className="mb-3">
+                      <CategoryLabel category={card.category} />
+                    </div>
                     <h4 className="text-sm font-bold text-foreground mb-2">{card.title}</h4>
                     <p className="text-xs text-muted-foreground leading-relaxed mb-4">{card.description}</p>
                     <div className="border-t border-border pt-3">
