@@ -32,12 +32,12 @@ const TabNavigation = ({ activeTab, onTabChange }: TabNavigationProps) => {
     return (
       <div className="bg-card border-b border-border px-4 py-2">
         <Select value={activeTab} onValueChange={onTabChange}>
-          <SelectTrigger className="w-full text-[11px] font-semibold tracking-[0.1em] uppercase">
+          <SelectTrigger className="w-full font-mono-ui text-[10px] tracking-[0.12em] uppercase">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {TABS.map((tab) => (
-              <SelectItem key={tab} value={tab} className="text-[11px] tracking-[0.1em] uppercase">
+              <SelectItem key={tab} value={tab} className="font-mono-ui text-[10px] tracking-[0.12em] uppercase">
                 {tab}
               </SelectItem>
             ))}
@@ -54,10 +54,10 @@ const TabNavigation = ({ activeTab, onTabChange }: TabNavigationProps) => {
           <button
             key={tab}
             onClick={() => onTabChange(tab)}
-            className={`px-4 py-3 text-[11px] tracking-[0.1em] uppercase whitespace-nowrap transition-colors relative
+            className={`font-mono-ui px-4 py-3 text-[10px] tracking-[0.12em] uppercase whitespace-nowrap transition-colors relative
               ${activeTab === tab
-                ? 'text-white font-bold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-[hsl(var(--chart-gold))]'
-                : 'text-white/40 font-semibold hover:text-white/80'
+                ? 'text-white font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-[hsl(var(--chart-gold))]'
+                : 'text-white/40 font-medium hover:text-white/80'
               }`}
           >
             {tab}
