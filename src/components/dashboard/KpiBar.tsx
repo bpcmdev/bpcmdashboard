@@ -151,12 +151,12 @@ const KpiBar = () => {
       const roiVal = r.influencer_roi ?? 0;
 
       setKpis([
-        { label: 'Press Placements', value: String(r.placement_count ?? 0), ...placementDelta },
-        { label: 'Earned Media Value', value: `$${formatCompact(r.emv_usd ?? 0)}`, ...emvDelta },
+        { label: 'Press Placements', value: String(r.placement_count ?? 0), ...placementDelta, targetTab: 'EARNED MEDIA' },
+        { label: 'Earned Media Value', value: `$${formatCompact(r.emv_usd ?? 0)}`, ...emvDelta, targetTab: 'EARNED MEDIA' },
         { label: 'Sentiment Score', value: `${r.sentiment_score ?? 0}/100`, ...sentimentDelta },
-        { label: 'Social Reach', value: formatCompact(r.social_reach ?? 0), ...reachDelta },
+        { label: 'Social Reach', value: formatCompact(r.social_reach ?? 0), ...reachDelta, targetTab: 'INFLUENCER & SOCIAL' },
         { label: 'Share of Voice', value: `${r.sov_pct ?? 0}%`, ...sovDelta },
-        { label: 'Influencer ROI', value: `${roiVal}x`, delta: 'stable', deltaType: 'neutral' },
+        { label: 'Influencer ROI', value: `${roiVal}x`, delta: 'stable', deltaType: 'neutral', targetTab: 'INFLUENCER & SOCIAL' },
       ]);
       setLoading(false);
     };
@@ -166,7 +166,7 @@ const KpiBar = () => {
 
   if (error) {
     return (
-      <div className="bg-card border-b border-border px-5 py-4 text-center">
+      <div className="bg-white border-b border-black/10 px-5 py-4 text-center">
         <p className="text-sm text-destructive">Unable to load data. Please try refreshing.</p>
       </div>
     );
@@ -174,12 +174,12 @@ const KpiBar = () => {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-3 md:flex divide-x divide-white/[0.08] border-b border-white/[0.08] bg-background">
+      <div className="grid grid-cols-3 md:flex border-b border-black/10 bg-white">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="flex-1 px-3 md:px-5 py-4 md:py-5 text-center space-y-2">
-            <Skeleton className="h-3 w-16 md:w-20 mx-auto bg-white/10" />
-            <Skeleton className="h-7 md:h-8 w-14 md:w-20 mx-auto bg-white/10" />
-            <Skeleton className="h-3 w-20 md:w-24 mx-auto bg-white/10" />
+          <div key={i} className="flex-1 px-3 md:px-5 py-4 md:py-5 text-center space-y-2 border-r border-black/10">
+            <Skeleton className="h-3 w-16 md:w-20 mx-auto" />
+            <Skeleton className="h-7 md:h-8 w-14 md:w-20 mx-auto" />
+            <Skeleton className="h-3 w-20 md:w-24 mx-auto" />
           </div>
         ))}
       </div>
@@ -187,7 +187,7 @@ const KpiBar = () => {
   }
 
   return (
-    <div className="grid grid-cols-3 md:flex divide-x divide-white/[0.08] border-b border-white/[0.08] bg-background">
+    <div className="grid grid-cols-3 md:flex border-b border-black/10 bg-white">
       {kpis.map((kpi) => (
         <KpiCard key={kpi.label} {...kpi} />
       ))}
