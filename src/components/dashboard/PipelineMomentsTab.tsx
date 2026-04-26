@@ -8,6 +8,7 @@ import PlaceholderCard from './PlaceholderCard';
 import DeleteEntryButton from './DeleteEntryButton';
 import EditPipelineDialog from './EditPipelineDialog';
 import PipelineCalendarView from './PipelineCalendarView';
+import EmptyState from './EmptyState';
 
 interface PipelineEntry {
   id: string;
@@ -20,9 +21,9 @@ interface PipelineEntry {
 }
 
 const dotStyles: Record<string, React.CSSProperties> = {
-  active:   { background: '#2ECC71', boxShadow: '0 0 6px rgba(46,204,113,0.5)' },
-  watch:    { background: '#C9A03C', boxShadow: '0 0 6px rgba(201,160,60,0.4)' },
-  upcoming: { background: 'rgba(255,255,255,0.4)' },
+  active:   { background: '#047857', boxShadow: '0 0 6px rgba(4,120,87,0.45)' },
+  watch:    { background: 'hsl(42 64% 45%)', boxShadow: '0 0 6px rgba(201,160,60,0.4)' },
+  upcoming: { background: 'rgba(0,0,0,0.4)' },
 };
 
 const badgeStyles: Record<string, string> = {
