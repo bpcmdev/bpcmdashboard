@@ -47,6 +47,16 @@ function DashboardContent() {
     setDismissedFor(null);
   }, [activeClientId]);
 
+  // Listen for KPI cards / external triggers asking us to switch tab.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<string>).detail;
+      if (detail && TAB_MAP[detail]) setActiveTab(detail);
+    };
+    window.addEventListener('bpcm:switch-tab', handler);
+    return () => window.removeEventListener('bpcm:switch-tab', handler);
+  }, []);
+
   // Getting Started checklist is an internal BPCM setup task — admins only.
   const showWelcome = isAdmin && isNew === true && dismissedFor !== activeClientId;
 
@@ -66,7 +76,9 @@ function DashboardContent() {
           onOpenAdmin={openAdmin}
         />
       ) : TabContent ? (
-        <TabContent />
+        <div key={activeTab} className="tab-content-enter">
+          <TabContent />
+        </div>
       ) : (
         <div className="flex items-center justify-center py-24 text-muted-foreground text-sm">
           {activeTab} — Coming soon
