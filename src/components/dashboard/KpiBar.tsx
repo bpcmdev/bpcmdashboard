@@ -9,6 +9,7 @@ interface KpiCardProps {
   value: string;
   delta: string;
   deltaType: 'positive' | 'negative' | 'neutral';
+  targetTab?: string;
 }
 
 /** Animate a numeric value from 0 → target over `duration` ms. Non-numeric values are returned as-is. */
