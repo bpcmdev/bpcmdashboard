@@ -6,78 +6,78 @@
 
 @layer base {
   :root {
-    /* Navy intelligence environment — matches login page */
-    --background: 213 56% 12%;            /* #0D1B2E page navy */
-    --foreground: 0 0% 100%;              /* white primary text */
+    /* Light intelligence environment */
+    --background: 0 0% 96%;                /* #F5F5F5 light grey page bg */
+    --foreground: 0 0% 8%;                 /* #141414 near black text */
 
-    --card: 218 45% 15%;                  /* #152238 card surface */
-    --card-foreground: 0 0% 100%;
+    --card: 0 0% 100%;                     /* #FFFFFF white cards */
+    --card-foreground: 0 0% 8%;
 
-    --popover: 213 56% 12%;
-    --popover-foreground: 0 0% 100%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 8%;
 
-    --primary: 218 60% 47%;               /* #2E5FBF vivid blue */
+    --primary: 225 70% 35%;                /* #1A3A8F royal blue */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 100%;               /* used with /opacity utilities */
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 0 0% 93%;
+    --secondary-foreground: 0 0% 8%;
 
-    --muted: 218 45% 18%;
-    --muted-foreground: 0 0% 100%;        /* white; pair with /opacity (e.g., text-muted-foreground/45) where needed */
+    --muted: 0 0% 90%;
+    --muted-foreground: 0 0% 40%;
 
-    --accent: 42 64% 55%;                 /* #D4A843 gold */
-    --accent-foreground: 213 56% 12%;
+    --accent: 42 64% 45%;                  /* gold */
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 70% 61%;             /* #E05555 */
+    --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Hairline separators on dark — white at 8% */
-    --border: 0 0% 100%;                  /* used as hsl(var(--border) / 0.08) via utility .border-border */
-    --input: 0 0% 100%;
-    --ring: 42 64% 55%;
+    --border: 0 0% 0%;
+    --input: 0 0% 0%;
+    --ring: 42 64% 45%;
 
     --radius: 0.25rem;
 
     /* Dashboard-specific tokens */
-    --dashboard-header: 213 56% 12%;
+    --dashboard-header: 225 70% 35%;
     --dashboard-header-foreground: 0 0% 100%;
-    --dashboard-ticker: 213 56% 12%;
+    --dashboard-ticker: 225 70% 22%;
     --dashboard-ticker-foreground: 0 0% 100%;
-    --dashboard-positive: 42 64% 55%;     /* gold for positive deltas */
-    --dashboard-negative: 0 70% 61%;
-    --dashboard-neutral: 0 0% 100%;
-    --dashboard-kpi-bg: 213 56% 12%;
-    --dashboard-divider: 0 0% 100%;
-    --dashboard-tier1: 218 60% 47%;       /* blue */
-    --dashboard-tier2: 42 64% 55%;        /* gold */
-    --dashboard-tier3: 0 0% 100%;         /* used at 12% */
-    --dashboard-corp: 218 60% 47%;        /* blue family */
+    --dashboard-positive: 42 64% 38%;
+    --dashboard-negative: 0 70% 50%;
+    --dashboard-neutral: 0 0% 50%;
+    --dashboard-kpi-bg: 0 0% 100%;
+    --dashboard-divider: 0 0% 0%;
+    --dashboard-tier1: 225 70% 35%;        /* royal blue */
+    --dashboard-tier2: 42 64% 45%;         /* gold */
+    --dashboard-tier3: 0 0% 60%;
+    --dashboard-corp: 225 70% 35%;
 
-    /* Premium chart palette — navy/blue/gold */
-    --chart-navy: 213 56% 12%;            /* #0D1B2E */
-    --chart-navy-soft: 218 45% 15%;       /* #152238 */
-    --chart-blue: 218 60% 47%;            /* #2E5FBF primary data */
-    --chart-gold: 42 64% 55%;             /* #D4A843 highlight */
-    --chart-soft: 0 0% 100%;              /* used with /opacity */
-    --chart-grid: 0 0% 100%;              /* hsl(var(--chart-grid) / 0.06) */
+    /* Chart palette — royal blue + gold */
+    --chart-navy: 225 70% 35%;
+    --chart-navy-soft: 225 50% 92%;
+    --chart-blue: 225 70% 35%;
+    --chart-gold: 42 64% 45%;
+    --chart-soft: 0 0% 0%;
+    --chart-grid: 0 0% 0%;
 
-    --sidebar-background: 213 56% 12%;
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 218 60% 47%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 0 0% 8%;
+    --sidebar-primary: 225 70% 35%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 218 45% 15%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 0 0% 100%;
-    --sidebar-ring: 42 64% 55%;
+    --sidebar-accent: 0 0% 93%;
+    --sidebar-accent-foreground: 0 0% 8%;
+    --sidebar-border: 0 0% 0%;
+    --sidebar-ring: 42 64% 45%;
   }
 }
 
 @layer base {
   * {
-    border-color: hsl(var(--border) / 0.08);
+    border-color: hsl(var(--border) / 0.1);
   }
   body {
-    @apply bg-background text-foreground;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
     font-family: 'DM Sans', 'Inter', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -90,7 +90,7 @@
     font-family: 'DM Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   }
 
-  /* Scrollbar — navy track, subtle thumb, gold hover */
+  /* Scrollbar — light track, subtle thumb, gold hover */
   ::-webkit-scrollbar {
     width: 10px;
     height: 10px;
@@ -99,73 +99,78 @@
     background: hsl(var(--background));
   }
   ::-webkit-scrollbar-thumb {
-    background: hsl(0 0% 100% / 0.15);
+    background: hsl(0 0% 0% / 0.15);
     border-radius: 6px;
   }
   ::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--chart-gold));
   }
   * {
-    scrollbar-color: hsl(0 0% 100% / 0.15) hsl(var(--background));
+    scrollbar-color: hsl(0 0% 0% / 0.15) hsl(var(--background));
     scrollbar-width: thin;
   }
 }
 
 @layer utilities {
   .dashboard-header {
-    background-color: hsl(var(--dashboard-header));
-    color: hsl(var(--dashboard-header-foreground));
+    background-color: hsl(225 70% 35%);
+    color: #ffffff;
   }
   .dashboard-ticker {
-    background-color: hsl(0 0% 100% / 0.04);
-    color: hsl(var(--dashboard-ticker-foreground));
+    background-color: hsl(225 70% 22%);
+    color: #ffffff;
+    border-bottom: 1px solid rgba(201, 160, 60, 0.35);
   }
   .text-positive {
-    color: hsl(var(--dashboard-positive));
+    color: hsl(42 64% 38%);
   }
   .text-negative {
-    color: hsl(var(--dashboard-negative));
+    color: hsl(0 70% 50%);
   }
   .text-neutral-delta {
-    color: hsl(0 0% 100% / 0.55);
+    color: hsl(0 0% 50%);
   }
   .bg-tier1 {
-    background-color: hsl(var(--dashboard-tier1));
+    background-color: hsl(225 70% 35%);
     color: #ffffff;
   }
   .bg-tier2 {
-    background-color: hsl(var(--dashboard-tier2));
-    color: hsl(213 56% 12%);
+    background-color: hsl(42 64% 45%);
+    color: #ffffff;
   }
   .bg-tier3 {
-    background-color: hsl(0 0% 100% / 0.12);
-    color: hsl(0 0% 100% / 0.6);
+    background-color: hsl(0 0% 88%);
+    color: hsl(0 0% 35%);
   }
   .bg-corp-news {
-    background-color: hsl(218 60% 47% / 0.2);
-    color: hsl(218 100% 74%);
+    background-color: hsl(225 70% 92%);
+    color: hsl(225 70% 30%);
+  }
+
+  /* Generic card hover lift utility */
+  .dashboard-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .dashboard-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
   }
 
   /* Premium entry cards — colored left border + hover lift */
   .entry-card {
     position: relative;
-    border-left: 3px solid hsl(var(--chart-gold) / 0.5);
+    border-left: 3px solid hsl(var(--chart-gold) / 0.7);
     transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   }
   .entry-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
   }
-  .entry-card.cat-earned        { border-left-color: rgba(59, 130, 246, 0.6); }
-  .entry-card.cat-influencer    { border-left-color: rgba(232, 121, 249, 0.6); }
-  .entry-card.cat-corporate     { border-left-color: rgba(59, 130, 246, 0.6); }
-  .entry-card.cat-partnership   { border-left-color: rgba(46, 204, 113, 0.6); }
-  .entry-card.cat-default       { border-left-color: rgba(201, 160, 60, 0.5); }
-  .entry-card.cat-earned:hover      { border-left-color: #3B82F6; }
-  .entry-card.cat-influencer:hover  { border-left-color: #E879F9; }
-  .entry-card.cat-corporate:hover   { border-left-color: #3B82F6; }
-  .entry-card.cat-partnership:hover { border-left-color: #2ECC71; }
-  .entry-card.cat-default:hover     { border-left-color: hsl(var(--chart-gold)); }
+  .entry-card.cat-earned        { border-left-color: hsl(225 70% 35%); }
+  .entry-card.cat-influencer    { border-left-color: #7C3AED; }
+  .entry-card.cat-corporate     { border-left-color: #1D4ED8; }
+  .entry-card.cat-partnership   { border-left-color: #047857; }
+  .entry-card.cat-default       { border-left-color: hsl(42 64% 45%); }
 
   /* Category label — dot + monospace */
   .cat-label {
@@ -177,7 +182,7 @@
     font-weight: 500;
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.55);
+    color: hsl(0 0% 35%);
   }
   .cat-label::before {
     content: '';
@@ -187,10 +192,10 @@
     background: currentColor;
     opacity: 0.85;
   }
-  .cat-label.cat-earned       { color: #93C5FD; }
-  .cat-label.cat-influencer   { color: #F0ABFC; }
-  .cat-label.cat-corporate    { color: #93C5FD; }
-  .cat-label.cat-partnership  { color: #6EE7A0; }
+  .cat-label.cat-earned       { color: hsl(225 70% 35%); }
+  .cat-label.cat-influencer   { color: #7C3AED; }
+  .cat-label.cat-corporate    { color: #1D4ED8; }
+  .cat-label.cat-partnership  { color: #047857; }
 
   /* Section header — monospace label + count */
   .section-label {
@@ -199,21 +204,28 @@
     font-weight: 500;
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.4);
+    color: hsl(0 0% 40%);
   }
   .section-count {
+    display: inline-block;
     font-family: 'Playfair Display', Georgia, serif;
     font-weight: 700;
-    color: hsl(var(--chart-gold));
+    font-size: 11px;
+    line-height: 1;
+    padding: 4px 10px;
+    background: hsl(42 64% 45% / 0.12);
+    color: hsl(42 64% 38%);
+    border: 1px solid hsl(42 64% 45% / 0.3);
+    border-radius: 9999px;
   }
 
-  /* Header chips */
+  /* Header chips — used inside the dark royal-blue header */
   .header-chip {
     font-family: 'DM Mono', ui-monospace, monospace;
     font-size: 10px;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     padding: 5px 12px;
     color: rgba(255, 255, 255, 0.85);
     transition: all 0.2s;
@@ -223,8 +235,35 @@
   }
   .header-chip:hover {
     color: #ffffff;
-    border-color: rgba(255, 255, 255, 0.15);
-    background: rgba(255, 255, 255, 0.04);
+    border-color: hsl(42 64% 45%);
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 64px 24px;
+    color: hsl(0 0% 45%);
+  }
+  .empty-state-icon {
+    font-size: 32px;
+    opacity: 0.4;
+    margin-bottom: 12px;
+  }
+  .empty-state-title {
+    font-family: 'DM Mono', ui-monospace, monospace;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: hsl(0 0% 25%);
+    margin-bottom: 6px;
+  }
+  .empty-state-sub {
+    font-size: 12px;
+    color: hsl(0 0% 50%);
+    max-width: 320px;
+    margin: 0 auto;
   }
 }
 
@@ -238,6 +277,15 @@
   50% { opacity: 0.4; }
 }
 
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.tab-content-enter {
+  animation: fade-in-up 0.25s ease forwards;
+}
+
 .animate-ticker {
   animation: ticker-scroll 30s linear infinite;
 }
@@ -246,7 +294,7 @@
   animation: pulse-live 2s ease-in-out infinite;
 }
 
-/* Login page */
+/* Login page (do not touch) */
 @keyframes ticker-login-scroll {
   0% { transform: translateX(0); }
   100% { transform: translateX(-33.333%); }
