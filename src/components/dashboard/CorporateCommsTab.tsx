@@ -23,42 +23,50 @@ const CorporateCommsTab = () => {
   return (
     <div className="p-6 space-y-6">
       {/* Active Story Banner */}
-      <div className="bg-[hsl(80_20%_90%)] border border-[hsl(80_20%_80%)] p-4 flex items-center gap-4">
-        <span className="text-[10px] font-bold tracking-[0.12em] uppercase px-2 py-0.5 bg-foreground text-background shrink-0">ACTIVE STORY</span>
+      <div
+        className="p-4 flex items-center gap-4 border"
+        style={{ background: 'hsl(225 70% 96%)', borderColor: 'hsl(225 70% 85%)' }}
+      >
+        <span
+          className="text-[10px] font-bold tracking-[0.12em] uppercase px-2 py-0.5 shrink-0"
+          style={{ background: 'hsl(225 70% 35%)', color: '#fff' }}
+        >
+          ACTIVE STORY
+        </span>
         <p className="text-xs text-foreground/80">Frank B / Global Artistic Director announcement generating strong positive pickup. 14 earned pieces in 5 days. Turnaround narrative gaining momentum.</p>
       </div>
 
       {/* Two panels */}
       <div className="grid grid-cols-5 gap-6">
-        <div className="col-span-3 bg-card border border-border p-5">
-          <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">Comms Activity — 8 Weeks</h3>
+        <div className="col-span-3 bg-card border border-black/10 p-5">
+          <h3 className="section-label mb-4">Comms Activity — 8 Weeks</h3>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={commsData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 90%)" vertical={false} />
-              <XAxis dataKey="week" tick={{ fontSize: 10, fill: 'hsl(0 0% 45%)' }} axisLine={{ stroke: 'hsl(0 0% 90%)' }} tickLine={false} />
-              <YAxis domain={[0, 7]} tick={{ fontSize: 10, fill: 'hsl(0 0% 45%)' }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ backgroundColor: 'hsl(0 0% 9%)', border: 'none', borderRadius: '2px', color: 'white', fontSize: 11 }} />
-              <Bar dataKey="press" stackId="a" fill="hsl(0 0% 9%)" barSize={20} />
-              <Bar dataKey="trade" stackId="a" fill="hsl(0 0% 35%)" radius={[1, 1, 0, 0]} barSize={20} />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" vertical={false} />
+              <XAxis dataKey="week" tick={{ fontSize: 10, fill: 'hsl(0 0% 40%)' }} axisLine={{ stroke: 'rgba(0,0,0,0.1)' }} tickLine={false} />
+              <YAxis domain={[0, 7]} tick={{ fontSize: 10, fill: 'hsl(0 0% 40%)' }} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={{ backgroundColor: 'white', border: '1px solid rgba(0,0,0,0.1)', borderRadius: '4px', color: 'hsl(0 0% 8%)', fontSize: 11 }} />
+              <Bar dataKey="press" stackId="a" fill="hsl(225 70% 35%)" barSize={20} />
+              <Bar dataKey="trade" stackId="a" fill="hsl(42 64% 45%)" radius={[1, 1, 0, 0]} barSize={20} />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
-        <div className="col-span-2 bg-card border border-border p-5">
-          <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">Sentiment on Corporate Narrative</h3>
+        <div className="col-span-2 bg-card border border-black/10 p-5">
+          <h3 className="section-label mb-4">Sentiment on Corporate Narrative</h3>
           <div className="space-y-3">
             {[
-              { label: 'Positive on leadership', pct: 71, color: 'bg-foreground' },
-              { label: 'Neutral / informational', pct: 22, color: 'bg-muted-foreground/50' },
-              { label: 'Negative on financials', pct: 7, color: 'bg-destructive' },
+              { label: 'Positive on leadership', pct: 71, color: 'hsl(225 70% 35%)' },
+              { label: 'Neutral / informational', pct: 22, color: 'hsl(0 0% 60%)' },
+              { label: 'Negative on financials', pct: 7, color: 'hsl(0 70% 50%)' },
             ].map((row) => (
               <div key={row.label}>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-medium">{row.label}</span>
-                  <span className="text-xs font-bold">{row.pct}%</span>
+                  <span className="text-xs font-medium text-foreground">{row.label}</span>
+                  <span className="text-xs font-bold text-foreground">{row.pct}%</span>
                 </div>
                 <div className="h-5 bg-secondary w-full">
-                  <div className={`h-full ${row.color}`} style={{ width: `${row.pct}%` }} />
+                  <div className="h-full" style={{ width: `${row.pct}%`, background: row.color }} />
                 </div>
               </div>
             ))}
@@ -68,14 +76,14 @@ const CorporateCommsTab = () => {
       </div>
 
       {/* Communications Log */}
-      <div className="bg-card border border-border p-5">
+      <div className="bg-card border border-black/10 p-5">
         <div className="flex items-center justify-between mb-3">
           <span className="section-label">Corporate Communications Log</span>
-          <span className="section-count text-base">{commsLog.length}</span>
+          <span className="section-count">{commsLog.length}</span>
         </div>
         <div className="space-y-3">
           {commsLog.map((row, i) => (
-            <div key={i} className="entry-card cat-corporate bg-card border border-border flex items-center gap-4 p-4">
+            <div key={i} className="entry-card cat-corporate bg-card border border-black/10 flex items-center gap-4 p-4 cursor-pointer">
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-foreground">{row.title}</p>
                 <p className="text-[11px] text-muted-foreground mt-0.5">{row.detail}</p>

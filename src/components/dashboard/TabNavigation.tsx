@@ -48,7 +48,7 @@ const TabNavigation = ({ activeTab, onTabChange }: TabNavigationProps) => {
   }
 
   return (
-    <div className="bg-background border-b border-white/[0.08] px-6 overflow-x-auto">
+    <div className="bg-white border-b border-black/10 px-6 overflow-x-auto">
       <div className="flex gap-0">
         {TABS.map((tab) => (
           <button
@@ -56,8 +56,8 @@ const TabNavigation = ({ activeTab, onTabChange }: TabNavigationProps) => {
             onClick={() => onTabChange(tab)}
             className={`font-mono-ui px-4 py-3 text-[10px] tracking-[0.12em] uppercase whitespace-nowrap transition-colors relative
               ${activeTab === tab
-                ? 'text-white font-semibold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-[hsl(var(--chart-gold))]'
-                : 'text-white/40 font-medium hover:text-white/80'
+                ? 'text-foreground font-bold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-[hsl(225,70%,35%)]'
+                : 'text-muted-foreground font-medium hover:text-foreground'
               }`}
           >
             {tab}

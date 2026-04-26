@@ -102,35 +102,33 @@ const ShareOfVoiceTable = () => {
 
   return (
     <div>
-      <h3 className="text-[10px] font-bold tracking-[0.14em] uppercase text-white/40 mb-4">
-        Share of Voice — Competitive Set
-      </h3>
+      <h3 className="section-label mb-4">Share of Voice — Competitive Set</h3>
       <div className="space-y-1">
         {sovData.map((row) => (
           <div
             key={row.brand}
             className={`flex items-center gap-3 px-2 py-1.5 rounded-sm ${
-              row.highlight ? 'bg-[hsl(42_64%_55%/0.12)]' : ''
+              row.highlight ? 'bg-[hsl(42_64%_45%/0.12)]' : ''
             }`}
           >
-            <span className={`text-[10px] w-4 text-right ${row.highlight ? 'text-[hsl(var(--chart-gold))] font-bold' : 'text-white/40'}`}>
+            <span className={`text-[10px] w-4 text-right ${row.highlight ? 'text-[hsl(42_64%_38%)] font-bold' : 'text-muted-foreground'}`}>
               #{row.rank}
             </span>
-            <span className={`text-xs w-32 truncate ${row.highlight ? 'font-bold text-white' : 'text-white/70'}`}>
+            <span className={`text-xs w-32 truncate ${row.highlight ? 'font-bold text-foreground' : 'text-foreground/70'}`}>
               {row.brand}
             </span>
-            <div className="flex-1 h-4 bg-white/[0.06] relative rounded-sm overflow-hidden">
+            <div className="flex-1 h-4 bg-black/[0.06] relative rounded-sm overflow-hidden">
               <div
                 className="h-full"
                 style={{
                   width: `${(row.pct / 25) * 100}%`,
-                  backgroundColor: row.highlight ? 'hsl(218 60% 47%)' : 'hsl(0 0% 100% / 0.15)',
+                  backgroundColor: row.highlight ? 'hsl(225 70% 35%)' : 'hsl(0 0% 0% / 0.18)',
                 }}
               />
             </div>
-            <span className={`text-xs w-10 text-right ${row.highlight ? 'font-bold text-white' : 'text-white/70'}`}>{row.pct}%</span>
+            <span className={`text-xs w-10 text-right ${row.highlight ? 'font-bold text-foreground' : 'text-foreground/70'}`}>{row.pct}%</span>
             <span className={`text-[10px] w-14 text-right ${
-              row.delta.includes('▲') ? 'text-positive' : row.delta.includes('-') ? 'text-negative' : 'text-white/40'
+              row.delta.includes('▲') ? 'text-positive' : row.delta.includes('-') ? 'text-negative' : 'text-muted-foreground'
             }`}>
               {row.delta}
             </span>

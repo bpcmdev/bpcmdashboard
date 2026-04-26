@@ -38,9 +38,9 @@ const CoverageByTier = () => {
         return;
       }
 
-      const tier1Color = 'hsl(218 60% 47%)';
-      const tier2Color = 'hsl(42 64% 55%)';
-      const tier3Color = 'hsl(0 0% 100% / 0.2)';
+      const tier1Color = 'hsl(225 70% 35%)';
+      const tier2Color = 'hsl(42 64% 45%)';
+      const tier3Color = 'hsl(0 0% 60%)';
       if (placements && placements.length > 0) {
         const counts: Record<number, number> = {};
         placements.forEach((p: any) => {
@@ -79,9 +79,7 @@ const CoverageByTier = () => {
 
   return (
     <div>
-      <h3 className="text-[10px] font-bold tracking-[0.14em] uppercase text-white/40 mb-4">
-        Coverage by Outlet Tier
-      </h3>
+      <h3 className="section-label mb-4">Coverage by Outlet Tier</h3>
       <div className="flex items-center gap-6">
         <ResponsiveContainer width={160} height={160}>
           <PieChart>
@@ -90,15 +88,15 @@ const CoverageByTier = () => {
                 <Cell key={index} fill={entry.color} />
               ))}
             </Pie>
-            <Tooltip contentStyle={{ backgroundColor: 'hsl(213 56% 12%)', border: '1px solid hsl(42 64% 55%)', borderRadius: '2px', color: 'white', fontSize: 11 }} />
+            <Tooltip contentStyle={{ backgroundColor: 'white', border: '1px solid rgba(0,0,0,0.1)', borderRadius: '4px', color: 'hsl(0 0% 8%)', fontSize: 11 }} />
           </PieChart>
         </ResponsiveContainer>
         <div className="space-y-2">
           {data.map((item) => (
             <div key={item.name} className="flex items-center gap-2">
               <div className="w-3 h-3" style={{ backgroundColor: item.color }} />
-              <span className="text-xs text-white/70">{item.name}</span>
-              <span className="text-xs font-bold ml-1 text-white">{item.value}</span>
+              <span className="text-xs text-foreground/70">{item.name}</span>
+              <span className="text-xs font-bold ml-1 text-foreground">{item.value}</span>
             </div>
           ))}
         </div>

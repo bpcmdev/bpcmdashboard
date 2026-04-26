@@ -9,6 +9,7 @@ interface KpiCardProps {
   value: string;
   delta: string;
   deltaType: 'positive' | 'negative' | 'neutral';
+  targetTab?: string;
 }
 
 /** Animate a numeric value from 0 → target over `duration` ms. Non-numeric values are returned as-is. */
@@ -49,26 +50,35 @@ function useCountUp(target: string, duration = 900): string {
   return display;
 }
 
-const KpiCard = ({ label, value, delta, deltaType }: KpiCardProps) => {
+const KpiCard = ({ label, value, delta, deltaType, targetTab }: KpiCardProps) => {
   const animated = useCountUp(value);
   const isPos = deltaType === 'positive';
   const isNeg = deltaType === 'negative';
   const TrendIcon = isPos ? ArrowUpRight : isNeg ? ArrowDownRight : Minus;
   const trendColor = isPos ? 'text-positive' : isNeg ? 'text-negative' : 'text-neutral-delta';
 
+  const handleClick = () => {
+    if (!targetTab) return;
+    window.dispatchEvent(new CustomEvent('bpcm:switch-tab', { detail: targetTab }));
+  };
+
   return (
-    <div className="flex-1 px-3 md:px-5 py-4 md:py-5 text-center min-w-0 relative overflow-hidden animate-fade-in bg-background">
-      <p className="font-mono-ui text-[9px] md:text-[10px] font-medium tracking-[0.18em] uppercase text-white/45 mb-1.5 truncate">
+    <button
+      type="button"
+      onClick={handleClick}
+      className={`flex-1 px-3 md:px-5 py-4 md:py-5 text-center min-w-0 relative overflow-hidden animate-fade-in bg-white border-r border-black/10 transition-all duration-200 hover:bg-[hsl(0,0%,98%)] hover:border-b-2 hover:border-b-[hsl(225,70%,35%)] ${targetTab ? 'cursor-pointer' : 'cursor-default'}`}
+    >
+      <p className="font-mono-ui text-[9px] md:text-[10px] font-medium tracking-[0.18em] uppercase text-muted-foreground mb-1.5 truncate">
         {label}
       </p>
-      <p className="font-display text-3xl md:text-4xl font-bold tracking-tight text-white tabular-nums leading-none">
+      <p className="font-display text-3xl md:text-4xl font-bold tracking-tight text-foreground tabular-nums leading-none">
         {animated}
       </p>
       <div className={`flex items-center justify-center gap-1 mt-2 ${trendColor}`}>
         <TrendIcon className="w-3 h-3 md:w-3.5 md:h-3.5" strokeWidth={2.5} />
         <span className="font-mono-ui text-[9px] md:text-[10px] font-medium tracking-[0.18em] uppercase truncate">{delta.replace(/^[▲▼]\s?/, '')}</span>
       </div>
-    </div>
+    </button>
   );
 };
 
@@ -138,12 +148,12 @@ const KpiBar = () => {
       const roiVal = r.influencer_roi ?? 0;
 
       setKpis([
-        { label: 'Press Placements', value: String(r.placement_count ?? 0), ...placementDelta },
-        { label: 'Earned Media Value', value: `$${formatCompact(r.emv_usd ?? 0)}`, ...emvDelta },
+        { label: 'Press Placements', value: String(r.placement_count ?? 0), ...placementDelta, targetTab: 'EARNED MEDIA' },
+        { label: 'Earned Media Value', value: `$${formatCompact(r.emv_usd ?? 0)}`, ...emvDelta, targetTab: 'EARNED MEDIA' },
         { label: 'Sentiment Score', value: `${r.sentiment_score ?? 0}/100`, ...sentimentDelta },
-        { label: 'Social Reach', value: formatCompact(r.social_reach ?? 0), ...reachDelta },
+        { label: 'Social Reach', value: formatCompact(r.social_reach ?? 0), ...reachDelta, targetTab: 'INFLUENCER & SOCIAL' },
         { label: 'Share of Voice', value: `${r.sov_pct ?? 0}%`, ...sovDelta },
-        { label: 'Influencer ROI', value: `${roiVal}x`, delta: 'stable', deltaType: 'neutral' },
+        { label: 'Influencer ROI', value: `${roiVal}x`, delta: 'stable', deltaType: 'neutral', targetTab: 'INFLUENCER & SOCIAL' },
       ]);
       setLoading(false);
     };
@@ -153,7 +163,7 @@ const KpiBar = () => {
 
   if (error) {
     return (
-      <div className="bg-card border-b border-border px-5 py-4 text-center">
+      <div className="bg-white border-b border-black/10 px-5 py-4 text-center">
         <p className="text-sm text-destructive">Unable to load data. Please try refreshing.</p>
       </div>
     );
@@ -161,12 +171,12 @@ const KpiBar = () => {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-3 md:flex divide-x divide-white/[0.08] border-b border-white/[0.08] bg-background">
+      <div className="grid grid-cols-3 md:flex border-b border-black/10 bg-white">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="flex-1 px-3 md:px-5 py-4 md:py-5 text-center space-y-2">
-            <Skeleton className="h-3 w-16 md:w-20 mx-auto bg-white/10" />
-            <Skeleton className="h-7 md:h-8 w-14 md:w-20 mx-auto bg-white/10" />
-            <Skeleton className="h-3 w-20 md:w-24 mx-auto bg-white/10" />
+          <div key={i} className="flex-1 px-3 md:px-5 py-4 md:py-5 text-center space-y-2 border-r border-black/10">
+            <Skeleton className="h-3 w-16 md:w-20 mx-auto" />
+            <Skeleton className="h-7 md:h-8 w-14 md:w-20 mx-auto" />
+            <Skeleton className="h-3 w-20 md:w-24 mx-auto" />
           </div>
         ))}
       </div>
@@ -174,7 +184,7 @@ const KpiBar = () => {
   }
 
   return (
-    <div className="grid grid-cols-3 md:flex divide-x divide-white/[0.08] border-b border-white/[0.08] bg-background">
+    <div className="grid grid-cols-3 md:flex border-b border-black/10 bg-white">
       {kpis.map((kpi) => (
         <KpiCard key={kpi.label} {...kpi} />
       ))}

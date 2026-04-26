@@ -109,13 +109,11 @@ const PlacementVolumeChart = () => {
 
   return (
     <div>
-      <h3 className="text-[10px] font-bold tracking-[0.14em] uppercase text-white/40 mb-4">
-        {title}
-      </h3>
+      <h3 className="section-label mb-4">{title}</h3>
       {loading ? (
         <Skeleton className="h-[240px] w-full" />
       ) : buckets.length === 0 ? (
-        <div className="h-[240px] flex items-center justify-center text-xs text-white/40">
+        <div className="h-[240px] flex items-center justify-center text-xs text-muted-foreground">
           No placements in selected range.
         </div>
       ) : (
@@ -123,33 +121,33 @@ const PlacementVolumeChart = () => {
           <BarChart data={buckets} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
             <defs>
               <linearGradient id="barClientBlue" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="hsl(218 60% 55%)" />
-                <stop offset="100%" stopColor="hsl(218 60% 42%)" />
+                <stop offset="0%" stopColor="hsl(225 70% 45%)" />
+                <stop offset="100%" stopColor="hsl(225 70% 30%)" />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="2 4" stroke="hsl(0 0% 100% / 0.06)" vertical={false} />
+            <CartesianGrid strokeDasharray="2 4" stroke="rgba(0,0,0,0.06)" vertical={false} />
             <XAxis
               dataKey="label"
-              tick={{ fontSize: 10, fill: 'hsl(0 0% 100% / 0.35)' }}
+              tick={{ fontSize: 10, fill: 'hsl(0 0% 40%)' }}
               axisLine={false}
               tickLine={false}
             />
             <YAxis
               domain={[0, yMax]}
-              tick={{ fontSize: 10, fill: 'hsl(0 0% 100% / 0.35)' }}
+              tick={{ fontSize: 10, fill: 'hsl(0 0% 40%)' }}
               axisLine={false}
               tickLine={false}
               allowDecimals={false}
             />
             <Tooltip
-              cursor={{ fill: 'hsl(0 0% 100% / 0.04)' }}
+              cursor={{ fill: 'rgba(0,0,0,0.04)' }}
               contentStyle={{
-                backgroundColor: 'hsl(213 56% 12%)',
-                border: '1px solid hsl(42 64% 55%)',
+                backgroundColor: 'white',
+                border: '1px solid rgba(0,0,0,0.1)',
                 borderRadius: '4px',
-                color: 'white',
+                color: 'hsl(0 0% 8%)',
                 fontSize: 11,
-                boxShadow: '0 4px 16px hsl(0 0% 0% / 0.4)',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
               }}
             />
             <Bar dataKey="placements" fill="url(#barClientBlue)" radius={[3, 3, 0, 0]} />
