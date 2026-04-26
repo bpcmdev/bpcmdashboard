@@ -49,26 +49,39 @@ function useCountUp(target: string, duration = 900): string {
   return display;
 }
 
-const KpiCard = ({ label, value, delta, deltaType }: KpiCardProps) => {
+interface KpiCardWithTargetProps extends KpiCardProps {
+  targetTab?: string;
+}
+
+const KpiCard = ({ label, value, delta, deltaType, targetTab }: KpiCardWithTargetProps) => {
   const animated = useCountUp(value);
   const isPos = deltaType === 'positive';
   const isNeg = deltaType === 'negative';
   const TrendIcon = isPos ? ArrowUpRight : isNeg ? ArrowDownRight : Minus;
   const trendColor = isPos ? 'text-positive' : isNeg ? 'text-negative' : 'text-neutral-delta';
 
+  const handleClick = () => {
+    if (!targetTab) return;
+    window.dispatchEvent(new CustomEvent('bpcm:switch-tab', { detail: targetTab }));
+  };
+
   return (
-    <div className="flex-1 px-3 md:px-5 py-4 md:py-5 text-center min-w-0 relative overflow-hidden animate-fade-in bg-background">
-      <p className="font-mono-ui text-[9px] md:text-[10px] font-medium tracking-[0.18em] uppercase text-white/45 mb-1.5 truncate">
+    <button
+      type="button"
+      onClick={handleClick}
+      className={`flex-1 px-3 md:px-5 py-4 md:py-5 text-center min-w-0 relative overflow-hidden animate-fade-in bg-white border-r border-black/10 transition-all duration-200 hover:bg-[hsl(0,0%,98%)] hover:border-b-2 hover:border-b-[hsl(225,70%,35%)] ${targetTab ? 'cursor-pointer' : 'cursor-default'}`}
+    >
+      <p className="font-mono-ui text-[9px] md:text-[10px] font-medium tracking-[0.18em] uppercase text-muted-foreground mb-1.5 truncate">
         {label}
       </p>
-      <p className="font-display text-3xl md:text-4xl font-bold tracking-tight text-white tabular-nums leading-none">
+      <p className="font-display text-3xl md:text-4xl font-bold tracking-tight text-foreground tabular-nums leading-none">
         {animated}
       </p>
       <div className={`flex items-center justify-center gap-1 mt-2 ${trendColor}`}>
         <TrendIcon className="w-3 h-3 md:w-3.5 md:h-3.5" strokeWidth={2.5} />
         <span className="font-mono-ui text-[9px] md:text-[10px] font-medium tracking-[0.18em] uppercase truncate">{delta.replace(/^[▲▼]\s?/, '')}</span>
       </div>
-    </div>
+    </button>
   );
 };
 
