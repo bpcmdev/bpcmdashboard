@@ -7,6 +7,7 @@ import DataStateWrapper from './DataStateWrapper';
 import PlaceholderCard from './PlaceholderCard';
 import DeleteEntryButton from './DeleteEntryButton';
 import EditPartnershipDialog from './EditPartnershipDialog';
+import EmptyState from './EmptyState';
 
 interface Partnership {
   id: string;
