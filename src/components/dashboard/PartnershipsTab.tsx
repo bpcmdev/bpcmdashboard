@@ -62,35 +62,39 @@ const PartnershipsTab = () => {
   return (
     <DataStateWrapper loading={loading} error={error}>
       {partnerships.length === 0 ? (
-        <div className="p-6 text-center text-sm text-muted-foreground py-24">
-          No partnerships yet. Add entries via the Admin panel.
+        <div className="p-6">
+          <EmptyState
+            icon="🤝"
+            title="No partnerships yet"
+            description="Add entries via the Admin panel or upload a weekly document."
+          />
         </div>
       ) : (
         <div className="p-6 space-y-6">
           <div className="grid grid-cols-2 gap-6">
-            <div className="bg-card border border-border p-5">
+            <div className="bg-card border border-black/10 p-5">
               <div className="flex items-center justify-between mb-4">
                 <span className="section-label">Active &amp; Pipeline Partnerships</span>
-                <span className="section-count text-base">{active.length}</span>
+                <span className="section-count">{active.length}</span>
               </div>
               <div className="space-y-4">
                 {active.map((p) => {
                   const badge = statusBadge[p.status] ?? { label: p.status.toUpperCase(), style: 'bg-muted text-muted-foreground' };
                   const initials = p.partner_name.split(/\s+/).map(s => s[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
                   return (
-                    <div key={p.id} className="entry-card cat-partnership bg-card border border-border p-4">
+                    <div key={p.id} className="entry-card cat-partnership bg-card border border-black/10 p-4 cursor-pointer">
                       <div className="flex items-start gap-3">
                         <div
                           className="w-9 h-9 flex items-center justify-center text-[11px] font-bold text-white shrink-0 rounded-sm"
-                          style={{ background: 'linear-gradient(135deg, #2E5FBF 0%, #2ECC71 100%)' }}
+                          style={{ background: 'linear-gradient(135deg, hsl(225 70% 35%) 0%, #047857 100%)' }}
                         >
                           {initials || '—'}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2 mb-1">
                             <div className="min-w-0">
-                              <h4 className="text-sm font-bold text-white truncate">{p.partner_name}</h4>
-                              <p className="text-[11px] text-white/45">{p.type}</p>
+                              <h4 className="text-sm font-bold text-foreground truncate">{p.partner_name}</h4>
+                              <p className="text-[11px] text-muted-foreground">{p.type}</p>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
                               <span className={`font-mono-ui text-[9px] font-medium tracking-[0.12em] uppercase px-1.5 py-0.5 ${badge.style}`}>{badge.label}</span>
@@ -98,11 +102,11 @@ const PartnershipsTab = () => {
                               {isAdmin && <DeleteEntryButton table="partnerships" id={p.id} label="this partnership" />}
                             </div>
                           </div>
-                          <p className="text-xs text-white/55 mt-1">{p.description}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{p.description}</p>
                           {p.emv_generated ? (
                             <div className="flex items-baseline gap-1.5 mt-2">
-                              <span className="font-mono-ui text-[8px] tracking-[0.18em] uppercase text-white/40">EMV</span>
-                              <span className="font-display text-base font-bold" style={{ color: 'hsl(var(--chart-gold))' }}>${p.emv_generated}K</span>
+                              <span className="font-mono-ui text-[8px] tracking-[0.18em] uppercase text-muted-foreground">EMV</span>
+                              <span className="font-display text-base font-bold" style={{ color: 'hsl(42 64% 38%)' }}>${p.emv_generated}K</span>
                             </div>
                           ) : null}
                         </div>
@@ -118,14 +122,14 @@ const PartnershipsTab = () => {
             </div>
 
             {emvData.length > 0 && (
-              <div className="bg-card border border-border p-5">
-                <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">Partnership EMV</h3>
+              <div className="bg-card border border-black/10 p-5">
+                <h3 className="section-label mb-4">Partnership EMV</h3>
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={emvData} layout="vertical" margin={{ left: 100, right: 30 }}>
-                    <XAxis type="number" tick={{ fontSize: 10, fill: 'hsl(0 0% 45%)' }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `$${v}K`} />
+                    <XAxis type="number" tick={{ fontSize: 10, fill: 'hsl(0 0% 40%)' }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `$${v}K`} />
                     <YAxis type="category" dataKey="program" tick={{ fontSize: 11, fill: 'hsl(0 0% 20%)' }} axisLine={false} tickLine={false} width={95} />
-                    <Tooltip contentStyle={{ backgroundColor: 'hsl(0 0% 9%)', border: 'none', borderRadius: '2px', color: 'white', fontSize: 11 }} formatter={(v: number) => `$${v}K`} />
-                    <Bar dataKey="emv" fill="hsl(0 0% 9%)" barSize={18} radius={[0, 1, 1, 0]} />
+                    <Tooltip contentStyle={{ backgroundColor: 'white', border: '1px solid rgba(0,0,0,0.1)', borderRadius: '4px', color: 'hsl(0 0% 8%)', fontSize: 11 }} formatter={(v: number) => `$${v}K`} />
+                    <Bar dataKey="emv" fill="hsl(225 70% 35%)" barSize={18} radius={[0, 1, 1, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
