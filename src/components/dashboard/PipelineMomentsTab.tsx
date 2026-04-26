@@ -47,6 +47,8 @@ function groupByMonth(entries: PipelineEntry[]) {
   return groups;
 }
 
+type PriorityFilter = 'ALL' | 'ACTIVE' | 'WATCH' | 'UPCOMING';
+
 const PipelineMomentsTab = () => {
   const { refreshKey, activeClientId: clientId } = useWeek();
   const { isAdmin } = useAdmin();
@@ -54,6 +56,8 @@ const PipelineMomentsTab = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
+  const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('ALL');
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!clientId) return;
@@ -75,23 +79,53 @@ const PipelineMomentsTab = () => {
     fetch();
   }, [clientId, refreshKey]);
 
-  const monthGroups = groupByMonth(entries);
-  const monitorEntries = entries.filter(e => e.priority && e.monitor_strings?.length > 0);
+  const filteredEntries = priorityFilter === 'ALL'
+    ? entries
+    : entries.filter(e => (e.priority || '').toLowerCase() === priorityFilter.toLowerCase());
+
+  const monthGroups = groupByMonth(filteredEntries);
+  const monitorEntries = filteredEntries.filter(e => e.priority && e.monitor_strings?.length > 0);
   const monitorPlaceholders = Math.max(0, 3 - monitorEntries.length);
 
   return (
     <DataStateWrapper loading={loading} error={error} skeletonCount={4} skeletonHeight="h-20">
       {entries.length === 0 ? (
-        <div className="p-6 text-center text-sm text-muted-foreground py-24">
-          No pipeline moments yet. Add entries via the Admin panel.
-        </div>
+        <EmptyState
+          icon="🗓️"
+          title="No pipeline moments yet"
+          description="Add entries via the Admin panel or upload a weekly document."
+        />
       ) : (
         <div className="p-6 space-y-8">
+          {/* Priority filter chips */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            {(['ALL', 'ACTIVE', 'WATCH', 'UPCOMING'] as PriorityFilter[]).map(p => (
+              <button
+                key={p}
+                onClick={() => setPriorityFilter(p)}
+                style={{
+                  fontFamily: 'DM Mono, monospace',
+                  fontSize: '10px',
+                  letterSpacing: '0.12em',
+                  textTransform: 'uppercase',
+                  padding: '5px 12px',
+                  border: priorityFilter === p ? '1px solid rgba(201,160,60,0.5)' : '1px solid rgba(0,0,0,0.1)',
+                  background: priorityFilter === p ? 'rgba(201,160,60,0.12)' : 'transparent',
+                  color: priorityFilter === p ? 'hsl(42 64% 38%)' : 'hsl(0 0% 40%)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                }}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+
           <div>
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-1">Marketing Calendar</h3>
-                <p className="text-[11px] text-muted-foreground">Product launches + cultural moments</p>
+                <span className="section-label">Marketing Calendar</span>
+                <p className="text-[11px] text-muted-foreground mt-1">Product launches + cultural moments</p>
               </div>
               <div className="flex items-center bg-muted rounded p-0.5 gap-0.5">
                 <button
@@ -112,12 +146,12 @@ const PipelineMomentsTab = () => {
             </div>
 
             {viewMode === 'calendar' ? (
-              <PipelineCalendarView entries={entries} />
+              <PipelineCalendarView entries={filteredEntries} />
             ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto bg-card border border-black/10">
               <div className="flex min-w-[900px]">
                 {Object.entries(monthGroups).map(([month, items]) => (
-                  <div key={month} className="flex-1 min-w-[170px] border-r border-border p-3">
+                  <div key={month} className="flex-1 min-w-[170px] border-r border-black/10 p-3">
                     <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-foreground mb-3">{month}</p>
                     <div className="space-y-2">
                       {items.map((e) => (
@@ -141,26 +175,41 @@ const PipelineMomentsTab = () => {
             )}
           </div>
 
-          {(monitorEntries.length > 0 || entries.length > 0) && (
+          {(monitorEntries.length > 0 || filteredEntries.length > 0) && (
             <div>
               <div className="flex items-center justify-between mb-4">
                 <span className="section-label">Agent Intelligence — What to Monitor Now</span>
-                <span className="section-count text-base">{monitorEntries.length}</span>
+                <span className="section-count">{monitorEntries.length}</span>
               </div>
               <div className="grid grid-cols-3 gap-4">
-                {monitorEntries.map((card) => (
-                  <div key={card.id} className="entry-card cat-default bg-card border border-border p-5 relative">
+                {monitorEntries.map((card) => {
+                  const desc = card.description ?? '';
+                  const isLong = desc.length > 120;
+                  const isOpen = !!expanded[card.id];
+                  const showDesc = isLong && !isOpen ? desc.slice(0, 120).trim() + '…' : desc;
+                  return (
+                  <div key={card.id} className="entry-card cat-default bg-card border border-black/10 p-5 relative cursor-pointer">
                     <span
                       className="absolute top-3 left-3 inline-block rounded-full"
                       style={{ width: 8, height: 8, ...(dotStyles[card.priority] ?? dotStyles.upcoming) }}
                     />
                     <div className="flex items-center gap-2 mb-3 pl-5">
-                      <span className="font-mono-ui text-[9px] font-medium tracking-[0.18em] uppercase text-white/55 flex-1">{card.priority}</span>
+                      <span className="font-mono-ui text-[9px] font-medium tracking-[0.18em] uppercase text-muted-foreground flex-1">{card.priority}</span>
                       {isAdmin && <EditPipelineDialog entry={card} />}
                       {isAdmin && <DeleteEntryButton table="pipeline_moments" id={card.id} label="this moment" />}
                     </div>
                     <h4 className="text-sm font-bold text-foreground mb-2">{card.title}</h4>
-                    <p className="text-xs text-muted-foreground leading-relaxed mb-3">{card.description}</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed mb-2">{showDesc}</p>
+                    {isLong && (
+                      <button
+                        type="button"
+                        onClick={() => setExpanded(prev => ({ ...prev, [card.id]: !isOpen }))}
+                        className="text-[11px] font-medium mb-3"
+                        style={{ color: 'hsl(225,70%,35%)' }}
+                      >
+                        {isOpen ? 'Show less' : 'Show more'}
+                      </button>
+                    )}
                     {card.monitor_strings?.length > 0 && (
                       <div className="flex flex-wrap gap-1 mb-3">
                         {card.monitor_strings.map((m, j) => (
@@ -169,7 +218,8 @@ const PipelineMomentsTab = () => {
                       </div>
                     )}
                   </div>
-                ))}
+                  );
+                })}
                 {Array.from({ length: monitorPlaceholders }).map((_, i) => (
                   <PlaceholderCard key={`ph-${i}`} />
                 ))}
