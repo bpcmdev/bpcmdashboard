@@ -50,11 +50,7 @@ function useCountUp(target: string, duration = 900): string {
   return display;
 }
 
-interface KpiCardWithTargetProps extends KpiCardProps {
-  targetTab?: string;
-}
-
-const KpiCard = ({ label, value, delta, deltaType, targetTab }: KpiCardWithTargetProps) => {
+const KpiCard = ({ label, value, delta, deltaType, targetTab }: KpiCardProps) => {
   const animated = useCountUp(value);
   const isPos = deltaType === 'positive';
   const isNeg = deltaType === 'negative';
