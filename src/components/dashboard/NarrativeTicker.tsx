@@ -55,29 +55,23 @@ const NarrativeTicker = () => {
   }, [activeClientId, selectedWeek, refreshKey]);
 
   return (
-    <div
-      className="px-6 py-2.5 flex items-center gap-4 overflow-hidden"
-      style={{
-        background: 'linear-gradient(90deg, hsl(var(--card)) 0%, hsl(var(--card) / 0.6) 50%, hsl(var(--card)) 100%)',
-        borderBottom: '1px solid rgba(201,160,60,0.35)',
-      }}
-    >
+    <div className="dashboard-ticker px-6 py-2.5 flex items-center gap-4 overflow-hidden">
       <span
         className="shrink-0 font-mono-ui text-[9px] uppercase"
         style={{
           paddingRight: 20,
-          borderRight: '1px solid rgba(201,160,60,0.35)',
+          borderRight: '1px solid rgba(201,160,60,0.5)',
           letterSpacing: '0.2em',
-          color: 'hsl(var(--chart-gold))',
-          fontWeight: 500,
+          color: 'hsl(42 64% 60%)',
+          fontWeight: 600,
         }}
       >
         NARRATIVE WATCH
       </span>
       <div className="overflow-hidden flex-1">
         <div className="animate-ticker whitespace-nowrap inline-block">
-          <span className="text-xs tracking-wide mr-24" style={{ color: 'rgba(255,255,255,0.7)' }}>{tickerText}</span>
-          <span className="text-xs tracking-wide mr-24" style={{ color: 'rgba(255,255,255,0.7)' }}>{tickerText}</span>
+          <span className="text-xs tracking-wide mr-24" style={{ color: 'rgba(255,255,255,0.85)' }}>{tickerText}</span>
+          <span className="text-xs tracking-wide mr-24" style={{ color: 'rgba(255,255,255,0.85)' }}>{tickerText}</span>
         </div>
       </div>
     </div>

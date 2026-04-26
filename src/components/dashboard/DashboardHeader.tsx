@@ -54,12 +54,8 @@ const DashboardHeader = () => {
 
   return (
     <header
-      className="dashboard-header px-4 md:px-6 py-3 backdrop-blur-xl border-b border-white/5 sticky top-0 z-40"
-      style={{
-        background:
-          'linear-gradient(180deg, hsl(var(--dashboard-header) / 0.92) 0%, hsl(var(--dashboard-header) / 0.78) 100%)',
-        WebkitBackdropFilter: 'blur(16px)',
-      }}
+      className="dashboard-header px-4 md:px-6 py-3 border-b sticky top-0 z-40"
+      style={{ borderColor: 'rgba(255,255,255,0.1)' }}
     >
       {/* Top row */}
       <div className="flex items-center justify-between">
