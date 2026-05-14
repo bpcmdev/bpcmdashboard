@@ -748,7 +748,7 @@ export function UserManagement() {
                   </div>
                   <p className="text-[10px] text-muted-foreground truncate">{user.email}</p>
                   <p className="text-[10px] text-muted-foreground">
-                    {user.role} · {user.client_name ?? '—'}
+                    {user.role} · {user.role === 'admin' ? 'All Clients' : (user.client_name ?? '—')}
                   </p>
                 </div>
                 <div className="flex items-center gap-1 ml-2">
