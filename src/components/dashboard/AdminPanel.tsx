@@ -508,6 +508,8 @@ interface UserRow {
   role: string;
   client_id: string | null;
   invited_at: string | null;
+  email_confirmed_at?: string | null;
+  last_sign_in_at?: string | null;
   clients: { name: string } | null;
 }
 
@@ -586,13 +588,8 @@ export function UserManagement() {
   const fetchUsers = useCallback(async () => {
     try {
       const cacheBust = Date.now();
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('id, full_name, email, role, client_id, invited_at, clients(name)')
-        .order('full_name')
-        .limit(1000);
-      if (error) throw error;
-      const rows = (data as unknown as UserRow[]) || [];
+      const data = await callEdgeFunction({ action: 'list' });
+      const rows = ((data?.users as unknown) as UserRow[]) || [];
       console.log('[UserManagement] fetch @', cacheBust, 'first user:', JSON.stringify(rows[0]));
       setUsers(rows);
     } catch (err) {
@@ -600,7 +597,7 @@ export function UserManagement() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [callEdgeFunction]);
 
   const fetchClients = useCallback(async () => {
     const { data } = await supabase.from('clients').select('id, name').order('name');
@@ -742,7 +739,7 @@ export function UserManagement() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <p className="text-xs font-semibold truncate">{user.full_name}</p>
-                    {user.invited_at && (
+                    {!user.email_confirmed_at && (
                       <Badge className="bg-yellow-400 text-yellow-950 hover:bg-yellow-400 border-transparent text-[9px] px-1.5 py-0 h-4">
                         Pending
                       </Badge>
@@ -754,7 +751,7 @@ export function UserManagement() {
                   </p>
                 </div>
                 <div className="flex items-center gap-1 ml-2">
-                  {user.invited_at && (
+                  {!user.email_confirmed_at && (
                     <Button
                       variant="ghost"
                       size="icon"
