@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { LayoutDashboard, Users, FileText, Database, Building2, LogOut, Plus, ExternalLink, Activity } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, Database, Building2, LogOut, Plus, ExternalLink, Activity, ToggleLeft } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { WeekProvider } from '@/contexts/WeekContext';
@@ -20,6 +20,7 @@ import {
   WeeklySnapshotForm,
   UserManagement,
   NarrativeWatchForm,
+  TabAccessManager,
 } from '@/components/dashboard/AdminPanel';
 import ManageEntries from '@/components/dashboard/ManageEntries';
 import ActivityLogSection from '@/components/admin/ActivityLogSection';
