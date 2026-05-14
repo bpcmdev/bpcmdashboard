@@ -511,6 +511,7 @@ interface UserRow {
   email_confirmed_at?: string | null;
   last_sign_in_at?: string | null;
   clients: { name: string } | null;
+  client_name?: string | null;
 }
 
 interface ClientOption {
@@ -747,7 +748,7 @@ export function UserManagement() {
                   </div>
                   <p className="text-[10px] text-muted-foreground truncate">{user.email}</p>
                   <p className="text-[10px] text-muted-foreground">
-                    {user.role} · {user.clients?.name || '—'}
+                    {user.role} · {user.client_name ?? '—'}
                   </p>
                 </div>
                 <div className="flex items-center gap-1 ml-2">

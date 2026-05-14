@@ -84,6 +84,7 @@ Deno.serve(async (req) => {
 
       const enriched = (data ?? []).map((u: any) => ({
         ...u,
+        client_name: u.clients?.name ?? null,
         email_confirmed_at: authMap[u.id]?.email_confirmed_at ?? null,
         last_sign_in_at: authMap[u.id]?.last_sign_in_at ?? null,
       }));
