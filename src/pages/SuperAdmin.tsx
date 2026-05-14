@@ -25,11 +25,12 @@ import {
 import ManageEntries from '@/components/dashboard/ManageEntries';
 import ActivityLogSection from '@/components/admin/ActivityLogSection';
 
-type SectionKey = 'overview' | 'clients' | 'users' | 'narrative' | 'data' | 'activity';
+type SectionKey = 'overview' | 'clients' | 'users' | 'narrative' | 'data' | 'activity' | 'tab_access';
 
 const NAV: { key: SectionKey; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { key: 'overview', label: 'Dashboard Overview', icon: LayoutDashboard },
   { key: 'clients', label: 'Clients', icon: Building2 },
+  { key: 'tab_access', label: 'Tab Access', icon: ToggleLeft },
   { key: 'users', label: 'Users', icon: Users },
   { key: 'narrative', label: 'Narrative Watch', icon: FileText },
   { key: 'data', label: 'Data Entry', icon: Database },
