@@ -739,7 +739,7 @@ export function UserManagement() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <p className="text-xs font-semibold truncate">{user.full_name}</p>
-                    {user.invited_at && (
+                    {!user.email_confirmed_at && (
                       <Badge className="bg-yellow-400 text-yellow-950 hover:bg-yellow-400 border-transparent text-[9px] px-1.5 py-0 h-4">
                         Pending
                       </Badge>
@@ -751,7 +751,7 @@ export function UserManagement() {
                   </p>
                 </div>
                 <div className="flex items-center gap-1 ml-2">
-                  {user.invited_at && (
+                  {!user.email_confirmed_at && (
                     <Button
                       variant="ghost"
                       size="icon"
