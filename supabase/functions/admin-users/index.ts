@@ -61,10 +61,34 @@ Deno.serve(async (req) => {
     if (action === "list") {
       const { data, error } = await adminClient
         .from("user_profiles")
-        .select("id, full_name, email, role, client_id, clients(name)")
+        .select("id, full_name, email, role, client_id, invited_at, clients(name)")
         .order("full_name");
       if (error) throw error;
-      return jsonResponse({ users: data });
+
+      // Enrich with auth.users data (email_confirmed_at, last_sign_in_at)
+      const authMap: Record<string, { email_confirmed_at: string | null; last_sign_in_at: string | null }> = {};
+      let page = 1;
+      const perPage = 1000;
+      while (true) {
+        const { data: authData, error: authErr } = await adminClient.auth.admin.listUsers({ page, perPage });
+        if (authErr) break;
+        for (const u of authData.users) {
+          authMap[u.id] = {
+            email_confirmed_at: (u as any).email_confirmed_at ?? null,
+            last_sign_in_at: (u as any).last_sign_in_at ?? null,
+          };
+        }
+        if (authData.users.length < perPage) break;
+        page++;
+      }
+
+      const enriched = (data ?? []).map((u: any) => ({
+        ...u,
+        email_confirmed_at: authMap[u.id]?.email_confirmed_at ?? null,
+        last_sign_in_at: authMap[u.id]?.last_sign_in_at ?? null,
+      }));
+
+      return jsonResponse({ users: enriched });
     }
 
     if (action === "invite") {
