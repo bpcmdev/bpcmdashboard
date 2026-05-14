@@ -157,7 +157,7 @@ const Login = () => {
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: 'rgba(255,255,255,0.45)',
+                  color: 'rgba(0,0,0,0.45)',
                   fontSize: '11px',
                   cursor: 'pointer',
                   marginTop: '8px',
