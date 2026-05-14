@@ -1002,11 +1002,203 @@ export function NarrativeWatchForm({ defaultClientId }: { defaultClientId: strin
 }
 
 /* ── Main Panel ── */
+/* ── Tab Access Manager ── */
+interface TabAccessClient {
+  id: string;
+  name: string;
+  enabled_tabs: string[] | null;
+}
+
+export function TabAccessManager() {
+  const [clients, setClients] = useState<TabAccessClient[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [sourceClientId, setSourceClientId] = useState<string>('');
+  const [targetClientIds, setTargetClientIds] = useState<string[]>([]);
+  const [copying, setCopying] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase
+        .from('clients')
+        .select('id, name, enabled_tabs')
+        .order('name');
+      if (error) console.error('[TabAccessManager] fetch error:', error);
+      setClients((data as TabAccessClient[]) ?? []);
+      setLoading(false);
+    })();
+  }, []);
+
+  const toggleTab = async (clientId: string, tabId: string, currentTabs: string[]) => {
+    const newTabs = currentTabs.includes(tabId)
+      ? currentTabs.filter(t => t !== tabId)
+      : [...currentTabs, tabId];
+
+    // Optimistic update
+    setClients(prev => prev.map(c => c.id === clientId ? { ...c, enabled_tabs: newTabs } : c));
+
+    const { error } = await supabase
+      .from('clients')
+      .update({ enabled_tabs: newTabs })
+      .eq('id', clientId);
+
+    if (error) {
+      console.error('[TabAccessManager] toggle error:', error);
+      toast.error('Failed to update tab access');
+      // Revert
+      setClients(prev => prev.map(c => c.id === clientId ? { ...c, enabled_tabs: currentTabs } : c));
+    }
+  };
+
+  const copyTabAccess = async () => {
+    if (!sourceClientId || targetClientIds.length === 0) return;
+    const source = clients.find(c => c.id === sourceClientId);
+    if (!source) return;
+    const sourceTabs = source.enabled_tabs ?? [];
+
+    setCopying(true);
+    const { error } = await supabase
+      .from('clients')
+      .update({ enabled_tabs: sourceTabs })
+      .in('id', targetClientIds);
+    setCopying(false);
+
+    if (error) {
+      console.error('[TabAccessManager] copy error:', error);
+      toast.error('Failed to copy tab access');
+      return;
+    }
+    setClients(prev => prev.map(c =>
+      targetClientIds.includes(c.id) ? { ...c, enabled_tabs: sourceTabs } : c
+    ));
+    toast.success(`Copied tab access from ${source.name} to ${targetClientIds.length} client(s)`);
+    setSourceClientId('');
+    setTargetClientIds([]);
+  };
+
+  const handleCopy = () => {
+    const sourceName = clients.find(c => c.id === sourceClientId)?.name ?? '';
+    if (window.confirm(`Copy tab access from ${sourceName} to ${targetClientIds.length} client(s)? This will overwrite their current tab access.`)) {
+      copyTabAccess();
+    }
+  };
+
+  if (loading) return <div className="text-xs text-muted-foreground">Loading clients…</div>;
+
+  return (
+    <div className="space-y-4">
+      {/* Copy Tab Access */}
+      <div className="bg-white border border-black/10 p-4">
+        <h4 style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'hsl(0,0%,40%)', marginBottom: '12px' }}>
+          Copy Tab Access
+        </h4>
+        <div className="flex flex-col gap-3">
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Copy from</label>
+            <Select value={sourceClientId} onValueChange={setSourceClientId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select source client" />
+              </SelectTrigger>
+              <SelectContent>
+                {clients.map(c => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Copy to (select multiple)</label>
+            <div className="border border-black/10 rounded p-2 max-h-40 overflow-y-auto">
+              {clients.filter(c => c.id !== sourceClientId).map(c => (
+                <label key={c.id} className="flex items-center gap-2 py-1 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={targetClientIds.includes(c.id)}
+                    onChange={() => {
+                      setTargetClientIds(prev =>
+                        prev.includes(c.id)
+                          ? prev.filter(id => id !== c.id)
+                          : [...prev, c.id]
+                      );
+                    }}
+                  />
+                  <span className="text-sm">{c.name}</span>
+                </label>
+              ))}
+              {clients.filter(c => c.id !== sourceClientId).length === 0 && (
+                <div className="text-xs text-muted-foreground px-1 py-1">No other clients available.</div>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={handleCopy}
+            disabled={!sourceClientId || targetClientIds.length === 0 || copying}
+            style={{
+              fontFamily: 'DM Mono, monospace',
+              fontSize: '10px',
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              padding: '8px 16px',
+              background: 'hsl(225,70%,35%)',
+              color: 'white',
+              cursor: (!sourceClientId || targetClientIds.length === 0 || copying) ? 'not-allowed' : 'pointer',
+              opacity: (!sourceClientId || targetClientIds.length === 0 || copying) ? 0.5 : 1,
+              alignSelf: 'flex-start',
+            }}
+          >
+            {copying ? 'Copying…' : 'Copy Access'}
+          </button>
+        </div>
+      </div>
+
+      {/* Per-client toggle grid */}
+      <div className="bg-white border border-black/10 p-4">
+        <h3 style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'hsl(0,0%,40%)', marginBottom: '16px' }}>
+          Client Tab Access
+        </h3>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-black/10">
+                <th className="text-left py-2 pr-3 font-mono-ui text-[10px] tracking-[0.12em] uppercase text-muted-foreground sticky left-0 bg-white">
+                  Client
+                </th>
+                {ALL_TABS.map(tab => (
+                  <th key={tab.id} className="px-2 py-2 font-mono-ui text-[9px] tracking-[0.1em] uppercase text-muted-foreground whitespace-nowrap">
+                    {tab.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {clients.map(client => {
+                const tabs = client.enabled_tabs ?? [];
+                return (
+                  <tr key={client.id} className="border-b border-black/5">
+                    <td className="py-2 pr-3 font-medium sticky left-0 bg-white whitespace-nowrap">{client.name}</td>
+                    {ALL_TABS.map(tab => (
+                      <td key={tab.id} className="px-2 py-2 text-center">
+                        <Switch
+                          checked={tabs.includes(tab.id)}
+                          onCheckedChange={() => toggleTab(client.id, tab.id, tabs)}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminPanel({ open, onOpenChange, clientId }: AdminPanelProps) {
   const [adminSection, setAdminSection] = useState('pipeline');
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto bg-background border-border p-0">
+      <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto bg-background border-border p-0">
         <div className="bg-foreground text-background px-6 py-4">
           <SheetTitle className="text-background text-sm font-bold tracking-widest uppercase">Admin Data Entry</SheetTitle>
         </div>
@@ -1024,6 +1216,7 @@ export default function AdminPanel({ open, onOpenChange, clientId }: AdminPanelP
               <SelectItem value="snapshot" className="text-xs tracking-wider uppercase">Snapshot</SelectItem>
               <SelectItem value="narrative" className="text-xs tracking-wider uppercase">Narrative Watch</SelectItem>
               <SelectItem value="users" className="text-xs tracking-wider uppercase">Users</SelectItem>
+              <SelectItem value="tab_access" className="text-xs tracking-wider uppercase">Tab Access</SelectItem>
             </SelectContent>
           </Select>
           {adminSection === 'pipeline' && <PipelineForm clientId={clientId} />}
@@ -1034,11 +1227,14 @@ export default function AdminPanel({ open, onOpenChange, clientId }: AdminPanelP
           {adminSection === 'snapshot' && <WeeklySnapshotForm clientId={clientId} />}
           {adminSection === 'narrative' && <NarrativeWatchForm defaultClientId={clientId} />}
           {adminSection === 'users' && <UserManagement />}
+          {adminSection === 'tab_access' && <TabAccessManager />}
 
           {/* Manage Entries section */}
-          <div className="border-t border-border pt-6">
-            <ManageEntries clientId={clientId} />
-          </div>
+          {adminSection !== 'tab_access' && (
+            <div className="border-t border-border pt-6">
+              <ManageEntries clientId={clientId} />
+            </div>
+          )}
         </div>
       </SheetContent>
     </Sheet>
