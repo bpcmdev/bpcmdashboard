@@ -765,6 +765,22 @@ export function UserManagement() {
                       <Mail className="w-3 h-3" />
                     </Button>
                   )}
+                  <button
+                    onClick={() => { setSelectedUserId(user.id); setNewPassword(''); setPasswordError(''); setPasswordSuccess(false); }}
+                    style={{
+                      fontFamily: 'DM Mono, monospace',
+                      fontSize: '9px',
+                      letterSpacing: '0.1em',
+                      textTransform: 'uppercase',
+                      padding: '4px 10px',
+                      border: '1px solid rgba(0,0,0,0.1)',
+                      background: 'none',
+                      color: '#666',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Set Password
+                  </button>
                   <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => startEdit(user)}>
                     <Pencil className="w-3 h-3" />
                   </Button>
