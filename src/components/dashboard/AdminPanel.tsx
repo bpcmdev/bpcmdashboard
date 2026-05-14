@@ -826,16 +826,18 @@ export function UserManagement() {
                   </SelectContent>
                 </Select>
               </Field>
-              <Field label="Client">
-                <Select value={editClient} onValueChange={setEditClient}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {clients.map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
+              {editRole !== 'admin' && (
+                <Field label="Client">
+                  <Select value={editClient} onValueChange={setEditClient}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {clients.map(c => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              )}
             </div>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
