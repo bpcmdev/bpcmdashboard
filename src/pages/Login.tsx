@@ -141,7 +141,41 @@ const Login = () => {
               >
                 {submitting ? 'Signing in…' : 'Sign in'}
               </Button>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!email) {
+                    setError('Enter your email above first.');
+                    return;
+                  }
+                  await supabase.auth.signInWithOtp({
+                    email,
+                    options: { emailRedirectTo: `${window.location.origin}/dashboard` }
+                  });
+                  setMagicLinkSent(true);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'rgba(255,255,255,0.45)',
+                  fontSize: '11px',
+                  cursor: 'pointer',
+                  marginTop: '8px',
+                  textDecoration: 'underline',
+                  display: 'block',
+                  width: '100%',
+                  textAlign: 'center'
+                }}
+              >
+                Forgot password? Send me a sign-in link
+              </button>
             </form>
+
+            {magicLinkSent && (
+              <p className="text-xs text-center" style={{ color: '#93c5fd' }}>
+                Check your email for a sign-in link
+              </p>
+            )}
 
             {/* Footer */}
             <div className="text-center space-y-1 pt-2">
