@@ -529,6 +529,29 @@ export function UserManagement() {
   const [editingUser, setEditingUser] = useState<UserRow | null>(null);
   const [editRole, setEditRole] = useState('');
   const [editClient, setEditClient] = useState('');
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+
+  const handleSetPassword = async () => {
+    if (!newPassword || newPassword.length < 8) {
+      setPasswordError('Password must be at least 8 characters.');
+      return;
+    }
+    setPasswordLoading(true);
+    setPasswordError('');
+    try {
+      await callEdgeFunction({ action: 'set_password', userId: selectedUserId, password: newPassword });
+      setPasswordSuccess(true);
+      setNewPassword('');
+      setTimeout(() => { setSelectedUserId(null); setPasswordSuccess(false); }, 2000);
+    } catch (err: any) {
+      setPasswordError(err?.message || 'Failed to set password. Please try again.');
+    }
+    setPasswordLoading(false);
+  };
 
   const callEdgeFunction = useCallback(async (body: Record<string, unknown>) => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -742,6 +765,22 @@ export function UserManagement() {
                       <Mail className="w-3 h-3" />
                     </Button>
                   )}
+                  <button
+                    onClick={() => { setSelectedUserId(user.id); setNewPassword(''); setPasswordError(''); setPasswordSuccess(false); }}
+                    style={{
+                      fontFamily: 'DM Mono, monospace',
+                      fontSize: '9px',
+                      letterSpacing: '0.1em',
+                      textTransform: 'uppercase',
+                      padding: '4px 10px',
+                      border: '1px solid rgba(0,0,0,0.1)',
+                      background: 'none',
+                      color: '#666',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Set Password
+                  </button>
                   <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => startEdit(user)}>
                     <Pencil className="w-3 h-3" />
                   </Button>
@@ -808,6 +847,48 @@ export function UserManagement() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+      )}
+      {selectedUserId && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: 'white', padding: '32px', width: '100%', maxWidth: '380px', borderRadius: '4px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '8px', color: '#141414' }}>Set Password</h3>
+            <p style={{ fontSize: '12px', color: '#666', marginBottom: '20px' }}>
+              Set a temporary password for this user. They can change it after signing in.
+            </p>
+            {passwordError && (
+              <p style={{ fontSize: '12px', color: '#E74C3C', marginBottom: '12px', padding: '8px', background: '#FEF2F2' }}>{passwordError}</p>
+            )}
+            {passwordSuccess ? (
+              <p style={{ fontSize: '12px', color: '#2ECC71', padding: '8px', background: '#F0FFF4', textAlign: 'center' }}>✓ Password set successfully</p>
+            ) : (
+              <>
+                <input
+                  type="password"
+                  placeholder="New password (min 8 characters)"
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleSetPassword()}
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #E5E5E5', fontSize: '13px', marginBottom: '12px', outline: 'none', borderRadius: '4px' }}
+                />
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => { setSelectedUserId(null); setNewPassword(''); setPasswordError(''); }}
+                    style={{ flex: 1, padding: '10px', background: 'none', border: '1px solid #E5E5E5', fontSize: '12px', cursor: 'pointer', color: '#666', borderRadius: '4px' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSetPassword}
+                    disabled={passwordLoading || !newPassword}
+                    style={{ flex: 1, padding: '10px', background: 'hsl(225,70%,35%)', color: 'white', border: 'none', fontSize: '12px', fontWeight: 600, cursor: passwordLoading || !newPassword ? 'not-allowed' : 'pointer', opacity: passwordLoading || !newPassword ? 0.6 : 1, borderRadius: '4px' }}
+                  >
+                    {passwordLoading ? 'Setting...' : 'Set Password'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

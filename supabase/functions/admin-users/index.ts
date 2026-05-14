@@ -111,6 +111,19 @@ Deno.serve(async (req) => {
       return jsonResponse({ success: true });
     }
 
+    if (action === "set_password") {
+      const { userId, password } = body;
+      if (!userId || !password) {
+        return jsonResponse({ error: "userId and password required" }, 400);
+      }
+      if (typeof password !== "string" || password.length < 8) {
+        return jsonResponse({ error: "Password must be at least 8 characters" }, 400);
+      }
+      const { error } = await adminClient.auth.admin.updateUserById(userId, { password });
+      if (error) return jsonResponse({ error: error.message }, 400);
+      return jsonResponse({ success: true });
+    }
+
     if (action === "delete") {
       const { user_id } = body;
       if (!user_id) return jsonResponse({ error: "Missing user_id" }, 400);
