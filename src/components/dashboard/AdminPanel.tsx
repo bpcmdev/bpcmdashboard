@@ -511,6 +511,7 @@ interface UserRow {
   email_confirmed_at?: string | null;
   last_sign_in_at?: string | null;
   clients: { name: string } | null;
+  client_name?: string | null;
 }
 
 interface ClientOption {
