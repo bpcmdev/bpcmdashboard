@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index.tsx";
 import Login from "./pages/Login.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import SetPassword from "./pages/SetPassword";
 import SuperAdmin from "./pages/SuperAdmin.tsx";
 
 const queryClient = new QueryClient();
@@ -18,6 +19,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/set-password" element={<SetPassword />} />
           <Route path="/" element={<Index />} />
           <Route path="/dashboard" element={<Index />} />
           <Route path="/admin" element={<SuperAdmin />} />
