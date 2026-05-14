@@ -508,6 +508,8 @@ interface UserRow {
   role: string;
   client_id: string | null;
   invited_at: string | null;
+  email_confirmed_at?: string | null;
+  last_sign_in_at?: string | null;
   clients: { name: string } | null;
 }
 
