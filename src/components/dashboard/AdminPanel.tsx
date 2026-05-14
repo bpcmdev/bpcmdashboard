@@ -1049,17 +1049,21 @@ export function TabAccessManager() {
     // Optimistic update
     setClients(prev => prev.map(c => c.id === clientId ? { ...c, enabled_tabs: newTabs } : c));
 
-    const { error } = await supabase
+    const { error, data } = await supabase
       .from('clients')
       .update({ enabled_tabs: newTabs })
-      .eq('id', clientId);
+      .eq('id', clientId)
+      .select('id, enabled_tabs');
 
-    if (error) {
-      console.error('[TabAccessManager] toggle error:', error);
-      toast.error('Failed to update tab access');
+    if (error || !data || data.length === 0) {
+      console.error('[TabAccessManager] toggle error:', error, 'returned:', data);
+      toast.error(error?.message ? `Failed to save: ${error.message}` : 'Failed to save tab access (no rows updated — check permissions)');
       // Revert
       setClients(prev => prev.map(c => c.id === clientId ? { ...c, enabled_tabs: currentTabs } : c));
+      return;
     }
+    flashSaved(clientId, tabId);
+    toast.success('Tab access updated');
   };
 
   const copyTabAccess = async () => {
