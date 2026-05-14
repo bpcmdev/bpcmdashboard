@@ -748,7 +748,7 @@ export function UserManagement() {
                   </div>
                   <p className="text-[10px] text-muted-foreground truncate">{user.email}</p>
                   <p className="text-[10px] text-muted-foreground">
-                    {user.role} · {user.client_name ?? '—'}
+                    {user.role} · {user.role === 'admin' ? 'All Clients' : (user.client_name ?? '—')}
                   </p>
                 </div>
                 <div className="flex items-center gap-1 ml-2">
@@ -826,16 +826,18 @@ export function UserManagement() {
                   </SelectContent>
                 </Select>
               </Field>
-              <Field label="Client">
-                <Select value={editClient} onValueChange={setEditClient}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {clients.map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
+              {editRole !== 'admin' && (
+                <Field label="Client">
+                  <Select value={editClient} onValueChange={setEditClient}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {clients.map(c => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              )}
             </div>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
