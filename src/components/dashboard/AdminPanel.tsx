@@ -1015,6 +1015,19 @@ export function TabAccessManager() {
   const [sourceClientId, setSourceClientId] = useState<string>('');
   const [targetClientIds, setTargetClientIds] = useState<string[]>([]);
   const [copying, setCopying] = useState(false);
+  const [savedFlash, setSavedFlash] = useState<Record<string, number>>({});
+
+  const flashSaved = (clientId: string, tabId: string) => {
+    const key = `${clientId}:${tabId}`;
+    setSavedFlash(prev => ({ ...prev, [key]: Date.now() }));
+    setTimeout(() => {
+      setSavedFlash(prev => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    }, 1800);
+  };
 
   useEffect(() => {
     (async () => {
