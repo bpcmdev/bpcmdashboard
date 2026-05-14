@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { LayoutDashboard, Users, FileText, Database, Building2, LogOut, Plus, ExternalLink, Activity } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, Database, Building2, LogOut, Plus, ExternalLink, Activity, ToggleLeft } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { WeekProvider } from '@/contexts/WeekContext';
@@ -20,15 +20,17 @@ import {
   WeeklySnapshotForm,
   UserManagement,
   NarrativeWatchForm,
+  TabAccessManager,
 } from '@/components/dashboard/AdminPanel';
 import ManageEntries from '@/components/dashboard/ManageEntries';
 import ActivityLogSection from '@/components/admin/ActivityLogSection';
 
-type SectionKey = 'overview' | 'clients' | 'users' | 'narrative' | 'data' | 'activity';
+type SectionKey = 'overview' | 'clients' | 'users' | 'narrative' | 'data' | 'activity' | 'tab_access';
 
 const NAV: { key: SectionKey; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { key: 'overview', label: 'Dashboard Overview', icon: LayoutDashboard },
   { key: 'clients', label: 'Clients', icon: Building2 },
+  { key: 'tab_access', label: 'Tab Access', icon: ToggleLeft },
   { key: 'users', label: 'Users', icon: Users },
   { key: 'narrative', label: 'Narrative Watch', icon: FileText },
   { key: 'data', label: 'Data Entry', icon: Database },
@@ -390,6 +392,15 @@ function SuperAdminContent() {
       case 'narrative': return <NarrativeWatchForm defaultClientId={null} />;
       case 'data': return <DataEntrySection />;
       case 'activity': return <ActivityLogSection />;
+      case 'tab_access': return (
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Tab Access</h1>
+            <p className="text-sm text-muted-foreground mt-1">Toggle which dashboard tabs are visible per client</p>
+          </div>
+          <TabAccessManager />
+        </div>
+      );
     }
   }, [section]);
 

@@ -1015,6 +1015,19 @@ export function TabAccessManager() {
   const [sourceClientId, setSourceClientId] = useState<string>('');
   const [targetClientIds, setTargetClientIds] = useState<string[]>([]);
   const [copying, setCopying] = useState(false);
+  const [savedFlash, setSavedFlash] = useState<Record<string, number>>({});
+
+  const flashSaved = (clientId: string, tabId: string) => {
+    const key = `${clientId}:${tabId}`;
+    setSavedFlash(prev => ({ ...prev, [key]: Date.now() }));
+    setTimeout(() => {
+      setSavedFlash(prev => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    }, 1800);
+  };
 
   useEffect(() => {
     (async () => {
@@ -1036,17 +1049,21 @@ export function TabAccessManager() {
     // Optimistic update
     setClients(prev => prev.map(c => c.id === clientId ? { ...c, enabled_tabs: newTabs } : c));
 
-    const { error } = await supabase
+    const { error, data } = await supabase
       .from('clients')
       .update({ enabled_tabs: newTabs })
-      .eq('id', clientId);
+      .eq('id', clientId)
+      .select('id, enabled_tabs');
 
-    if (error) {
-      console.error('[TabAccessManager] toggle error:', error);
-      toast.error('Failed to update tab access');
+    if (error || !data || data.length === 0) {
+      console.error('[TabAccessManager] toggle error:', error, 'returned:', data);
+      toast.error(error?.message ? `Failed to save: ${error.message}` : 'Failed to save tab access (no rows updated — check permissions)');
       // Revert
       setClients(prev => prev.map(c => c.id === clientId ? { ...c, enabled_tabs: currentTabs } : c));
+      return;
     }
+    flashSaved(clientId, tabId);
+    toast.success('Tab access updated');
   };
 
   const copyTabAccess = async () => {
@@ -1177,10 +1194,17 @@ export function TabAccessManager() {
                     <td className="py-2 pr-3 font-medium sticky left-0 bg-white whitespace-nowrap">{client.name}</td>
                     {ALL_TABS.map(tab => (
                       <td key={tab.id} className="px-2 py-2 text-center">
-                        <Switch
-                          checked={tabs.includes(tab.id)}
-                          onCheckedChange={() => toggleTab(client.id, tab.id, tabs)}
-                        />
+                        <div className="inline-flex items-center gap-1.5">
+                          <Switch
+                            checked={tabs.includes(tab.id)}
+                            onCheckedChange={() => toggleTab(client.id, tab.id, tabs)}
+                          />
+                          {savedFlash[`${client.id}:${tab.id}`] && (
+                            <span className="text-[10px] font-semibold text-green-600 flex items-center gap-0.5">
+                              <Check className="w-3 h-3" /> Saved
+                            </span>
+                          )}
+                        </div>
                       </td>
                     ))}
                   </tr>
