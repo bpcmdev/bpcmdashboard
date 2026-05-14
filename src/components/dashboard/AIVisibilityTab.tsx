@@ -101,7 +101,7 @@ const PlatformScorecards = ({ cards, loading }: { cards: PlatformCard[]; loading
         if (!s) {
           return (
             <div key={platform} className="bg-card border border-border p-4 opacity-50">
-              <p className="text-xs font-bold tracking-wider uppercase">{platform}</p>
+              <p style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', fontWeight: '600', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'hsl(225, 70%, 35%)' }}>{platform}</p>
               <p className="text-[10px] text-muted-foreground mb-2">—</p>
               <p className="text-lg font-medium text-muted-foreground mt-4">No data this week</p>
             </div>
@@ -113,7 +113,7 @@ const PlatformScorecards = ({ cards, loading }: { cards: PlatformCard[]; loading
         const pct = Math.max(0, Math.min(100, s.score));
         return (
           <div key={platform} className="bg-card border border-border p-4">
-            <p className="font-mono-ui text-[10px] font-medium tracking-[0.18em] uppercase text-white/55">{platform}</p>
+            <p style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', fontWeight: '600', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'hsl(225, 70%, 35%)' }}>{platform}</p>
             <p className="text-[10px] text-muted-foreground mb-2 truncate">{s.subtitle}</p>
             <p className="font-display text-3xl font-bold mb-1" style={{ color: scoreColor }}>
               {s.score}<span className="text-sm font-normal text-muted-foreground">/100</span>

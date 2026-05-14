@@ -77,7 +77,7 @@ const GapAnalysisView = () => {
               const s = statusLabel(p.status);
               return (
                 <div key={p.platform} className="flex items-center gap-4 py-2 border-b border-border last:border-0">
-                  <span className="text-sm font-medium w-28">{PLATFORM_LABELS[p.platform] ?? p.platform}</span>
+                  <span className="w-28" style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', fontWeight: '600', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'hsl(225, 70%, 35%)' }}>{PLATFORM_LABELS[p.platform] ?? p.platform}</span>
                   <span className="text-2xl font-bold w-16">{p.score}<span className="text-xs font-normal text-muted-foreground">/100</span></span>
                   <span className={`text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 ${s.style}`}>{s.text}</span>
                   <span className="text-[11px] text-muted-foreground flex-1">
