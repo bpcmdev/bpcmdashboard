@@ -1194,10 +1194,17 @@ export function TabAccessManager() {
                     <td className="py-2 pr-3 font-medium sticky left-0 bg-white whitespace-nowrap">{client.name}</td>
                     {ALL_TABS.map(tab => (
                       <td key={tab.id} className="px-2 py-2 text-center">
-                        <Switch
-                          checked={tabs.includes(tab.id)}
-                          onCheckedChange={() => toggleTab(client.id, tab.id, tabs)}
-                        />
+                        <div className="inline-flex items-center gap-1.5">
+                          <Switch
+                            checked={tabs.includes(tab.id)}
+                            onCheckedChange={() => toggleTab(client.id, tab.id, tabs)}
+                          />
+                          {savedFlash[`${client.id}:${tab.id}`] && (
+                            <span className="text-[10px] font-semibold text-green-600 flex items-center gap-0.5">
+                              <Check className="w-3 h-3" /> Saved
+                            </span>
+                          )}
+                        </div>
                       </td>
                     ))}
                   </tr>
