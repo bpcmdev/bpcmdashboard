@@ -588,13 +588,8 @@ export function UserManagement() {
   const fetchUsers = useCallback(async () => {
     try {
       const cacheBust = Date.now();
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('id, full_name, email, role, client_id, invited_at, clients(name)')
-        .order('full_name')
-        .limit(1000);
-      if (error) throw error;
-      const rows = (data as unknown as UserRow[]) || [];
+      const data = await callEdgeFunction({ action: 'list' });
+      const rows = ((data?.users as unknown) as UserRow[]) || [];
       console.log('[UserManagement] fetch @', cacheBust, 'first user:', JSON.stringify(rows[0]));
       setUsers(rows);
     } catch (err) {
@@ -602,7 +597,7 @@ export function UserManagement() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [callEdgeFunction]);
 
   const fetchClients = useCallback(async () => {
     const { data } = await supabase.from('clients').select('id, name').order('name');
