@@ -529,6 +529,29 @@ export function UserManagement() {
   const [editingUser, setEditingUser] = useState<UserRow | null>(null);
   const [editRole, setEditRole] = useState('');
   const [editClient, setEditClient] = useState('');
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+
+  const handleSetPassword = async () => {
+    if (!newPassword || newPassword.length < 8) {
+      setPasswordError('Password must be at least 8 characters.');
+      return;
+    }
+    setPasswordLoading(true);
+    setPasswordError('');
+    try {
+      await callEdgeFunction({ action: 'set_password', userId: selectedUserId, password: newPassword });
+      setPasswordSuccess(true);
+      setNewPassword('');
+      setTimeout(() => { setSelectedUserId(null); setPasswordSuccess(false); }, 2000);
+    } catch (err: any) {
+      setPasswordError(err?.message || 'Failed to set password. Please try again.');
+    }
+    setPasswordLoading(false);
+  };
 
   const callEdgeFunction = useCallback(async (body: Record<string, unknown>) => {
     const { data: { session } } = await supabase.auth.getSession();
