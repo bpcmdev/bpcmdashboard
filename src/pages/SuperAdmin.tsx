@@ -392,6 +392,15 @@ function SuperAdminContent() {
       case 'narrative': return <NarrativeWatchForm defaultClientId={null} />;
       case 'data': return <DataEntrySection />;
       case 'activity': return <ActivityLogSection />;
+      case 'tab_access': return (
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Tab Access</h1>
+            <p className="text-sm text-muted-foreground mt-1">Toggle which dashboard tabs are visible per client</p>
+          </div>
+          <TabAccessManager />
+        </div>
+      );
     }
   }, [section]);
 
