@@ -6,6 +6,7 @@ interface ClientInfo {
   name: string;
   logo_url: string | null;
   primary_color: string | null;
+  enabled_tabs?: string[] | null;
 }
 
 export function useAdmin() {
@@ -14,6 +15,7 @@ export function useAdmin() {
   const [clientName, setClientName] = useState<string | null>(null);
   const [clientLogo, setClientLogo] = useState<string | null>(null);
   const [clientColor, setClientColor] = useState<string | null>(null);
+  const [enabledTabs, setEnabledTabs] = useState<string[] | null>(null);
   const [allClients, setAllClients] = useState<ClientInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [userClientId, setUserClientId] = useState<string | null>(null);
@@ -26,6 +28,7 @@ export function useAdmin() {
       setClientName(client.name);
       setClientLogo(client.logo_url);
       setClientColor(client.primary_color);
+      setEnabledTabs(client.enabled_tabs ?? null);
     }
   }, [allClients]);
 
@@ -53,13 +56,14 @@ export function useAdmin() {
         if (data.client_id) {
           const { data: client } = await supabase
             .from('clients')
-            .select('name, logo_url, primary_color')
+            .select('name, logo_url, primary_color, enabled_tabs')
             .eq('id', data.client_id)
             .maybeSingle();
           if (client) {
             setClientName(client.name);
             setClientLogo(client.logo_url ?? null);
             setClientColor(client.primary_color ?? null);
+            setEnabledTabs((client as { enabled_tabs?: string[] | null }).enabled_tabs ?? null);
           }
         }
 
@@ -67,9 +71,9 @@ export function useAdmin() {
         if (admin) {
           const { data: clients } = await supabase
             .from('clients')
-            .select('id, name, logo_url, primary_color')
+            .select('id, name, logo_url, primary_color, enabled_tabs')
             .order('name');
-          setAllClients(clients ?? []);
+          setAllClients((clients as ClientInfo[]) ?? []);
         }
       }
       setLoading(false);
@@ -77,5 +81,5 @@ export function useAdmin() {
     check();
   }, []);
 
-  return { isAdmin, clientId, clientName, clientLogo, clientColor, allClients, switchClient, userClientId, loading };
+  return { isAdmin, clientId, clientName, clientLogo, clientColor, enabledTabs, allClients, switchClient, userClientId, loading };
 }

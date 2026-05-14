@@ -34,7 +34,7 @@ const TAB_MAP: Record<string, React.ComponentType> = {
 /** Inner component that can access WeekContext */
 function DashboardContent() {
   const [activeTab, setActiveTab] = useState('EARNED MEDIA');
-  const { clientColor, clientId, isAdmin } = useAdmin();
+  const { clientColor, clientId, isAdmin, enabledTabs } = useAdmin();
   const { activeClientId } = useWeek();
   const { isNew } = useIsNewClient();
   const [dismissedFor, setDismissedFor] = useState<string | null>(null);
@@ -57,6 +57,34 @@ function DashboardContent() {
     return () => window.removeEventListener('bpcm:switch-tab', handler);
   }, []);
 
+  // If the current tab is not enabled for this (non-admin) client, fall back to
+  // the first enabled tab so users never land on a hidden tab.
+  useEffect(() => {
+    if (isAdmin) return;
+    if (!Array.isArray(enabledTabs)) return;
+    // Map active label back to id by matching against TAB_MAP order.
+    const labels = Object.keys(TAB_MAP);
+    const enabledLabels = labels.filter((label) => {
+      // id <-> label mapping mirrors src/lib/dashboardTabs.ts
+      const idMap: Record<string, string> = {
+        'PIPELINE & MOMENTS': 'pipeline',
+        'KEY WINS': 'key_wins',
+        'PRODUCT LAUNCHES': 'product_launches',
+        'EARNED MEDIA': 'earned_media',
+        'INFLUENCER & SOCIAL': 'influencer_social',
+        'CORPORATE COMMS': 'corporate_comms',
+        'AI VISIBILITY': 'ai_visibility',
+        'GEO / AI SOV': 'geo_ai_sov',
+        'PARTNERSHIPS': 'partnerships',
+        'TIKTOK SHOP': 'tiktok_shop',
+      };
+      return enabledTabs.includes(idMap[label]);
+    });
+    if (!enabledLabels.includes(activeTab) && enabledLabels.length > 0) {
+      setActiveTab(enabledLabels[0]);
+    }
+  }, [enabledTabs, isAdmin, activeTab]);
+
   // Getting Started checklist is an internal BPCM setup task — admins only.
   const showWelcome = isAdmin && isNew === true && dismissedFor !== activeClientId;
 
@@ -68,7 +96,7 @@ function DashboardContent() {
       <DashboardHeader />
       {!showWelcome && <NarrativeTicker />}
       {!showWelcome && <KpiBar />}
-      {!showWelcome && <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />}
+      {!showWelcome && <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} enabledTabs={enabledTabs} isAdmin={isAdmin} />}
       {showWelcome ? (
         <GettingStarted
           onDismiss={() => setDismissedFor(activeClientId)}
