@@ -848,6 +848,48 @@ export function UserManagement() {
           </AlertDialogContent>
         </AlertDialog>
       )}
+      {selectedUserId && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: 'white', padding: '32px', width: '100%', maxWidth: '380px', borderRadius: '4px', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '8px', color: '#141414' }}>Set Password</h3>
+            <p style={{ fontSize: '12px', color: '#666', marginBottom: '20px' }}>
+              Set a temporary password for this user. They can change it after signing in.
+            </p>
+            {passwordError && (
+              <p style={{ fontSize: '12px', color: '#E74C3C', marginBottom: '12px', padding: '8px', background: '#FEF2F2' }}>{passwordError}</p>
+            )}
+            {passwordSuccess ? (
+              <p style={{ fontSize: '12px', color: '#2ECC71', padding: '8px', background: '#F0FFF4', textAlign: 'center' }}>✓ Password set successfully</p>
+            ) : (
+              <>
+                <input
+                  type="password"
+                  placeholder="New password (min 8 characters)"
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleSetPassword()}
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #E5E5E5', fontSize: '13px', marginBottom: '12px', outline: 'none', borderRadius: '4px' }}
+                />
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => { setSelectedUserId(null); setNewPassword(''); setPasswordError(''); }}
+                    style={{ flex: 1, padding: '10px', background: 'none', border: '1px solid #E5E5E5', fontSize: '12px', cursor: 'pointer', color: '#666', borderRadius: '4px' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSetPassword}
+                    disabled={passwordLoading || !newPassword}
+                    style={{ flex: 1, padding: '10px', background: 'hsl(225,70%,35%)', color: 'white', border: 'none', fontSize: '12px', fontWeight: 600, cursor: passwordLoading || !newPassword ? 'not-allowed' : 'pointer', opacity: passwordLoading || !newPassword ? 0.6 : 1, borderRadius: '4px' }}
+                  >
+                    {passwordLoading ? 'Setting...' : 'Set Password'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
