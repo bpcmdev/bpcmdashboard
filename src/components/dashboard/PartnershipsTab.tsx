@@ -179,7 +179,7 @@ const PartnershipsTab = () => {
             <div className="bg-card border border-border p-5">
               <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-3">Historical Reference</h3>
               <div className="divide-y divide-border">
-                {past.map((h) => (
+                {pastPaginated.map((h) => (
                   <div key={h.id} className="flex items-center gap-4 py-3">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold">{h.partner_name}</p>
@@ -194,6 +194,27 @@ const PartnershipsTab = () => {
                   </div>
                 ))}
               </div>
+              {pastTotalPages > 1 && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginTop: '24px', paddingTop: '20px', borderTop: '1px solid rgba(0,0,0,0.08)' }}>
+                  <button
+                    onClick={() => setPastPage(p => Math.max(1, p - 1))}
+                    disabled={pastPage === 1}
+                    style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase', padding: '6px 14px', border: '1px solid rgba(0,0,0,0.1)', background: 'none', color: pastPage === 1 ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.6)', cursor: pastPage === 1 ? 'not-allowed' : 'pointer' }}
+                  >
+                    ← Prev
+                  </button>
+                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', letterSpacing: '0.1em', color: 'rgba(0,0,0,0.4)' }}>
+                    {pastPage} / {pastTotalPages}
+                  </span>
+                  <button
+                    onClick={() => setPastPage(p => Math.min(pastTotalPages, p + 1))}
+                    disabled={pastPage === pastTotalPages}
+                    style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase', padding: '6px 14px', border: '1px solid rgba(0,0,0,0.1)', background: 'none', color: pastPage === pastTotalPages ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.6)', cursor: pastPage === pastTotalPages ? 'not-allowed' : 'pointer' }}
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
