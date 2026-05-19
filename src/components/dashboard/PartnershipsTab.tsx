@@ -41,6 +41,8 @@ const PartnershipsTab = () => {
   const [partnerships, setPartnerships] = useState<Partnership[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [activePage, setActivePage] = useState(1);
+  const [pastPage, setPastPage] = useState(1);
 
   useEffect(() => {
     if (!clientId) return;
@@ -64,11 +66,16 @@ const PartnershipsTab = () => {
 
   const active = partnerships.filter(p => p.status !== 'past');
   const past = partnerships.filter(p => p.status === 'past');
-  const activePlaceholders = Math.max(0, 3 - active.length);
-  const emvData = partnerships
+  const activeTotalPages = Math.max(1, Math.ceil(active.length / PAGE_SIZE));
+  const pastTotalPages = Math.max(1, Math.ceil(past.length / PAGE_SIZE));
+  const activePaginated = active.slice((activePage - 1) * PAGE_SIZE, activePage * PAGE_SIZE);
+  const pastPaginated = past.slice((pastPage - 1) * PAGE_SIZE, pastPage * PAGE_SIZE);
+  const activePlaceholders = activePage === 1 ? Math.max(0, 3 - activePaginated.length) : 0;
+  const emvData = useMemo(() => partnerships
     .filter(p => p.emv_generated && p.emv_generated > 0)
     .map(p => ({ program: p.partner_name, emv: p.emv_generated! }))
-    .sort((a, b) => b.emv - a.emv);
+    .sort((a, b) => b.emv - a.emv)
+    .slice(0, 10), [partnerships]);
 
   return (
     <DataStateWrapper loading={loading} error={error}>
