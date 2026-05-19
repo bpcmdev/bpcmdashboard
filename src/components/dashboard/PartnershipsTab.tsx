@@ -1,5 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
+
+const PAGE_SIZE = 10;
+
+function formatEmv(v: number): string {
+  if (!Number.isFinite(v)) return '$0';
+  const abs = Math.abs(v);
+  if (abs >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
+  if (abs >= 1_000) return `$${Math.round(v / 1_000)}K`;
+  return `$${v.toLocaleString()}`;
+}
 import { supabase } from '@/lib/supabase';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useWeek } from '@/contexts/WeekContext';
@@ -31,6 +41,8 @@ const PartnershipsTab = () => {
   const [partnerships, setPartnerships] = useState<Partnership[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [activePage, setActivePage] = useState(1);
+  const [pastPage, setPastPage] = useState(1);
 
   useEffect(() => {
     if (!clientId) return;
@@ -54,11 +66,16 @@ const PartnershipsTab = () => {
 
   const active = partnerships.filter(p => p.status !== 'past');
   const past = partnerships.filter(p => p.status === 'past');
-  const activePlaceholders = Math.max(0, 3 - active.length);
-  const emvData = partnerships
+  const activeTotalPages = Math.max(1, Math.ceil(active.length / PAGE_SIZE));
+  const pastTotalPages = Math.max(1, Math.ceil(past.length / PAGE_SIZE));
+  const activePaginated = active.slice((activePage - 1) * PAGE_SIZE, activePage * PAGE_SIZE);
+  const pastPaginated = past.slice((pastPage - 1) * PAGE_SIZE, pastPage * PAGE_SIZE);
+  const activePlaceholders = activePage === 1 ? Math.max(0, 3 - activePaginated.length) : 0;
+  const emvData = useMemo(() => partnerships
     .filter(p => p.emv_generated && p.emv_generated > 0)
     .map(p => ({ program: p.partner_name, emv: p.emv_generated! }))
-    .sort((a, b) => b.emv - a.emv);
+    .sort((a, b) => b.emv - a.emv)
+    .slice(0, 10), [partnerships]);
 
   return (
     <DataStateWrapper loading={loading} error={error}>
@@ -79,7 +96,7 @@ const PartnershipsTab = () => {
                 <span className="section-count">{active.length}</span>
               </div>
               <div className="space-y-4">
-                {active.map((p) => {
+                {activePaginated.map((p) => {
                   const badge = statusBadge[p.status] ?? { label: p.status.toUpperCase(), style: 'bg-muted text-muted-foreground' };
                   const initials = p.partner_name.split(/\s+/).map(s => s[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
                   return (
@@ -120,16 +137,37 @@ const PartnershipsTab = () => {
                 ))}
                 {active.length === 0 && <p className="text-xs text-muted-foreground">No active partnerships</p>}
               </div>
+              {activeTotalPages > 1 && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginTop: '24px', paddingTop: '20px', borderTop: '1px solid rgba(0,0,0,0.08)' }}>
+                  <button
+                    onClick={() => setActivePage(p => Math.max(1, p - 1))}
+                    disabled={activePage === 1}
+                    style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase', padding: '6px 14px', border: '1px solid rgba(0,0,0,0.1)', background: 'none', color: activePage === 1 ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.6)', cursor: activePage === 1 ? 'not-allowed' : 'pointer' }}
+                  >
+                    ← Prev
+                  </button>
+                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', letterSpacing: '0.1em', color: 'rgba(0,0,0,0.4)' }}>
+                    {activePage} / {activeTotalPages}
+                  </span>
+                  <button
+                    onClick={() => setActivePage(p => Math.min(activeTotalPages, p + 1))}
+                    disabled={activePage === activeTotalPages}
+                    style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase', padding: '6px 14px', border: '1px solid rgba(0,0,0,0.1)', background: 'none', color: activePage === activeTotalPages ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.6)', cursor: activePage === activeTotalPages ? 'not-allowed' : 'pointer' }}
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
             </div>
 
             {emvData.length > 0 && (
               <div className="bg-card border border-black/10 p-5">
-                <h3 className="section-label mb-4">Partnership EMV</h3>
-                <ResponsiveContainer width="100%" height={Math.max(200, emvData.length * 40)}>
+                <h3 className="section-label mb-4">Partnership EMV — Top 10</h3>
+                <ResponsiveContainer width="100%" height={400}>
                   <BarChart data={emvData} layout="vertical" margin={{ left: 200, right: 30 }}>
-                    <XAxis type="number" tick={{ fontSize: 10, fill: 'hsl(0 0% 40%)' }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `$${v.toLocaleString()}`} />
-                    <YAxis type="category" dataKey="program" tick={{ fontSize: 11, fill: 'hsl(0 0% 20%)' }} axisLine={false} tickLine={false} width={95} />
-                    <Tooltip contentStyle={{ backgroundColor: 'white', border: '1px solid rgba(0,0,0,0.1)', borderRadius: '4px', color: 'hsl(0 0% 8%)', fontSize: 11 }} formatter={(v: number) => `$${v.toLocaleString()}`} />
+                    <XAxis type="number" tick={{ fontSize: 10, fill: 'hsl(0 0% 40%)' }} axisLine={false} tickLine={false} tickFormatter={formatEmv} />
+                    <YAxis type="category" dataKey="program" tick={{ fontSize: 11, fill: 'hsl(0 0% 20%)' }} axisLine={false} tickLine={false} width={195} />
+                    <Tooltip contentStyle={{ backgroundColor: 'white', border: '1px solid rgba(0,0,0,0.1)', borderRadius: '4px', color: 'hsl(0 0% 8%)', fontSize: 11 }} formatter={(v: number) => formatEmv(v)} />
                     <Bar dataKey="emv" fill="hsl(225 70% 35%)" barSize={18} radius={[0, 1, 1, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -141,7 +179,7 @@ const PartnershipsTab = () => {
             <div className="bg-card border border-border p-5">
               <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-3">Historical Reference</h3>
               <div className="divide-y divide-border">
-                {past.map((h) => (
+                {pastPaginated.map((h) => (
                   <div key={h.id} className="flex items-center gap-4 py-3">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold">{h.partner_name}</p>
@@ -156,6 +194,27 @@ const PartnershipsTab = () => {
                   </div>
                 ))}
               </div>
+              {pastTotalPages > 1 && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginTop: '24px', paddingTop: '20px', borderTop: '1px solid rgba(0,0,0,0.08)' }}>
+                  <button
+                    onClick={() => setPastPage(p => Math.max(1, p - 1))}
+                    disabled={pastPage === 1}
+                    style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase', padding: '6px 14px', border: '1px solid rgba(0,0,0,0.1)', background: 'none', color: pastPage === 1 ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.6)', cursor: pastPage === 1 ? 'not-allowed' : 'pointer' }}
+                  >
+                    ← Prev
+                  </button>
+                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', letterSpacing: '0.1em', color: 'rgba(0,0,0,0.4)' }}>
+                    {pastPage} / {pastTotalPages}
+                  </span>
+                  <button
+                    onClick={() => setPastPage(p => Math.min(pastTotalPages, p + 1))}
+                    disabled={pastPage === pastTotalPages}
+                    style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase', padding: '6px 14px', border: '1px solid rgba(0,0,0,0.1)', background: 'none', color: pastPage === pastTotalPages ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.6)', cursor: pastPage === pastTotalPages ? 'not-allowed' : 'pointer' }}
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
