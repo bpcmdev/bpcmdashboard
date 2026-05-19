@@ -96,7 +96,7 @@ const PartnershipsTab = () => {
                 <span className="section-count">{active.length}</span>
               </div>
               <div className="space-y-4">
-                {active.map((p) => {
+                {activePaginated.map((p) => {
                   const badge = statusBadge[p.status] ?? { label: p.status.toUpperCase(), style: 'bg-muted text-muted-foreground' };
                   const initials = p.partner_name.split(/\s+/).map(s => s[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
                   return (
@@ -137,6 +137,27 @@ const PartnershipsTab = () => {
                 ))}
                 {active.length === 0 && <p className="text-xs text-muted-foreground">No active partnerships</p>}
               </div>
+              {activeTotalPages > 1 && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', marginTop: '24px', paddingTop: '20px', borderTop: '1px solid rgba(0,0,0,0.08)' }}>
+                  <button
+                    onClick={() => setActivePage(p => Math.max(1, p - 1))}
+                    disabled={activePage === 1}
+                    style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase', padding: '6px 14px', border: '1px solid rgba(0,0,0,0.1)', background: 'none', color: activePage === 1 ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.6)', cursor: activePage === 1 ? 'not-allowed' : 'pointer' }}
+                  >
+                    ← Prev
+                  </button>
+                  <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', letterSpacing: '0.1em', color: 'rgba(0,0,0,0.4)' }}>
+                    {activePage} / {activeTotalPages}
+                  </span>
+                  <button
+                    onClick={() => setActivePage(p => Math.min(activeTotalPages, p + 1))}
+                    disabled={activePage === activeTotalPages}
+                    style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase', padding: '6px 14px', border: '1px solid rgba(0,0,0,0.1)', background: 'none', color: activePage === activeTotalPages ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.6)', cursor: activePage === activeTotalPages ? 'not-allowed' : 'pointer' }}
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
             </div>
 
             {emvData.length > 0 && (
