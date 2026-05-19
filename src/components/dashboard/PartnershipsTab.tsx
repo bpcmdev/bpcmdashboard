@@ -125,11 +125,11 @@ const PartnershipsTab = () => {
             {emvData.length > 0 && (
               <div className="bg-card border border-black/10 p-5">
                 <h3 className="section-label mb-4">Partnership EMV</h3>
-                <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={emvData} layout="vertical" margin={{ left: 100, right: 30 }}>
-                    <XAxis type="number" tick={{ fontSize: 10, fill: 'hsl(0 0% 40%)' }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `$${v}K`} />
+                <ResponsiveContainer width="100%" height={Math.max(200, emvData.length * 40)}>
+                  <BarChart data={emvData} layout="vertical" margin={{ left: 200, right: 30 }}>
+                    <XAxis type="number" tick={{ fontSize: 10, fill: 'hsl(0 0% 40%)' }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `$${v.toLocaleString()}`} />
                     <YAxis type="category" dataKey="program" tick={{ fontSize: 11, fill: 'hsl(0 0% 20%)' }} axisLine={false} tickLine={false} width={95} />
-                    <Tooltip contentStyle={{ backgroundColor: 'white', border: '1px solid rgba(0,0,0,0.1)', borderRadius: '4px', color: 'hsl(0 0% 8%)', fontSize: 11 }} formatter={(v: number) => `$${v}K`} />
+                    <Tooltip contentStyle={{ backgroundColor: 'white', border: '1px solid rgba(0,0,0,0.1)', borderRadius: '4px', color: 'hsl(0 0% 8%)', fontSize: 11 }} formatter={(v: number) => `$${v.toLocaleString()}`} />
                     <Bar dataKey="emv" fill="hsl(225 70% 35%)" barSize={18} radius={[0, 1, 1, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
