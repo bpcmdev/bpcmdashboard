@@ -17,6 +17,7 @@ interface LeftyPost {
   emv: number | null;
   engagement_rate: number | null;
   post_link: string | null;
+  posted_at?: string | null;
 }
 
 const fmtMoney = (n: number) => {
