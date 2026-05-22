@@ -252,85 +252,96 @@ const PartnershipsTab = () => {
               )}
             </div>
 
-            {emvData.length > 0 && (
-              <div className="p-5">
-                <h3 className="section-label mb-4">Top 10 Campaigns by EMV</h3>
-                <ResponsiveContainer width="100%" height={340}>
-                  <BarChart
-                    data={emvData}
-                    margin={{ top: 28, right: 16, left: 8, bottom: 90 }}
-                    barCategoryGap="40%"
-                    onMouseLeave={() => setHoverIdx(null)}
-                  >
-                    <defs>
-                      <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={accent} stopOpacity={0.8} />
-                        <stop offset="100%" stopColor={accent} stopOpacity={1} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid stroke="rgba(0,0,0,0.08)" strokeDasharray="2 4" vertical={false} />
-                    <XAxis
-                      dataKey="program"
-                      interval={0}
-                      height={90}
-                      axisLine={false}
-                      tickLine={false}
-                      tick={renderTick as unknown as ReactElement}
-                    />
-                    <YAxis
-                      domain={[0, yMax]}
-                      ticks={yTicks}
-                      tick={{ fontSize: 10, fill: 'hsl(0 0% 40%)' }}
-                      axisLine={false}
-                      tickLine={false}
-                      tickFormatter={formatEmv}
-                      width={56}
-                    />
-                    <Tooltip cursor={{ fill: 'rgba(0,0,0,0.04)' }} content={renderTooltip as unknown as ReactElement} />
-                    <Bar
-                      dataKey="emv"
-                      radius={[2, 2, 0, 0]}
-                      onClick={(d) => handleBarClick(d as unknown as CampaignStat)}
-                      style={{ cursor: 'pointer' }}
+            {emvData.length > 0 && (() => {
+              const rowHeight = 40;
+              const chartHeight = Math.max(220, emvData.length * rowHeight + 60);
+              const yAxisWidth = Math.min(
+                220,
+                Math.max(120, ...emvData.map(d => d.program.length * 6.5 + 16))
+              );
+              return (
+                <div className="p-5">
+                  <h3 className="section-label mb-4">Top 10 Campaigns by EMV</h3>
+                  <ResponsiveContainer width="100%" height={chartHeight}>
+                    <BarChart
+                      data={emvData}
+                      layout="vertical"
+                      margin={{ top: 8, right: 64, left: 8, bottom: 24 }}
+                      barCategoryGap="30%"
+                      onMouseLeave={() => setHoverIdx(null)}
                     >
-                      {emvData.map((entry, i) => {
-                        const dim = hoverIdx !== null && hoverIdx !== i;
-                        return (
-                          <Cell
-                            key={entry.id}
-                            fill={`url(#${gradientId})`}
-                            fillOpacity={dim ? 0.5 : 1}
-                            onMouseEnter={() => setHoverIdx(i)}
-                          />
-                        );
-                      })}
-                      <LabelList
-                        dataKey="emv"
-                        content={(props: { x?: number; y?: number; width?: number; value?: number; index?: number }) => {
-                          const { x = 0, y = 0, width = 0, value = 0, index = 0 } = props;
-                          if (value < labelThreshold) return null;
-                          const dim = hoverIdx !== null && hoverIdx !== index;
-                          return (
-                            <text
-                              x={x + width / 2}
-                              y={y - 6}
-                              textAnchor="middle"
-                              fontSize={10}
-                              fontFamily="DM Mono, monospace"
-                              fontWeight={600}
-                              fill="hsl(0 0% 25%)"
-                              opacity={dim ? 0.4 : 1}
-                            >
-                              {formatEmv(value)}
-                            </text>
-                          );
-                        }}
+                      <defs>
+                        <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor={accent} stopOpacity={1} />
+                          <stop offset="100%" stopColor={accent} stopOpacity={0.8} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid stroke="rgba(0,0,0,0.08)" strokeDasharray="2 4" horizontal={false} />
+                      <XAxis
+                        type="number"
+                        domain={[0, yMax]}
+                        ticks={yTicks}
+                        tick={{ fontSize: 10, fill: 'hsl(0 0% 40%)' }}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={formatEmv}
                       />
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
+                      <YAxis
+                        type="category"
+                        dataKey="program"
+                        interval={0}
+                        width={yAxisWidth}
+                        axisLine={false}
+                        tickLine={false}
+                        tick={renderYTick as unknown as ReactElement}
+                      />
+                      <Tooltip cursor={{ fill: 'rgba(0,0,0,0.04)' }} content={renderTooltip as unknown as ReactElement} />
+                      <Bar
+                        dataKey="emv"
+                        radius={[0, 2, 2, 0]}
+                        onClick={(d) => handleBarClick(d as unknown as CampaignStat)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        {emvData.map((entry, i) => {
+                          const dim = hoverIdx !== null && hoverIdx !== i;
+                          return (
+                            <Cell
+                              key={entry.id}
+                              fill={`url(#${gradientId})`}
+                              fillOpacity={dim ? 0.5 : 1}
+                              onMouseEnter={() => setHoverIdx(i)}
+                            />
+                          );
+                        })}
+                        <LabelList
+                          dataKey="emv"
+                          content={(props: { x?: number; y?: number; width?: number; height?: number; value?: number; index?: number }) => {
+                            const { x = 0, y = 0, width = 0, height = 0, value = 0, index = 0 } = props;
+                            const dim = hoverIdx !== null && hoverIdx !== index;
+                            return (
+                              <text
+                                x={x + width + 8}
+                                y={y + height / 2}
+                                textAnchor="start"
+                                dominantBaseline="middle"
+                                fontSize={11}
+                                fontFamily="DM Mono, monospace"
+                                fontWeight={600}
+                                fill="hsl(0 0% 20%)"
+                                opacity={dim ? 0.4 : 1}
+                              >
+                                {formatEmv(value)}
+                              </text>
+                            );
+                          }}
+                        />
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              );
+            })()}
+
 
           </div>
 
