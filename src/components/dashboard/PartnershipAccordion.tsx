@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, ExternalLink } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -24,7 +24,10 @@ interface Props {
   accent: string;
   isAdmin?: boolean;
   variant?: 'card' | 'row';
+  /** When this number changes (and is > 0), force the accordion open and scroll into view. */
+  openSignal?: number;
 }
+
 
 interface PostLite {
   id: string;
@@ -63,11 +66,22 @@ const normalizePost = (post: Record<string, unknown>): PostLite => ({
   posted_at: typeof post.posted_at === 'string' ? post.posted_at : null,
 });
 
-const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, variant = 'card' }: Props) => {
+const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, variant = 'card', openSignal }: Props) => {
   const [open, setOpen] = useState(false);
   const [posts, setPosts] = useState<PostLite[] | null>(null);
   const [loading, setLoading] = useState(false);
   const { activeClientId, isAllTime, effectiveFrom, effectiveTo } = useWeek();
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!openSignal) return;
+    setOpen(true);
+    requestAnimationFrame(() => {
+      rootRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  }, [openSignal]);
+
+
 
   useEffect(() => {
     if (!open || posts !== null || !activeClientId) return;
@@ -152,7 +166,7 @@ const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, varia
       : 'flex items-center gap-4 py-3 text-left w-full cursor-pointer hover:bg-black/[0.02] transition-colors';
 
   return (
-    <div className={containerCls} style={{ borderLeft: open ? `2px solid ${accent}` : undefined }}>
+    <div ref={rootRef} className={containerCls} style={{ borderLeft: open ? `2px solid ${accent}` : undefined }}>
       <button type="button" onClick={() => setOpen(o => !o)} className={headerCls}>
         {variant === 'card' && (
           <div
