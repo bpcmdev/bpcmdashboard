@@ -5,6 +5,7 @@ import { useWeek } from '@/contexts/WeekContext';
 import { useAdmin } from '@/hooks/useAdmin';
 import { Skeleton } from '@/components/ui/skeleton';
 import Sparkline from './Sparkline';
+import KpiDrawer, { type KpiMetricKey } from './KpiDrawer';
 import { formatMoney, formatCount } from '@/lib/format';
 
 interface KpiCardProps {
@@ -13,6 +14,12 @@ interface KpiCardProps {
   delta: string;
   deltaType: 'positive' | 'negative' | 'neutral';
   targetTab?: string;
+  metricKey?: KpiMetricKey;
+  onSelect?: (metric: KpiMetricKey, label: string, targetTab?: string) => void;
+  spark?: number[];
+  sparkColor?: string;
+  notTracked?: boolean;
+}
   spark?: number[];
   sparkColor?: string;
   notTracked?: boolean;
@@ -55,28 +62,27 @@ function useCountUp(target: string, duration = 900): string {
   return display;
 }
 
-const KpiCard = ({ label, value, delta, deltaType, targetTab, spark, sparkColor, notTracked }: KpiCardProps) => {
+const KpiCard = ({ label, value, delta, deltaType, targetTab, metricKey, onSelect, spark, sparkColor, notTracked }: KpiCardProps) => {
   const animated = useCountUp(notTracked ? '' : value);
   const isPos = deltaType === 'positive';
   const isNeg = deltaType === 'negative';
   const TrendIcon = isPos ? ArrowUpRight : isNeg ? ArrowDownRight : Minus;
-  // Status chip palette: gold positive / red negative / gray stable
   const chip = isPos
     ? 'bg-[hsl(42_64%_46%)]/15 text-[hsl(42_64%_32%)]'
     : isNeg
     ? 'bg-[hsl(0_72%_50%)]/12 text-[hsl(0_72%_42%)]'
     : 'bg-black/[0.06] text-muted-foreground';
 
+  const clickable = !!metricKey;
   const handleClick = () => {
-    if (!targetTab) return;
-    window.dispatchEvent(new CustomEvent('bpcm:switch-tab', { detail: targetTab }));
+    if (metricKey && onSelect) onSelect(metricKey, label, targetTab);
   };
 
   return (
     <button
       type="button"
       onClick={handleClick}
-      className={`group flex-1 px-3 md:px-5 py-4 md:py-5 text-center min-w-0 relative overflow-hidden animate-fade-in bg-white border-r border-black/10 transition-all duration-200 hover:bg-[hsl(0,0%,98%)] hover:-translate-y-0.5 hover:shadow-[0_8px_24px_-12px_rgba(0,0,0,0.18)] ${targetTab ? 'cursor-pointer' : 'cursor-default'}`}
+      className={`group flex-1 px-3 md:px-5 py-4 md:py-5 text-center min-w-0 relative overflow-hidden animate-fade-in bg-white border-r border-black/10 transition-all duration-200 hover:bg-[hsl(0,0%,98%)] hover:-translate-y-0.5 hover:shadow-[0_8px_24px_-12px_rgba(0,0,0,0.18)] ${clickable ? 'cursor-pointer' : 'cursor-default'}`}
       style={
         sparkColor
           ? ({ ['--kpi-accent' as string]: sparkColor } as React.CSSProperties)
