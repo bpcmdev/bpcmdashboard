@@ -20,10 +20,6 @@ interface KpiCardProps {
   sparkColor?: string;
   notTracked?: boolean;
 }
-  spark?: number[];
-  sparkColor?: string;
-  notTracked?: boolean;
-}
 
 /** Animate a numeric value from 0 → target over `duration` ms. Non-numeric values are returned as-is. */
 function useCountUp(target: string, duration = 900): string {
