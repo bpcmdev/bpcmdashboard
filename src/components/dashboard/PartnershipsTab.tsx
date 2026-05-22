@@ -279,7 +279,7 @@ const PartnershipsTab = () => {
                       height={90}
                       axisLine={false}
                       tickLine={false}
-                      tick={renderTick as unknown as React.ReactElement}
+                      tick={renderTick as unknown as ReactElement}
                     />
                     <YAxis
                       domain={[0, yMax]}
@@ -290,7 +290,7 @@ const PartnershipsTab = () => {
                       tickFormatter={formatEmv}
                       width={56}
                     />
-                    <Tooltip cursor={{ fill: 'rgba(0,0,0,0.04)' }} content={renderTooltip as unknown as React.ReactElement} />
+                    <Tooltip cursor={{ fill: 'rgba(0,0,0,0.04)' }} content={renderTooltip as unknown as ReactElement} />
                     <Bar
                       dataKey="emv"
                       radius={[2, 2, 0, 0]}
