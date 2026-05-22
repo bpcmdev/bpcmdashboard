@@ -226,7 +226,9 @@ const PartnershipsTab = () => {
                       accent={accent}
                       isAdmin={isAdmin}
                       variant="card"
+                      openSignal={openSignals[p.id]}
                     />
+
                   );
                 })}
                 {active.length === 0 && <p className="text-xs text-muted-foreground">No active partnerships</p>}
