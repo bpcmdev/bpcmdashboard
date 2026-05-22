@@ -135,7 +135,10 @@ const DashboardHeader = () => {
               </span>
             )}
           </div>
-          <button className="header-chip">
+          <button
+            className="header-chip"
+            onClick={() => window.dispatchEvent(new CustomEvent('bpcm:export-pdf'))}
+          >
             Export PDF
           </button>
           <button onClick={refreshData} className="header-chip">
@@ -209,7 +212,10 @@ const DashboardHeader = () => {
             <button onClick={refreshData} className="text-xs font-medium tracking-wider uppercase px-3 py-1.5 border border-white/20 hover:bg-white/10 transition-colors">
               Refresh
             </button>
-            <button className="text-xs font-medium tracking-wider uppercase px-3 py-1.5 border border-white/20 hover:bg-white/10 transition-colors">
+            <button
+              onClick={() => { window.dispatchEvent(new CustomEvent('bpcm:export-pdf')); setMobileMenuOpen(false); }}
+              className="text-xs font-medium tracking-wider uppercase px-3 py-1.5 border border-white/20 hover:bg-white/10 transition-colors"
+            >
               Export PDF
             </button>
             {isAdmin && (
