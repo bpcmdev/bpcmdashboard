@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useWeek, WeekProvider } from '@/contexts/WeekContext';
@@ -19,6 +19,8 @@ import TikTokShopTab from '@/components/dashboard/TikTokShopTab';
 import GettingStarted, { useIsNewClient } from '@/components/dashboard/GettingStarted';
 import NotableThisWeek from '@/components/dashboard/NotableThisWeek';
 import { LinkPreviewProvider } from '@/components/dashboard/LinkPreviewDrawer';
+import { exportDashboardPdf } from '@/lib/exportPdf';
+import { toast } from '@/hooks/use-toast';
 
 const TAB_MAP: Record<string, React.ComponentType> = {
   'KEY WINS': KeyWinsTab,
@@ -36,11 +38,29 @@ const TAB_MAP: Record<string, React.ComponentType> = {
 /** Inner component that can access WeekContext */
 function DashboardContent() {
   const [activeTab, setActiveTab] = useState('EARNED MEDIA');
-  const { clientColor, clientId, isAdmin, enabledTabs } = useAdmin();
-  const { activeClientId } = useWeek();
+  const { clientColor, clientId, isAdmin, enabledTabs, clientName } = useAdmin();
+  const { activeClientId, selectedWeek, isAllTime, weeks } = useWeek();
   const { isNew } = useIsNewClient();
   const [dismissedFor, setDismissedFor] = useState<string | null>(null);
   const TabContent = TAB_MAP[activeTab];
+
+  // --- PDF export state ---
+  const kpiRef = useRef<HTMLDivElement | null>(null);
+  const exportTabHostRef = useRef<HTMLDivElement | null>(null);
+  const [exportTabLabel, setExportTabLabel] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportMsg, setExportMsg] = useState('');
+  const exportResolverRef = useRef<(() => void) | null>(null);
+
+  // Mark the offscreen tab as "ready" after it mounts; renderTab promise resolves after a settle delay.
+  useEffect(() => {
+    if (!exportTabLabel || !exportResolverRef.current) return;
+    const t = setTimeout(() => {
+      exportResolverRef.current?.();
+      exportResolverRef.current = null;
+    }, 2000); // allow data fetches + chart animations to settle
+    return () => clearTimeout(t);
+  }, [exportTabLabel]);
 
   const openAdmin = () => window.dispatchEvent(new CustomEvent('bpcm:open-admin-panel'));
 
@@ -59,15 +79,53 @@ function DashboardContent() {
     return () => window.removeEventListener('bpcm:switch-tab', handler);
   }, []);
 
+  // Export PDF handler — listens for header button event.
+  const runExport = useCallback(async () => {
+    if (exporting) return;
+    setExporting(true);
+    setExportMsg('Preparing export…');
+    try {
+      const weekLabel = isAllTime
+        ? 'All Time'
+        : (weeks.find((w) => w.weekStart === selectedWeek)?.label ?? selectedWeek ?? '');
+      await exportDashboardPdf({
+        brand: {
+          clientName: clientName ?? 'Client',
+          weekLabel,
+          primaryColor: clientColor || 'hsl(225 70% 35%)',
+        },
+        kpiEl: kpiRef.current,
+        renderTab: (label) =>
+          new Promise<HTMLElement | null>((resolve) => {
+            setExportTabLabel(label);
+            exportResolverRef.current = () => resolve(exportTabHostRef.current);
+          }),
+        onProgress: (_p, msg) => setExportMsg(msg),
+      });
+      toast({ title: 'PDF exported', description: 'Your dashboard report has been downloaded.' });
+    } catch (e) {
+      console.error('[ExportPDF] failed', e);
+      toast({ title: 'Export failed', description: 'Could not generate PDF. See console.', variant: 'destructive' });
+    } finally {
+      setExporting(false);
+      setExportTabLabel(null);
+      setExportMsg('');
+    }
+  }, [exporting, isAllTime, weeks, selectedWeek, clientName, clientColor]);
+
+  useEffect(() => {
+    const handler = () => runExport();
+    window.addEventListener('bpcm:export-pdf', handler);
+    return () => window.removeEventListener('bpcm:export-pdf', handler);
+  }, [runExport]);
+
   // If the current tab is not enabled for this (non-admin) client, fall back to
   // the first enabled tab so users never land on a hidden tab.
   useEffect(() => {
     if (isAdmin) return;
     if (!Array.isArray(enabledTabs)) return;
-    // Map active label back to id by matching against TAB_MAP order.
     const labels = Object.keys(TAB_MAP);
     const enabledLabels = labels.filter((label) => {
-      // id <-> label mapping mirrors src/lib/dashboardTabs.ts
       const idMap: Record<string, string> = {
         'PIPELINE & MOMENTS': 'pipeline',
         'KEY WINS': 'key_wins',
@@ -90,6 +148,8 @@ function DashboardContent() {
   // Getting Started checklist is an internal BPCM setup task — admins only.
   const showWelcome = isAdmin && isNew === true && dismissedFor !== activeClientId;
 
+  const ExportTabComp = exportTabLabel ? TAB_MAP[exportTabLabel] : null;
+
   return (
     <div
       className="min-h-screen bg-background"
@@ -98,7 +158,11 @@ function DashboardContent() {
       <DashboardHeader />
       {!showWelcome && <NarrativeTicker />}
       {!showWelcome && <NotableThisWeek />}
-      {!showWelcome && <KpiBar />}
+      {!showWelcome && (
+        <div ref={kpiRef}>
+          <KpiBar />
+        </div>
+      )}
       {!showWelcome && <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} enabledTabs={enabledTabs} isAdmin={isAdmin} />}
       {showWelcome ? (
         <GettingStarted
@@ -113,6 +177,38 @@ function DashboardContent() {
       ) : (
         <div className="flex items-center justify-center py-24 text-muted-foreground text-sm">
           {activeTab} — Coming soon
+        </div>
+      )}
+
+      {/* Offscreen export host: mounts one tab at a time at desktop width for clean capture */}
+      {exporting && (
+        <div
+          aria-hidden
+          style={{
+            position: 'fixed',
+            left: -100000,
+            top: 0,
+            width: 1280,
+            background: '#fff',
+            pointerEvents: 'none',
+          }}
+        >
+          <div ref={exportTabHostRef} style={{ width: 1280 }}>
+            {ExportTabComp ? <ExportTabComp /> : null}
+          </div>
+        </div>
+      )}
+
+      {/* Export overlay */}
+      {exporting && (
+        <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center">
+          <div className="bg-white rounded-md px-6 py-5 shadow-xl text-center min-w-[280px]">
+            <div className="text-sm font-semibold tracking-wider uppercase mb-2">Generating PDF</div>
+            <div className="text-xs text-muted-foreground">{exportMsg || 'Working…'}</div>
+            <div className="mt-3 h-1 bg-black/10 rounded overflow-hidden">
+              <div className="h-full bg-foreground animate-pulse" style={{ width: '60%' }} />
+            </div>
+          </div>
         </div>
       )}
     </div>
