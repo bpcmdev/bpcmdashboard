@@ -150,6 +150,23 @@ Deno.serve(async (req) => {
       data.author = data.author || oembed.author;
     }
 
+    // Detect blocked/broken Instagram OG (IG returns a generic login wall for many posts)
+    if (platform === 'instagram') {
+      const t = (data.title || '').trim().toLowerCase();
+      const desc = (data.description || '').trim();
+      const genericTitle =
+        !t ||
+        t === 'instagram' ||
+        t.startsWith('login') ||
+        t.startsWith('log in') ||
+        t.includes('page not found') ||
+        t.includes('content unavailable');
+      if (genericTitle && !desc && !data.embedHtml) {
+        data.blocked = true;
+      }
+    }
+
+
     return new Response(JSON.stringify(data), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
