@@ -158,12 +158,16 @@ const PartnershipsTab = () => {
     const normalizedLabel = normalizeCampaignName(label);
     const match = partnerships.find(p => normalizeCampaignName(p.partner_name) === normalizedLabel);
     const activeIdx = match ? active.findIndex(p => p.id === match.id) : -1;
+    const pastIdx = match ? past.findIndex(p => p.id === match.id) : -1;
     // eslint-disable-next-line no-console
     console.log(`[BarClick] clicked: '${label}' | searching partnerships: ${partnerships.length} | match found: ${Boolean(match)}`);
     if (!match) return;
     if (activeIdx >= 0) {
       const page = Math.floor(activeIdx / PAGE_SIZE) + 1;
       setActivePage(page);
+    } else if (pastIdx >= 0) {
+      const page = Math.floor(pastIdx / PAGE_SIZE) + 1;
+      setPastPage(page);
     }
     setOpenSignals(prev => ({ ...prev, [match.id]: (prev[match.id] ?? 0) + 1 }));
   };
@@ -382,6 +386,7 @@ const PartnershipsTab = () => {
                     accent={accent}
                     isAdmin={isAdmin}
                     variant="row"
+                    openSignal={openSignals[h.id]}
                   />
                 ))}
               </div>
