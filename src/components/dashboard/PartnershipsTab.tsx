@@ -186,18 +186,14 @@ const PartnershipsTab = () => {
               <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-3">Historical Reference</h3>
               <div className="divide-y divide-border">
                 {pastPaginated.map((h) => (
-                  <div key={h.id} className="flex items-center gap-4 py-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold">{h.partner_name}</p>
-                      <p className="text-[11px] text-muted-foreground">{h.description}</p>
-                      {h.emv_generated ? <p className="text-[10px] text-muted-foreground mt-0.5">{formatMoney(h.emv_generated)} EMV generated</p> : null}
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 bg-muted text-muted-foreground">PAST</span>
-                      {isAdmin && <EditPartnershipDialog entry={h} />}
-                      {isAdmin && <DeleteEntryButton table="partnerships" id={h.id} label="this partnership" />}
-                    </div>
-                  </div>
+                  <PartnershipAccordion
+                    key={h.id}
+                    partnership={h}
+                    statusBadge={{ label: 'PAST', style: 'bg-muted text-muted-foreground' }}
+                    accent={accent}
+                    isAdmin={isAdmin}
+                    variant="row"
+                  />
                 ))}
               </div>
               {pastTotalPages > 1 && (
