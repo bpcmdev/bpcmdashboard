@@ -57,24 +57,22 @@ const DashboardHeader = () => {
 
   return (
     <header
-      className="dashboard-header px-4 md:px-6 py-3 border-b sticky top-0 z-40"
+      className="dashboard-header px-4 md:px-6 py-2 border-b sticky top-0 z-40"
       style={{ borderColor: 'rgba(255,255,255,0.1)' }}
     >
       {/* Top row */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2 min-w-0">
           {clientLogo && (
-            <img src={clientLogo} alt={clientName ?? ''} className="h-7 w-auto" />
+            <img src={clientLogo} alt={clientName ?? ''} className="h-6 w-auto" />
           )}
-          <span className="font-display text-xl md:text-2xl font-bold tracking-[0.04em] uppercase text-white">
+          <span className="font-display text-sm md:text-base font-bold tracking-[0.06em] uppercase text-white truncate">
             {clientName ?? 'Loading…'}
           </span>
         </div>
 
         {/* Desktop center info */}
-        <div className="hidden md:flex items-center gap-3 text-xs tracking-widest uppercase opacity-70">
-          <span>Intelligence Dashboard</span>
-          <span className="opacity-40">|</span>
+        <div className="hidden md:flex items-center gap-2 text-[11px] tracking-widest uppercase opacity-80">
           {isAdmin && allClients.length > 1 && (
             <>
               <DropdownMenu>
