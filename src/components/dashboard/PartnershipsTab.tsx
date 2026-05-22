@@ -259,44 +259,83 @@ const PartnershipsTab = () => {
             {emvData.length > 0 && (
               <div className="p-5">
                 <h3 className="section-label mb-4">Top 10 Campaigns by EMV</h3>
-                <ResponsiveContainer width="100%" height={320}>
-                  <BarChart data={emvData} margin={{ top: 24, right: 16, left: 8, bottom: 80 }}>
+                <ResponsiveContainer width="100%" height={340}>
+                  <BarChart
+                    data={emvData}
+                    margin={{ top: 28, right: 16, left: 8, bottom: 90 }}
+                    barCategoryGap="40%"
+                    onMouseLeave={() => setHoverIdx(null)}
+                  >
+                    <defs>
+                      <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={accent} stopOpacity={0.8} />
+                        <stop offset="100%" stopColor={accent} stopOpacity={1} />
+                      </linearGradient>
+                    </defs>
                     <CartesianGrid stroke="rgba(0,0,0,0.08)" strokeDasharray="2 4" vertical={false} />
                     <XAxis
                       dataKey="program"
                       interval={0}
-                      angle={-45}
-                      textAnchor="end"
-                      height={80}
-                      tick={{ fontSize: 10, fill: 'hsl(0 0% 30%)' }}
+                      height={90}
                       axisLine={false}
                       tickLine={false}
-                      tickFormatter={(v: string) => (v && v.length > 20 ? `${v.slice(0, 20)}…` : v)}
+                      tick={renderTick as unknown as React.ReactElement}
                     />
                     <YAxis
+                      domain={[0, yMax]}
+                      ticks={yTicks}
                       tick={{ fontSize: 10, fill: 'hsl(0 0% 40%)' }}
                       axisLine={false}
                       tickLine={false}
                       tickFormatter={formatEmv}
                       width={56}
                     />
-                    <Tooltip
-                      cursor={{ fill: 'rgba(0,0,0,0.04)' }}
-                      contentStyle={{ backgroundColor: 'white', border: '1px solid rgba(0,0,0,0.1)', borderRadius: '4px', color: 'hsl(0 0% 8%)', fontSize: 11 }}
-                      formatter={(v: number) => formatEmv(v)}
-                    />
-                    <Bar dataKey="emv" fill={accent} fillOpacity={1} maxBarSize={48} radius={[2, 2, 0, 0]}>
+                    <Tooltip cursor={{ fill: 'rgba(0,0,0,0.04)' }} content={renderTooltip as unknown as React.ReactElement} />
+                    <Bar
+                      dataKey="emv"
+                      radius={[2, 2, 0, 0]}
+                      onClick={(d) => handleBarClick(d as unknown as CampaignStat)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      {emvData.map((entry, i) => {
+                        const dim = hoverIdx !== null && hoverIdx !== i;
+                        return (
+                          <Cell
+                            key={entry.id}
+                            fill={`url(#${gradientId})`}
+                            fillOpacity={dim ? 0.5 : 1}
+                            onMouseEnter={() => setHoverIdx(i)}
+                          />
+                        );
+                      })}
                       <LabelList
                         dataKey="emv"
-                        position="top"
-                        formatter={(v: number) => formatEmv(v)}
-                        style={{ fontFamily: 'DM Mono, monospace', fontSize: 10, fill: 'hsl(0 0% 25%)', fontWeight: 600 }}
+                        content={(props: { x?: number; y?: number; width?: number; value?: number; index?: number }) => {
+                          const { x = 0, y = 0, width = 0, value = 0, index = 0 } = props;
+                          if (value < labelThreshold) return null;
+                          const dim = hoverIdx !== null && hoverIdx !== index;
+                          return (
+                            <text
+                              x={x + width / 2}
+                              y={y - 6}
+                              textAnchor="middle"
+                              fontSize={10}
+                              fontFamily="DM Mono, monospace"
+                              fontWeight={600}
+                              fill="hsl(0 0% 25%)"
+                              opacity={dim ? 0.4 : 1}
+                            >
+                              {formatEmv(value)}
+                            </text>
+                          );
+                        }}
                       />
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             )}
+
           </div>
 
           {past.length > 0 && (
