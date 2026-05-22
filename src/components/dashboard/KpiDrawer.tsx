@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
 import { useAdmin } from '@/hooks/useAdmin';
 import { formatMoney, formatCount } from '@/lib/format';
+import { LinkPreviewTrigger } from './LinkPreviewDrawer';
 
 export type KpiMetricKey =
   | 'placement_count'
