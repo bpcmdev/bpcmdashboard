@@ -7,6 +7,7 @@ import DataStateWrapper from './DataStateWrapper';
 import DeleteEntryButton from './DeleteEntryButton';
 import EditPartnershipDialog from './EditPartnershipDialog';
 import EmptyState from './EmptyState';
+import PartnershipAccordion from './PartnershipAccordion';
 import { formatMoney } from '@/lib/format';
 
 const PAGE_SIZE = 10;
@@ -98,41 +99,18 @@ const PartnershipsTab = () => {
                 <span className="section-label">Active &amp; Pipeline Partnerships</span>
                 <span className="section-count">{active.length}</span>
               </div>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {activePaginated.map((p) => {
                   const badge = statusBadge[p.status] ?? { label: p.status.toUpperCase(), style: 'bg-muted text-muted-foreground' };
-                  const initials = p.partner_name.split(/\s+/).map(s => s[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
                   return (
-                    <div key={p.id} className="entry-card cat-partnership bg-card border border-black/10 p-4 cursor-pointer">
-                      <div className="flex items-start gap-3">
-                        <div
-                          className="w-9 h-9 flex items-center justify-center text-[11px] font-bold text-white shrink-0 rounded-sm"
-                          style={{ background: 'linear-gradient(135deg, hsl(225 70% 35%) 0%, #047857 100%)' }}
-                        >
-                          {initials || '—'}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2 mb-1">
-                            <div className="min-w-0">
-                              <h4 className="text-sm font-bold text-foreground truncate">{p.partner_name}</h4>
-                              <p className="text-[11px] text-muted-foreground">{p.type}</p>
-                            </div>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className={`font-mono-ui text-[9px] font-medium tracking-[0.12em] uppercase px-1.5 py-0.5 ${badge.style}`}>{badge.label}</span>
-                              {isAdmin && <EditPartnershipDialog entry={p} />}
-                              {isAdmin && <DeleteEntryButton table="partnerships" id={p.id} label="this partnership" />}
-                            </div>
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1">{p.description}</p>
-                          {p.emv_generated ? (
-                            <div className="flex items-baseline gap-1.5 mt-2">
-                              <span className="font-mono-ui text-[8px] tracking-[0.18em] uppercase text-muted-foreground">EMV</span>
-                              <span className="font-display text-base font-bold" style={{ color: 'hsl(42 64% 38%)' }}>{formatMoney(p.emv_generated)}</span>
-                            </div>
-                          ) : null}
-                        </div>
-                      </div>
-                    </div>
+                    <PartnershipAccordion
+                      key={p.id}
+                      partnership={p}
+                      statusBadge={badge}
+                      accent={accent}
+                      isAdmin={isAdmin}
+                      variant="card"
+                    />
                   );
                 })}
                 {active.length === 0 && <p className="text-xs text-muted-foreground">No active partnerships</p>}
@@ -208,18 +186,14 @@ const PartnershipsTab = () => {
               <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-3">Historical Reference</h3>
               <div className="divide-y divide-border">
                 {pastPaginated.map((h) => (
-                  <div key={h.id} className="flex items-center gap-4 py-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold">{h.partner_name}</p>
-                      <p className="text-[11px] text-muted-foreground">{h.description}</p>
-                      {h.emv_generated ? <p className="text-[10px] text-muted-foreground mt-0.5">{formatMoney(h.emv_generated)} EMV generated</p> : null}
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 bg-muted text-muted-foreground">PAST</span>
-                      {isAdmin && <EditPartnershipDialog entry={h} />}
-                      {isAdmin && <DeleteEntryButton table="partnerships" id={h.id} label="this partnership" />}
-                    </div>
-                  </div>
+                  <PartnershipAccordion
+                    key={h.id}
+                    partnership={h}
+                    statusBadge={{ label: 'PAST', style: 'bg-muted text-muted-foreground' }}
+                    accent={accent}
+                    isAdmin={isAdmin}
+                    variant="row"
+                  />
                 ))}
               </div>
               {pastTotalPages > 1 && (

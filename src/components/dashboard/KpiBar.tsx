@@ -5,6 +5,7 @@ import { useWeek } from '@/contexts/WeekContext';
 import { useAdmin } from '@/hooks/useAdmin';
 import { Skeleton } from '@/components/ui/skeleton';
 import Sparkline from './Sparkline';
+import KpiDrawer, { type KpiMetricKey } from './KpiDrawer';
 import { formatMoney, formatCount } from '@/lib/format';
 
 interface KpiCardProps {
@@ -13,6 +14,8 @@ interface KpiCardProps {
   delta: string;
   deltaType: 'positive' | 'negative' | 'neutral';
   targetTab?: string;
+  metricKey?: KpiMetricKey;
+  onSelect?: (metric: KpiMetricKey, label: string, targetTab?: string) => void;
   spark?: number[];
   sparkColor?: string;
   notTracked?: boolean;
@@ -55,28 +58,27 @@ function useCountUp(target: string, duration = 900): string {
   return display;
 }
 
-const KpiCard = ({ label, value, delta, deltaType, targetTab, spark, sparkColor, notTracked }: KpiCardProps) => {
+const KpiCard = ({ label, value, delta, deltaType, targetTab, metricKey, onSelect, spark, sparkColor, notTracked }: KpiCardProps) => {
   const animated = useCountUp(notTracked ? '' : value);
   const isPos = deltaType === 'positive';
   const isNeg = deltaType === 'negative';
   const TrendIcon = isPos ? ArrowUpRight : isNeg ? ArrowDownRight : Minus;
-  // Status chip palette: gold positive / red negative / gray stable
   const chip = isPos
     ? 'bg-[hsl(42_64%_46%)]/15 text-[hsl(42_64%_32%)]'
     : isNeg
     ? 'bg-[hsl(0_72%_50%)]/12 text-[hsl(0_72%_42%)]'
     : 'bg-black/[0.06] text-muted-foreground';
 
+  const clickable = !!metricKey;
   const handleClick = () => {
-    if (!targetTab) return;
-    window.dispatchEvent(new CustomEvent('bpcm:switch-tab', { detail: targetTab }));
+    if (metricKey && onSelect) onSelect(metricKey, label, targetTab);
   };
 
   return (
     <button
       type="button"
       onClick={handleClick}
-      className={`group flex-1 px-3 md:px-5 py-4 md:py-5 text-center min-w-0 relative overflow-hidden animate-fade-in bg-white border-r border-black/10 transition-all duration-200 hover:bg-[hsl(0,0%,98%)] hover:-translate-y-0.5 hover:shadow-[0_8px_24px_-12px_rgba(0,0,0,0.18)] ${targetTab ? 'cursor-pointer' : 'cursor-default'}`}
+      className={`group flex-1 px-3 md:px-5 py-4 md:py-5 text-center min-w-0 relative overflow-hidden animate-fade-in bg-white border-r border-black/10 transition-all duration-200 hover:bg-[hsl(0,0%,98%)] hover:-translate-y-0.5 hover:shadow-[0_8px_24px_-12px_rgba(0,0,0,0.18)] ${clickable ? 'cursor-pointer' : 'cursor-default'}`}
       style={
         sparkColor
           ? ({ ['--kpi-accent' as string]: sparkColor } as React.CSSProperties)
@@ -165,9 +167,18 @@ const KpiBar = () => {
   const [kpis, setKpis] = useState<KpiCardProps[]>(fallbackKpis);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [drawerMetric, setDrawerMetric] = useState<KpiMetricKey | null>(null);
+  const [drawerLabel, setDrawerLabel] = useState('');
+  const [drawerTab, setDrawerTab] = useState<string | undefined>(undefined);
   const { selectedWeek, refreshKey, activeClientId, isAllTime } = useWeek();
   const { clientColor } = useAdmin();
   const accent = clientColor || '#1B2B8A';
+
+  const openDrawer = (metric: KpiMetricKey, label: string, targetTab?: string) => {
+    setDrawerMetric(metric);
+    setDrawerLabel(label);
+    setDrawerTab(targetTab);
+  };
 
   useEffect(() => {
     if (!selectedWeek) return;
@@ -228,12 +239,12 @@ const KpiBar = () => {
         const allTimeDelta = { delta: `${rows.length} weeks`, deltaType: 'neutral' as const };
 
         setKpis([
-          { label: 'Press Placements', value: String(placements), ...allTimeDelta, targetTab: 'EARNED MEDIA', spark: placementSpark, sparkColor: accent },
-          { label: 'Earned Media Value', value: formatMoney(emv), ...allTimeDelta, targetTab: 'EARNED MEDIA', spark: emvSpark, sparkColor: accent },
-          { label: 'Sentiment Score', value: `${sentiment}/100`, ...allTimeDelta, spark: sentimentNotTracked ? undefined : sentimentSpark, sparkColor: accent, notTracked: sentimentNotTracked },
-          { label: 'Social Reach', value: formatCount(reach), ...allTimeDelta, targetTab: 'INFLUENCER & SOCIAL', spark: reachSpark, sparkColor: accent },
-          { label: 'Share of Voice', value: `${sov}%`, ...allTimeDelta, spark: sovNotTracked ? undefined : sovSpark, sparkColor: accent, notTracked: sovNotTracked },
-          { label: 'Influencer ROI', value: `${roi}x`, ...allTimeDelta, targetTab: 'INFLUENCER & SOCIAL', spark: roiNotTracked ? undefined : roiSpark, sparkColor: accent, notTracked: roiNotTracked },
+          { label: 'Press Placements', value: String(placements), ...allTimeDelta, targetTab: 'EARNED MEDIA', metricKey: 'placement_count', spark: placementSpark, sparkColor: accent },
+          { label: 'Earned Media Value', value: formatMoney(emv), ...allTimeDelta, targetTab: 'EARNED MEDIA', metricKey: 'emv_usd', spark: emvSpark, sparkColor: accent },
+          { label: 'Sentiment Score', value: `${sentiment}/100`, ...allTimeDelta, metricKey: 'sentiment_score', spark: sentimentNotTracked ? undefined : sentimentSpark, sparkColor: accent, notTracked: sentimentNotTracked },
+          { label: 'Social Reach', value: formatCount(reach), ...allTimeDelta, targetTab: 'INFLUENCER & SOCIAL', metricKey: 'social_reach', spark: reachSpark, sparkColor: accent },
+          { label: 'Share of Voice', value: `${sov}%`, ...allTimeDelta, metricKey: 'sov_pct', spark: sovNotTracked ? undefined : sovSpark, sparkColor: accent, notTracked: sovNotTracked },
+          { label: 'Influencer ROI', value: `${roi}x`, ...allTimeDelta, targetTab: 'INFLUENCER & SOCIAL', metricKey: 'influencer_roi', spark: roiNotTracked ? undefined : roiSpark, sparkColor: accent, notTracked: roiNotTracked },
         ]);
         setLoading(false);
         return;
@@ -273,12 +284,12 @@ const KpiBar = () => {
       const roiVal = r.influencer_roi ?? 0;
 
       setKpis([
-        { label: 'Press Placements', value: String(r.placement_count ?? 0), ...placementDelta, targetTab: 'EARNED MEDIA', spark: placementSpark, sparkColor: accent },
-        { label: 'Earned Media Value', value: formatMoney(r.emv_usd ?? 0), ...emvDelta, targetTab: 'EARNED MEDIA', spark: emvSpark, sparkColor: accent },
-        { label: 'Sentiment Score', value: `${r.sentiment_score ?? 0}/100`, ...sentimentDelta, spark: sentimentNotTracked ? undefined : sentimentSpark, sparkColor: accent, notTracked: sentimentNotTracked && !(r.sentiment_score) },
-        { label: 'Social Reach', value: formatCount(r.social_reach ?? 0), ...reachDelta, targetTab: 'INFLUENCER & SOCIAL', spark: reachSpark, sparkColor: accent },
-        { label: 'Share of Voice', value: `${r.sov_pct ?? 0}%`, ...sovDelta, spark: sovNotTracked ? undefined : sovSpark, sparkColor: accent, notTracked: sovNotTracked && !(r.sov_pct) },
-        { label: 'Influencer ROI', value: `${roiVal}x`, delta: 'stable', deltaType: 'neutral', targetTab: 'INFLUENCER & SOCIAL', spark: roiNotTracked ? undefined : roiSpark, sparkColor: accent, notTracked: roiNotTracked && !roiVal },
+        { label: 'Press Placements', value: String(r.placement_count ?? 0), ...placementDelta, targetTab: 'EARNED MEDIA', metricKey: 'placement_count', spark: placementSpark, sparkColor: accent },
+        { label: 'Earned Media Value', value: formatMoney(r.emv_usd ?? 0), ...emvDelta, targetTab: 'EARNED MEDIA', metricKey: 'emv_usd', spark: emvSpark, sparkColor: accent },
+        { label: 'Sentiment Score', value: `${r.sentiment_score ?? 0}/100`, ...sentimentDelta, metricKey: 'sentiment_score', spark: sentimentNotTracked ? undefined : sentimentSpark, sparkColor: accent, notTracked: sentimentNotTracked && !(r.sentiment_score) },
+        { label: 'Social Reach', value: formatCount(r.social_reach ?? 0), ...reachDelta, targetTab: 'INFLUENCER & SOCIAL', metricKey: 'social_reach', spark: reachSpark, sparkColor: accent },
+        { label: 'Share of Voice', value: `${r.sov_pct ?? 0}%`, ...sovDelta, metricKey: 'sov_pct', spark: sovNotTracked ? undefined : sovSpark, sparkColor: accent, notTracked: sovNotTracked && !(r.sov_pct) },
+        { label: 'Influencer ROI', value: `${roiVal}x`, delta: 'stable', deltaType: 'neutral', targetTab: 'INFLUENCER & SOCIAL', metricKey: 'influencer_roi', spark: roiNotTracked ? undefined : roiSpark, sparkColor: accent, notTracked: roiNotTracked && !roiVal },
       ]);
       setLoading(false);
     };
@@ -309,11 +320,20 @@ const KpiBar = () => {
   }
 
   return (
-    <div className="grid grid-cols-3 md:flex border-b border-black/10 bg-white">
-      {kpis.map((kpi) => (
-        <KpiCard key={kpi.label} {...kpi} />
-      ))}
-    </div>
+    <>
+      <div className="grid grid-cols-3 md:flex border-b border-black/10 bg-white">
+        {kpis.map((kpi) => (
+          <KpiCard key={kpi.label} {...kpi} onSelect={openDrawer} />
+        ))}
+      </div>
+      <KpiDrawer
+        open={drawerMetric !== null}
+        onOpenChange={(o) => { if (!o) setDrawerMetric(null); }}
+        metric={drawerMetric}
+        label={drawerLabel}
+        targetTab={drawerTab}
+      />
+    </>
   );
 };
 

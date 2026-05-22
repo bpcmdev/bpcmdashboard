@@ -17,6 +17,7 @@ import GeoAISovTab from '@/components/dashboard/GeoAISovTab';
 import PartnershipsTab from '@/components/dashboard/PartnershipsTab';
 import TikTokShopTab from '@/components/dashboard/TikTokShopTab';
 import GettingStarted, { useIsNewClient } from '@/components/dashboard/GettingStarted';
+import NotableThisWeek from '@/components/dashboard/NotableThisWeek';
 
 const TAB_MAP: Record<string, React.ComponentType> = {
   'KEY WINS': KeyWinsTab,
@@ -95,6 +96,7 @@ function DashboardContent() {
     >
       <DashboardHeader />
       {!showWelcome && <NarrativeTicker />}
+      {!showWelcome && <NotableThisWeek />}
       {!showWelcome && <KpiBar />}
       {!showWelcome && <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} enabledTabs={enabledTabs} isAdmin={isAdmin} />}
       {showWelcome ? (
