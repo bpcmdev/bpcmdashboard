@@ -15,6 +15,7 @@ interface PartnershipLite {
   status: string;
   description: string;
   emv_generated: number | null;
+  notes?: string | null;
 }
 
 interface Props {
@@ -37,6 +38,31 @@ interface PostLite {
   posted_at: string | null;
 }
 
+const getPostUrl = (post: Partial<PostLite> & Record<string, unknown>) => {
+  const candidates = [
+    post.post_link,
+    post.url,
+    post.link,
+    post.post_url,
+    post.permalink,
+    post.media_url,
+    post.source_url,
+  ];
+  return candidates.find((value): value is string => typeof value === 'string' && /^https?:\/\//i.test(value.trim()))?.trim();
+};
+
+const normalizePost = (post: Record<string, unknown>): PostLite => ({
+  id: String(post.id ?? crypto.randomUUID()),
+  author_name: typeof post.author_name === 'string' ? post.author_name : null,
+  network: typeof post.network === 'string' ? post.network : null,
+  campaign_name: typeof post.campaign_name === 'string' ? post.campaign_name : null,
+  reach: typeof post.reach === 'number' ? post.reach : null,
+  emv: typeof post.emv === 'number' ? post.emv : null,
+  engagement_rate: typeof post.engagement_rate === 'number' ? post.engagement_rate : null,
+  post_link: getPostUrl(post) ?? null,
+  posted_at: typeof post.posted_at === 'string' ? post.posted_at : null,
+});
+
 const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, variant = 'card' }: Props) => {
   const [open, setOpen] = useState(false);
   const [posts, setPosts] = useState<PostLite[] | null>(null);
@@ -52,7 +78,7 @@ const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, varia
       // Match posts by campaign_name containing the partner name (best-effort, no FK exists).
       let q = supabase
         .from('lefty_posts')
-        .select('id, author_name, network, campaign_name, reach, emv, engagement_rate, post_link, posted_at')
+        .select('*')
         .eq('client_id', activeClientId)
         .ilike('campaign_name', `%${name}%`)
         .order('emv', { ascending: false })
@@ -62,7 +88,7 @@ const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, varia
       }
       const { data } = await q;
       if (cancelled) return;
-      setPosts((data ?? []) as PostLite[]);
+      setPosts(((data ?? []) as Record<string, unknown>[]).map(normalizePost));
       setLoading(false);
     })();
     return () => { cancelled = true; };
@@ -82,11 +108,14 @@ const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, varia
       cur.emv += p.emv ?? 0;
       cur.reach += p.reach ?? 0;
       cur.posts += 1;
-      if ((p.emv ?? 0) > (cur.topPost.emv ?? 0)) cur.topPost = p;
+      const currentHasUrl = Boolean(getPostUrl(cur.topPost as unknown as Record<string, unknown>));
+      const nextHasUrl = Boolean(getPostUrl(p as unknown as Record<string, unknown>));
+      if ((nextHasUrl && !currentHasUrl) || (nextHasUrl === currentHasUrl && (p.emv ?? 0) > (cur.topPost.emv ?? 0))) cur.topPost = p;
       byAuthor.set(k, cur);
     }
     const topAuthors = Array.from(byAuthor.values()).sort((a, b) => b.emv - a.emv).slice(0, 3);
-    const topPosts = [...list].slice(0, 5);
+    const linkedPosts = list.filter((p) => Boolean(getPostUrl(p as unknown as Record<string, unknown>)));
+    const topPosts = (linkedPosts.length ? linkedPosts : list).slice(0, 5);
     return { totalEmv, totalReach, topAuthors, topPosts, count: list.length };
   })();
 
@@ -194,7 +223,7 @@ const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, varia
                       key={a.name}
                       url={a.topPost.post_link ?? undefined}
                       meta={postMeta(a.topPost, { posts: a.posts })}
-                      className="bg-white border border-black/[0.08] px-3 py-2 text-left hover:bg-black/[0.02] transition-colors w-full"
+                      className="bg-white border border-black/[0.08] px-3 py-2 text-left hover:bg-black/[0.02] transition-colors w-full cursor-pointer"
                     >
                       <p className="text-sm font-semibold text-foreground truncate">{a.name}</p>
                       <p className="text-[11px] text-muted-foreground">
@@ -219,7 +248,7 @@ const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, varia
                       key={p.id}
                       url={p.post_link ?? undefined}
                       meta={postMeta(p)}
-                      className="flex w-full items-center gap-3 px-3 py-2 hover:bg-black/[0.02] text-left"
+                      className="flex w-full items-center gap-3 px-3 py-2 hover:bg-black/[0.02] text-left cursor-pointer"
                     >
                       <span className="font-mono-ui text-[10px] text-muted-foreground w-4">{i + 1}</span>
                       <div className="flex-1 min-w-0">
@@ -244,7 +273,7 @@ const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, varia
               <span className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground mr-1">
                 Admin
               </span>
-              <EditPartnershipDialog entry={partnership as any} />
+              <EditPartnershipDialog entry={{ ...partnership, notes: partnership.notes ?? '' }} />
               <DeleteEntryButton table="partnerships" id={partnership.id} label="this partnership" />
             </div>
           )}
