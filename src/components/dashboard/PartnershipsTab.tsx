@@ -309,6 +309,8 @@ const PartnershipsTab = () => {
                       <Bar
                         dataKey="emv"
                         radius={[0, 2, 2, 0]}
+                        fill={`url(#${gradientId})`}
+                        isAnimationActive={false}
                         onClick={(d) => handleBarClick(d as unknown as CampaignStat)}
                         style={{ cursor: 'pointer' }}
                       >
@@ -318,8 +320,12 @@ const PartnershipsTab = () => {
                             <Cell
                               key={entry.id}
                               fill={`url(#${gradientId})`}
+                              stroke={accent}
+                              strokeOpacity={0}
                               fillOpacity={dim ? 0.5 : 1}
+                              style={{ cursor: 'pointer' }}
                               onMouseEnter={() => setHoverIdx(i)}
+                              onClick={() => handleBarClick(entry)}
                             />
                           );
                         })}
@@ -328,6 +334,7 @@ const PartnershipsTab = () => {
                           content={(props: { x?: number; y?: number; width?: number; height?: number; value?: number; index?: number }) => {
                             const { x = 0, y = 0, width = 0, height = 0, value = 0, index = 0 } = props;
                             const dim = hoverIdx !== null && hoverIdx !== index;
+                            const entry = emvData[index];
                             return (
                               <text
                                 x={x + width + 8}
@@ -339,6 +346,8 @@ const PartnershipsTab = () => {
                                 fontWeight={600}
                                 fill="hsl(0 0% 20%)"
                                 opacity={dim ? 0.4 : 1}
+                                style={{ cursor: 'pointer' }}
+                                onClick={() => entry && handleBarClick(entry)}
                               >
                                 {formatEmv(value)}
                               </text>
@@ -346,6 +355,7 @@ const PartnershipsTab = () => {
                           }}
                         />
                       </Bar>
+
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
