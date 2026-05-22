@@ -36,7 +36,7 @@ const statusBadge: Record<string, { label: string; style: string }> = {
 };
 
 const PartnershipsTab = () => {
-  const { refreshKey, activeClientId: clientId } = useWeek();
+  const { refreshKey, activeClientId: clientId, isAllTime, effectiveFrom, effectiveTo } = useWeek();
   const { isAdmin } = useAdmin();
   const [partnerships, setPartnerships] = useState<Partnership[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,14 +46,23 @@ const PartnershipsTab = () => {
 
   useEffect(() => {
     if (!clientId) return;
+    if (!isAllTime && (!effectiveFrom || !effectiveTo)) return;
     const fetch = async () => {
       setLoading(true);
       setError(false);
-      const { data, error: err } = await supabase
+      let q = supabase
         .from('partnerships')
         .select('*')
         .eq('client_id', clientId)
         .order('created_at', { ascending: false });
+      if (!isAllTime) {
+        // Include partnerships whose [start_date, end_date] window overlaps the selected window.
+        // Treat null start/end dates as open-ended (always overlap on that side).
+        q = q
+          .or(`start_date.is.null,start_date.lte.${effectiveTo}`)
+          .or(`end_date.is.null,end_date.gte.${effectiveFrom}`);
+      }
+      const { data, error: err } = await q;
       if (err) {
         console.error('[PartnershipsTab] error:', err);
         setError(true);
@@ -62,7 +71,7 @@ const PartnershipsTab = () => {
       setLoading(false);
     };
     fetch();
-  }, [clientId, refreshKey]);
+  }, [clientId, refreshKey, isAllTime, effectiveFrom, effectiveTo]);
 
   const active = partnerships.filter(p => p.status !== 'past');
   const past = partnerships.filter(p => p.status === 'past');
