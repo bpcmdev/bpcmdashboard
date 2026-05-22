@@ -2,9 +2,10 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { ALL_TABS } from './dashboardTabs';
 
-const PAGE_W = 595.28; // A4 portrait points
-const PAGE_H = 841.89;
-const MARGIN_X = 24;
+// A4 landscape points
+const PAGE_W = 841.89;
+const PAGE_H = 595.28;
+const MARGIN_X = 32;
 const HEADER_H = 56;
 const FOOTER_H = 24;
 const CONTENT_TOP = HEADER_H + 12;
