@@ -122,7 +122,7 @@ const InfluencerSocialTab = () => {
                 { label: 'Total Posts', value: stats.totalPosts.toLocaleString() },
                 { label: 'Total Impressions', value: formatReach(stats.totalImpressions) },
                 { label: 'Total EMV', value: fmtMoney(stats.totalEmv) },
-                { label: 'Avg Engagement', value: `${stats.avgEng.toFixed(2)}%` },
+                { label: 'Avg Engagement', value: `${(stats.avgEng * 100).toFixed(2)}%` },
               ].map((k) => (
                 <div key={k.label} className="bg-card border border-black/10 p-5">
                   <p className="font-mono-ui text-[10px] tracking-[0.18em] uppercase text-muted-foreground mb-2">{k.label}</p>
