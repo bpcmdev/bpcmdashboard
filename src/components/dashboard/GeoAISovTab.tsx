@@ -3,6 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recha
 import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
 import { useAdmin } from '@/hooks/useAdmin';
+import { LinkPreviewTrigger } from './LinkPreviewDrawer';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ViewToggle } from './AIVisibilityTab';
 import PaginationControls from './PaginationControls';
