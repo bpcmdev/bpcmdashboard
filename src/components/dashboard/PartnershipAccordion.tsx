@@ -32,6 +32,7 @@ interface PostLite {
   campaign_name: string | null;
   reach: number | null;
   emv: number | null;
+  engagement_rate: number | null;
   post_link: string | null;
   posted_at: string | null;
 }
@@ -51,7 +52,7 @@ const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, varia
       // Match posts by campaign_name containing the partner name (best-effort, no FK exists).
       let q = supabase
         .from('lefty_posts')
-        .select('id, author_name, network, campaign_name, reach, emv, post_link, posted_at')
+        .select('id, author_name, network, campaign_name, reach, emv, engagement_rate, post_link, posted_at')
         .eq('client_id', activeClientId)
         .ilike('campaign_name', `%${name}%`)
         .order('emv', { ascending: false })
@@ -74,19 +75,35 @@ const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, varia
     const list = posts ?? [];
     const totalEmv = list.reduce((s, p) => s + (p.emv ?? 0), 0);
     const totalReach = list.reduce((s, p) => s + (p.reach ?? 0), 0);
-    const byAuthor = new Map<string, { name: string; emv: number; reach: number; posts: number }>();
+    const byAuthor = new Map<string, { name: string; emv: number; reach: number; posts: number; topPost: PostLite }>();
     for (const p of list) {
       const k = p.author_name ?? '—';
-      const cur = byAuthor.get(k) ?? { name: k, emv: 0, reach: 0, posts: 0 };
+      const cur = byAuthor.get(k) ?? { name: k, emv: 0, reach: 0, posts: 0, topPost: p };
       cur.emv += p.emv ?? 0;
       cur.reach += p.reach ?? 0;
       cur.posts += 1;
+      if ((p.emv ?? 0) > (cur.topPost.emv ?? 0)) cur.topPost = p;
       byAuthor.set(k, cur);
     }
     const topAuthors = Array.from(byAuthor.values()).sort((a, b) => b.emv - a.emv).slice(0, 3);
     const topPosts = [...list].slice(0, 5);
     return { totalEmv, totalReach, topAuthors, topPosts, count: list.length };
   })();
+
+  const postMeta = (p: PostLite, extra?: { posts?: number }) => [
+    { label: 'Partner', value: partnership.partner_name },
+    { label: 'Creator', value: p.author_name ?? '—' },
+    { label: 'Network', value: (p.network ?? '—').toString() },
+    { label: 'EMV', value: formatMoney(p.emv ?? 0) },
+    ...(p.reach ? [{ label: 'Reach', value: formatCount(p.reach) }] : []),
+    ...(p.engagement_rate != null
+      ? [{ label: 'Engagement', value: `${(p.engagement_rate * 100).toFixed(2)}%` }]
+      : []),
+    ...(p.posted_at
+      ? [{ label: 'Posted', value: new Date(p.posted_at).toLocaleDateString() }]
+      : []),
+    ...(extra?.posts ? [{ label: 'Total Posts', value: String(extra.posts) }] : []),
+  ];
 
   const containerCls =
     variant === 'card'
@@ -173,7 +190,12 @@ const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, varia
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                   {breakdown.topAuthors.map((a) => (
-                    <div key={a.name} className="bg-white border border-black/[0.08] px-3 py-2">
+                    <LinkPreviewTrigger
+                      key={a.name}
+                      url={a.topPost.post_link ?? undefined}
+                      meta={postMeta(a.topPost, { posts: a.posts })}
+                      className="bg-white border border-black/[0.08] px-3 py-2 text-left hover:bg-black/[0.02] transition-colors w-full"
+                    >
                       <p className="text-sm font-semibold text-foreground truncate">{a.name}</p>
                       <p className="text-[11px] text-muted-foreground">
                         {a.posts} post{a.posts === 1 ? '' : 's'} · {formatCount(a.reach)} reach
@@ -181,7 +203,7 @@ const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, varia
                       <p className="font-display text-sm font-bold mt-0.5" style={{ color: accent }}>
                         {formatMoney(a.emv)}
                       </p>
-                    </div>
+                    </LinkPreviewTrigger>
                   ))}
                 </div>
               </div>
@@ -196,13 +218,7 @@ const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, varia
                     <LinkPreviewTrigger
                       key={p.id}
                       url={p.post_link ?? undefined}
-                      meta={[
-                        { label: 'Partner', value: partnership.partner_name },
-                        { label: 'Creator', value: p.author_name ?? '—' },
-                        { label: 'Network', value: (p.network ?? '—').toString() },
-                        { label: 'EMV', value: formatMoney(p.emv ?? 0) },
-                        ...(p.reach ? [{ label: 'Reach', value: formatCount(p.reach) }] : []),
-                      ]}
+                      meta={postMeta(p)}
                       className="flex w-full items-center gap-3 px-3 py-2 hover:bg-black/[0.02] text-left"
                     >
                       <span className="font-mono-ui text-[10px] text-muted-foreground w-4">{i + 1}</span>
