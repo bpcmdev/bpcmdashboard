@@ -279,18 +279,25 @@ export function LinkPreviewTrigger({
 }) {
   const { open } = useLinkPreview();
   const handle = (e: React.MouseEvent) => {
-    if (!url) return;
     e.preventDefault();
     e.stopPropagation();
+    // eslint-disable-next-line no-console
+    console.log('[LinkPreviewTrigger] click', { url, hasMeta: !!meta });
+    if (!url) {
+      // eslint-disable-next-line no-console
+      console.warn('[LinkPreviewTrigger] no url — nothing to preview');
+      return;
+    }
     open({ url, meta });
   };
   const Comp: any = Tag;
+  const cursorCls = url ? 'cursor-pointer' : 'cursor-not-allowed opacity-70';
   return (
     <Comp
       type={Tag === 'button' ? 'button' : undefined}
       href={Tag === 'a' ? (url ?? undefined) : undefined}
       onClick={handle}
-      className={className}
+      className={[className, cursorCls].filter(Boolean).join(' ')}
     >
       {children}
     </Comp>
