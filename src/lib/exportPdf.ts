@@ -118,7 +118,7 @@ export interface ExportOptions {
 
 export async function exportDashboardPdf(opts: ExportOptions): Promise<void> {
   const { brand, kpiEl, renderTab, onProgress } = opts;
-  const doc = new jsPDF({ unit: 'pt', format: 'a4', orientation: 'portrait' });
+  const doc = new jsPDF({ unit: 'pt', format: 'a4', orientation: 'landscape' });
   const generatedAt = new Date().toLocaleString('en-US', {
     month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
   });
