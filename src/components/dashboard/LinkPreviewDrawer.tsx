@@ -24,6 +24,7 @@ interface PreviewData {
   host?: string;
   embedHtml?: string;
   platform?: 'instagram' | 'tiktok' | 'youtube' | 'twitter' | 'web';
+  blocked?: boolean;
 }
 
 interface OpenArgs {
