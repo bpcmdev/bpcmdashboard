@@ -193,13 +193,17 @@ const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, varia
                 </p>
                 <div className="border border-black/[0.08] divide-y divide-black/[0.06] bg-white">
                   {breakdown.topPosts.map((p, i) => (
-                    <a
+                    <LinkPreviewTrigger
                       key={p.id}
-                      href={p.post_link ?? '#'}
-                      target={p.post_link ? '_blank' : undefined}
-                      rel="noreferrer"
-                      onClick={(e) => { if (!p.post_link) e.preventDefault(); }}
-                      className="flex items-center gap-3 px-3 py-2 hover:bg-black/[0.02]"
+                      url={p.post_link ?? undefined}
+                      meta={[
+                        { label: 'Partner', value: partnership.partner_name },
+                        { label: 'Creator', value: p.author_name ?? '—' },
+                        { label: 'Network', value: (p.network ?? '—').toString() },
+                        { label: 'EMV', value: formatMoney(p.emv ?? 0) },
+                        ...(p.reach ? [{ label: 'Reach', value: formatCount(p.reach) }] : []),
+                      ]}
+                      className="flex w-full items-center gap-3 px-3 py-2 hover:bg-black/[0.02] text-left"
                     >
                       <span className="font-mono-ui text-[10px] text-muted-foreground w-4">{i + 1}</span>
                       <div className="flex-1 min-w-0">
@@ -211,7 +215,7 @@ const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, varia
                       </div>
                       <span className="font-display text-xs font-bold tabular-nums shrink-0">{formatMoney(p.emv ?? 0)}</span>
                       {p.post_link && <ExternalLink className="w-3 h-3 text-muted-foreground shrink-0" />}
-                    </a>
+                    </LinkPreviewTrigger>
                   ))}
                 </div>
               </div>
