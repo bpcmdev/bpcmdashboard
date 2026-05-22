@@ -15,6 +15,7 @@ interface OgData {
   host?: string;
   embedHtml?: string;
   platform?: 'instagram' | 'tiktok' | 'youtube' | 'twitter' | 'web';
+  blocked?: boolean;
   error?: string;
 }
 
