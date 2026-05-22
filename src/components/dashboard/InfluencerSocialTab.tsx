@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from 'recharts';
 import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
+import { useAdmin } from '@/hooks/useAdmin';
 import DataStateWrapper from './DataStateWrapper';
 import EmptyState from './EmptyState';
-import { formatReach } from '@/lib/format';
+import { formatReach, formatMoney } from '@/lib/format';
 
 interface LeftyPost {
   id: string;
@@ -20,12 +21,7 @@ interface LeftyPost {
   posted_at?: string | null;
 }
 
-const fmtMoney = (n: number) => {
-  if (!n) return '$0';
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
-  return `$${Math.round(n)}`;
-};
+const fmtMoney = formatMoney;
 
 const normalizeNetwork = (n: string | null): string => {
   if (!n) return 'Other';

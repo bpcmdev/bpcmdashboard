@@ -1,4 +1,5 @@
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useAdmin } from '@/hooks/useAdmin';
 import {
   Select,
   SelectContent,
@@ -17,6 +18,8 @@ interface TabNavigationProps {
 
 const TabNavigation = ({ activeTab, onTabChange, enabledTabs, isAdmin }: TabNavigationProps) => {
   const isMobile = useIsMobile();
+  const { clientColor } = useAdmin();
+  const accent = clientColor || 'hsl(225 70% 35%)';
 
   // Admins always see every tab; clients are filtered by their enabled_tabs config.
   // If enabledTabs is null/undefined (e.g. column missing), default to showing all
@@ -50,19 +53,28 @@ const TabNavigation = ({ activeTab, onTabChange, enabledTabs, isAdmin }: TabNavi
   return (
     <div className="bg-white border-b border-black/10 px-6 overflow-x-auto">
       <div className="flex gap-0">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => onTabChange(tab.label)}
-            className={`font-mono-ui px-4 py-3 text-[10px] tracking-[0.12em] uppercase whitespace-nowrap transition-colors relative
-              ${activeTab === tab.label
-                ? 'text-foreground font-bold after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[3px] after:bg-[hsl(225,70%,35%)]'
-                : 'text-muted-foreground font-medium hover:text-foreground'
-              }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.label;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => onTabChange(tab.label)}
+              className={`font-mono-ui px-4 py-3 text-[10px] tracking-[0.12em] uppercase whitespace-nowrap transition-all duration-200 relative
+                ${isActive
+                  ? 'text-foreground font-bold'
+                  : 'text-muted-foreground font-medium hover:text-foreground'
+                }`}
+            >
+              {tab.label}
+              {isActive && (
+                <span
+                  className="absolute bottom-0 left-0 right-0 h-[3px] animate-fade-in"
+                  style={{ backgroundColor: accent }}
+                />
+              )}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
