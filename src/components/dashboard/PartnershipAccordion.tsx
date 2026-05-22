@@ -107,11 +107,14 @@ const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, varia
       cur.emv += p.emv ?? 0;
       cur.reach += p.reach ?? 0;
       cur.posts += 1;
-      if ((p.emv ?? 0) > (cur.topPost.emv ?? 0)) cur.topPost = p;
+      const currentHasUrl = Boolean(getPostUrl(cur.topPost as unknown as Record<string, unknown>));
+      const nextHasUrl = Boolean(getPostUrl(p as unknown as Record<string, unknown>));
+      if ((nextHasUrl && !currentHasUrl) || (nextHasUrl === currentHasUrl && (p.emv ?? 0) > (cur.topPost.emv ?? 0))) cur.topPost = p;
       byAuthor.set(k, cur);
     }
     const topAuthors = Array.from(byAuthor.values()).sort((a, b) => b.emv - a.emv).slice(0, 3);
-    const topPosts = [...list].slice(0, 5);
+    const linkedPosts = list.filter((p) => Boolean(getPostUrl(p as unknown as Record<string, unknown>)));
+    const topPosts = (linkedPosts.length ? linkedPosts : list).slice(0, 5);
     return { totalEmv, totalReach, topAuthors, topPosts, count: list.length };
   })();
 
