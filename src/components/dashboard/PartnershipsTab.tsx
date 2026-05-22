@@ -156,27 +156,23 @@ const PartnershipsTab = () => {
     setOpenSignals(prev => ({ ...prev, [data.id]: (prev[data.id] ?? 0) + 1 }));
   };
 
-  // Custom angled, wrapping x-axis tick
-  const renderTick = (props: { x: number; y: number; payload: { value: string } }) => {
+  // Right-aligned y-axis tick (campaign name) for horizontal bar chart
+  const renderYTick = (props: { x: number; y: number; payload: { value: string } }) => {
     const { x, y, payload } = props;
-    const text = payload.value ?? '';
-    const words = text.split(' ');
-    let line1 = text;
-    let line2 = '';
-    if (text.length > 16 && words.length > 1) {
-      const mid = Math.ceil(words.length / 2);
-      line1 = words.slice(0, mid).join(' ');
-      line2 = words.slice(mid).join(' ');
-    }
     return (
-      <g transform={`translate(${x},${y + 6})`}>
-        <text transform="rotate(-30)" textAnchor="end" fontSize={10} fill="hsl(0 0% 30%)" fontFamily="DM Mono, monospace">
-          <tspan x={0} dy={0}>{line1}</tspan>
-          {line2 && <tspan x={0} dy={12}>{line2}</tspan>}
-        </text>
-      </g>
+      <text
+        x={x - 8}
+        y={y}
+        textAnchor="end"
+        dominantBaseline="middle"
+        fontSize={11}
+        fill="hsl(0 0% 20%)"
+      >
+        {payload.value}
+      </text>
     );
   };
+
 
   // Custom tooltip
   const renderTooltip = ({ active: a, payload }: { active?: boolean; payload?: Array<{ payload: CampaignStat }> }) => {
