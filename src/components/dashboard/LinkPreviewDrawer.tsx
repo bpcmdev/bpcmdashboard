@@ -24,6 +24,7 @@ interface PreviewData {
   host?: string;
   embedHtml?: string;
   platform?: 'instagram' | 'tiktok' | 'youtube' | 'twitter' | 'web';
+  blocked?: boolean;
 }
 
 interface OpenArgs {
@@ -143,8 +144,8 @@ function LinkPreviewDrawer({ args, onClose }: { args: OpenArgs | null; onClose: 
             </div>
           )}
 
-          {/* OG image (if no embed) */}
-          {!embed && data?.image && (
+          {/* OG image (if no embed and not blocked) */}
+          {!embed && !data?.blocked && data?.image && (
             <a href={args?.url} target="_blank" rel="noopener noreferrer" className="block">
               <img
                 src={data.image}
@@ -155,8 +156,19 @@ function LinkPreviewDrawer({ args, onClose }: { args: OpenArgs | null; onClose: 
             </a>
           )}
 
-          {/* Title + description */}
-          {(data?.title || data?.description) && (
+          {/* Blocked notice (e.g. Instagram login wall) */}
+          {data?.blocked && (
+            <div className="flex items-start gap-2 text-xs text-muted-foreground border border-black/10 p-3 bg-black/[0.02]">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <p>
+                {data.platform === 'instagram' ? 'Instagram' : 'This site'} blocks unauthenticated previews.
+                Showing the data we have on file — open the original to see the full post.
+              </p>
+            </div>
+          )}
+
+          {/* Title + description (skip when blocked — the scraped values are useless) */}
+          {!data?.blocked && (data?.title || data?.description) && (
             <div>
               {data?.siteName && (
                 <p className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground mb-1">
@@ -211,7 +223,11 @@ function LinkPreviewDrawer({ args, onClose }: { args: OpenArgs | null; onClose: 
 
           <Button asChild variant="outline" size="sm" className="w-full gap-2 text-xs">
             <a href={args?.url} target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="w-3.5 h-3.5" /> View Original
+              <ExternalLink className="w-3.5 h-3.5" />
+              {data?.platform === 'instagram' ? 'View on Instagram'
+                : data?.platform === 'tiktok' ? 'View on TikTok'
+                : data?.platform === 'youtube' ? 'View on YouTube'
+                : 'View Original'}
             </a>
           </Button>
         </div>

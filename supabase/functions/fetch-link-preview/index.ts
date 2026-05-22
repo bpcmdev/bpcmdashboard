@@ -15,18 +15,32 @@ interface OgData {
   host?: string;
   embedHtml?: string;
   platform?: 'instagram' | 'tiktok' | 'youtube' | 'twitter' | 'web';
+  blocked?: boolean;
   error?: string;
 }
 
-function decode(s: string) {
-  return s
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&nbsp;/g, ' ');
+const NAMED_ENTITIES: Record<string, string> = {
+  amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ',
+  copy: '©', reg: '®', trade: '™', hellip: '…', mdash: '—', ndash: '–',
+  lsquo: '\u2018', rsquo: '\u2019', ldquo: '\u201C', rdquo: '\u201D',
+  laquo: '«', raquo: '»', bull: '•', middot: '·', deg: '°', euro: '€',
+  pound: '£', yen: '¥', cent: '¢', sect: '§', para: '¶', times: '×', divide: '÷',
+};
+
+function decode(s: string): string {
+  if (!s) return s;
+  // Numeric entities (decimal &#1234; and hex &#x1F62D;)
+  let out = s.replace(/&#(x?)([0-9a-fA-F]+);/g, (_, hex, code) => {
+    const n = parseInt(code, hex ? 16 : 10);
+    if (!Number.isFinite(n) || n <= 0) return '';
+    try { return String.fromCodePoint(n); } catch { return ''; }
+  });
+  // Named entities
+  out = out.replace(/&([a-zA-Z][a-zA-Z0-9]+);/g, (m, name) => NAMED_ENTITIES[name] ?? m);
+  // Run numeric pass again in case entities were nested
+  return out;
 }
+
 
 function pickMeta(html: string, names: string[]): string | undefined {
   for (const name of names) {
@@ -135,6 +149,23 @@ Deno.serve(async (req) => {
       data.image = data.image || oembed.image;
       data.author = data.author || oembed.author;
     }
+
+    // Detect blocked/broken Instagram OG (IG returns a generic login wall for many posts)
+    if (platform === 'instagram') {
+      const t = (data.title || '').trim().toLowerCase();
+      const desc = (data.description || '').trim();
+      const genericTitle =
+        !t ||
+        t === 'instagram' ||
+        t.startsWith('login') ||
+        t.startsWith('log in') ||
+        t.includes('page not found') ||
+        t.includes('content unavailable');
+      if (genericTitle && !desc && !data.embedHtml) {
+        data.blocked = true;
+      }
+    }
+
 
     return new Response(JSON.stringify(data), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
