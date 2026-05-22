@@ -36,6 +36,8 @@ const normalizeNetwork = (n: string | null): string => {
 
 const InfluencerSocialTab = () => {
   const { activeClientId, refreshKey, effectiveFrom, effectiveTo, isAllTime } = useWeek();
+  const { clientColor } = useAdmin();
+  const accent = clientColor || '#1B2B8A';
   const [posts, setPosts] = useState<LeftyPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
