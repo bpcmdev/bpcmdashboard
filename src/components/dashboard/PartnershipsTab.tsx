@@ -189,7 +189,7 @@ const PartnershipsTab = () => {
                       contentStyle={{ backgroundColor: 'white', border: '1px solid rgba(0,0,0,0.1)', borderRadius: '4px', color: 'hsl(0 0% 8%)', fontSize: 11 }}
                       formatter={(v: number) => formatEmv(v)}
                     />
-                    <Bar dataKey="emv" fill="#1B2B8A" fillOpacity={1} maxBarSize={48} radius={[2, 2, 0, 0]}>
+                    <Bar dataKey="emv" fill={accent} fillOpacity={1} maxBarSize={48} radius={[2, 2, 0, 0]}>
                       <LabelList
                         dataKey="emv"
                         position="top"
@@ -212,7 +212,7 @@ const PartnershipsTab = () => {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold">{h.partner_name}</p>
                       <p className="text-[11px] text-muted-foreground">{h.description}</p>
-                      {h.emv_generated && <p className="text-[10px] text-muted-foreground mt-0.5">${h.emv_generated}K EMV generated</p>}
+                      {h.emv_generated ? <p className="text-[10px] text-muted-foreground mt-0.5">{formatMoney(h.emv_generated)} EMV generated</p> : null}
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 bg-muted text-muted-foreground">PAST</span>
