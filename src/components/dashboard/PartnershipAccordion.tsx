@@ -6,6 +6,7 @@ import { useWeek } from '@/contexts/WeekContext';
 import { formatMoney, formatCount } from '@/lib/format';
 import EditPartnershipDialog from './EditPartnershipDialog';
 import DeleteEntryButton from './DeleteEntryButton';
+import { LinkPreviewTrigger } from './LinkPreviewDrawer';
 
 interface PartnershipLite {
   id: string;
