@@ -126,7 +126,9 @@ const Index = () => {
 
   return (
     <WeekProvider>
-      <DashboardContent />
+      <LinkPreviewProvider>
+        <DashboardContent />
+      </LinkPreviewProvider>
     </WeekProvider>
   );
 };
