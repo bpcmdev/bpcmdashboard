@@ -166,7 +166,7 @@ const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, varia
       : 'flex items-center gap-4 py-3 text-left w-full cursor-pointer hover:bg-black/[0.02] transition-colors';
 
   return (
-    <div className={containerCls} style={{ borderLeft: open ? `2px solid ${accent}` : undefined }}>
+    <div ref={rootRef} className={containerCls} style={{ borderLeft: open ? `2px solid ${accent}` : undefined }}>
       <button type="button" onClick={() => setOpen(o => !o)} className={headerCls}>
         {variant === 'card' && (
           <div
