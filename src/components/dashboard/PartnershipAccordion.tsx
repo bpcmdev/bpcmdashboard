@@ -136,8 +136,7 @@ const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, varia
       byAuthor.set(k, cur);
     }
     const topAuthors = Array.from(byAuthor.values()).sort((a, b) => b.emv - a.emv).slice(0, 3);
-    const linkedPosts = list.filter((p) => Boolean(getPostUrl(p as unknown as Record<string, unknown>)));
-    const topPosts = (linkedPosts.length ? linkedPosts : list).slice(0, 5);
+    const topPosts = [...list].sort((a, b) => (b.emv ?? 0) - (a.emv ?? 0)).slice(0, 5);
     return { totalEmv, totalReach, topAuthors, topPosts, count: list.length };
   })();
 
