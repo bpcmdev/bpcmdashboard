@@ -2,9 +2,10 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { ALL_TABS } from './dashboardTabs';
 
-const PAGE_W = 595.28; // A4 portrait points
-const PAGE_H = 841.89;
-const MARGIN_X = 24;
+// A4 landscape points
+const PAGE_W = 841.89;
+const PAGE_H = 595.28;
+const MARGIN_X = 32;
 const HEADER_H = 56;
 const FOOTER_H = 24;
 const CONTENT_TOP = HEADER_H + 12;
@@ -117,7 +118,7 @@ export interface ExportOptions {
 
 export async function exportDashboardPdf(opts: ExportOptions): Promise<void> {
   const { brand, kpiEl, renderTab, onProgress } = opts;
-  const doc = new jsPDF({ unit: 'pt', format: 'a4', orientation: 'portrait' });
+  const doc = new jsPDF({ unit: 'pt', format: 'a4', orientation: 'landscape' });
   const generatedAt = new Date().toLocaleString('en-US', {
     month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
   });

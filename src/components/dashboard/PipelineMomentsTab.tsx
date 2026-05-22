@@ -151,18 +151,18 @@ const PipelineMomentsTab = () => {
             <div className="overflow-x-auto bg-card border border-black/10">
               <div className="flex min-w-[900px]">
                 {Object.entries(monthGroups).map(([month, items]) => (
-                  <div key={month} className="flex-1 min-w-[170px] border-r border-black/10 p-3">
+                  <div key={month} className="flex-1 min-w-[170px] border-r border-black/10 p-3 pb-4">
                     <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-foreground mb-3">{month}</p>
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {items.map((e) => (
-                        <div key={e.id} className="flex flex-col gap-1">
+                        <div key={e.id} className="flex flex-col gap-1.5 pb-1">
                           <div className="flex items-start gap-1.5">
                             <span className="text-muted-foreground mt-0.5">●</span>
                             <p className="text-[10px] text-foreground/80 leading-snug flex-1">{e.title}{e.description ? ` — ${e.description}` : ''}</p>
                             {isAdmin && <EditPipelineDialog entry={e} />}
                             {isAdmin && <DeleteEntryButton table="pipeline_moments" id={e.id} label="this moment" />}
                           </div>
-                          <span className={`self-start text-[8px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 ${badgeStyles[e.event_type] ?? 'bg-muted text-muted-foreground'}`}>
+                          <span className={`self-start inline-flex items-center text-[8px] font-bold tracking-[0.1em] uppercase leading-none px-1.5 py-1 ${badgeStyles[e.event_type] ?? 'bg-muted text-muted-foreground'}`}>
                             {e.event_type.replace('-', ' ')}
                           </span>
                         </div>

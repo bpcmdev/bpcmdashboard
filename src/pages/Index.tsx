@@ -188,12 +188,12 @@ function DashboardContent() {
             position: 'fixed',
             left: -100000,
             top: 0,
-            width: 1280,
+            width: 1600,
             background: '#fff',
             pointerEvents: 'none',
           }}
         >
-          <div ref={exportTabHostRef} style={{ width: 1280 }}>
+          <div ref={exportTabHostRef} style={{ width: 1600, padding: '0 32px', background: '#fff' }}>
             {ExportTabComp ? <ExportTabComp /> : null}
           </div>
         </div>
