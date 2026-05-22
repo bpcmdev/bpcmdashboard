@@ -97,10 +97,39 @@ function formatCompact(n: number): string {
   return String(n);
 }
 
-function formatDelta(val: number, suffix: string): { delta: string; deltaType: 'positive' | 'negative' | 'neutral' } {
-  if (val > 0) return { delta: `${val}${suffix}`, deltaType: 'positive' };
-  if (val < 0) return { delta: `${Math.abs(val)}${suffix}`, deltaType: 'negative' };
-  return { delta: 'stable', deltaType: 'neutral' };
+type DeltaFmt = 'int' | 'currency' | 'compact' | 'points';
+
+function formatDeltaValue(val: number, fmt: DeltaFmt): string {
+  const abs = Math.abs(val);
+  switch (fmt) {
+    case 'currency':
+      return abs >= 1_000_000
+        ? `$${(abs / 1_000_000).toFixed(1)}M`
+        : abs >= 1_000
+        ? `$${(abs / 1_000).toFixed(1)}K`
+        : `$${abs.toLocaleString()}`;
+    case 'compact':
+      return abs >= 1_000_000
+        ? `${(abs / 1_000_000).toFixed(1)}M`
+        : abs >= 1_000
+        ? `${(abs / 1_000).toFixed(0)}K`
+        : String(abs);
+    case 'points':
+      return `${abs} pts`;
+    case 'int':
+    default:
+      return String(abs);
+  }
+}
+
+function formatDelta(val: number, fmt: DeltaFmt, suffix = 'vs prior week'): { delta: string; deltaType: 'positive' | 'negative' | 'neutral' } {
+  if (!val || !Number.isFinite(val)) return { delta: 'stable', deltaType: 'neutral' };
+  const sign = val > 0 ? '+' : '−';
+  const formatted = formatDeltaValue(val, fmt);
+  return {
+    delta: `${sign}${formatted} ${suffix}`,
+    deltaType: val > 0 ? 'positive' : 'negative',
+  };
 }
 
 const KpiBar = () => {
@@ -183,11 +212,11 @@ const KpiBar = () => {
       }
 
       const r = data as Record<string, any>;
-      const placementDelta = formatDelta(r.wow_placement_delta ?? 0, '% vs prior week');
-      const emvDelta = formatDelta(r.wow_emv_delta ?? 0, '%');
-      const sentimentDelta = formatDelta(r.mom_sentiment_delta ?? 0, 'pts MoM');
-      const reachDelta = formatDelta(r.wow_reach_delta ?? 0, '%');
-      const sovDelta = formatDelta(r.sov_delta_pts ?? 0, 'pts');
+      const placementDelta = formatDelta(r.wow_placement_delta ?? 0, 'int');
+      const emvDelta = formatDelta(r.wow_emv_delta ?? 0, 'currency');
+      const sentimentDelta = formatDelta(r.mom_sentiment_delta ?? 0, 'points', 'MoM');
+      const reachDelta = formatDelta(r.wow_reach_delta ?? 0, 'compact');
+      const sovDelta = formatDelta(r.sov_delta_pts ?? 0, 'points');
       const roiVal = r.influencer_roi ?? 0;
 
       setKpis([
