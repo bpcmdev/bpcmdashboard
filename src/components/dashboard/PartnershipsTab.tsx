@@ -7,6 +7,7 @@ import DataStateWrapper from './DataStateWrapper';
 import DeleteEntryButton from './DeleteEntryButton';
 import EditPartnershipDialog from './EditPartnershipDialog';
 import EmptyState from './EmptyState';
+import PartnershipAccordion from './PartnershipAccordion';
 import { formatMoney } from '@/lib/format';
 
 const PAGE_SIZE = 10;
