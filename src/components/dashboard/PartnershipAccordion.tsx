@@ -66,11 +66,21 @@ const normalizePost = (post: Record<string, unknown>): PostLite => ({
   posted_at: typeof post.posted_at === 'string' ? post.posted_at : null,
 });
 
-const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, variant = 'card' }: Props) => {
+const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, variant = 'card', openSignal }: Props) => {
   const [open, setOpen] = useState(false);
   const [posts, setPosts] = useState<PostLite[] | null>(null);
   const [loading, setLoading] = useState(false);
   const { activeClientId, isAllTime, effectiveFrom, effectiveTo } = useWeek();
+  const rootRef = (typeof window !== 'undefined') ? (useState(() => ({ current: null as HTMLDivElement | null }))[0]) : null;
+
+  useEffect(() => {
+    if (!openSignal) return;
+    setOpen(true);
+    requestAnimationFrame(() => {
+      rootRef?.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  }, [openSignal, rootRef]);
+
 
   useEffect(() => {
     if (!open || posts !== null || !activeClientId) return;
