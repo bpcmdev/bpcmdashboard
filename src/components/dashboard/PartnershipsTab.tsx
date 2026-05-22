@@ -117,7 +117,10 @@ const PartnershipsTab = () => {
   const activePaginated = active.slice((activePage - 1) * PAGE_SIZE, activePage * PAGE_SIZE);
   const pastPaginated = past.slice((pastPage - 1) * PAGE_SIZE, pastPage * PAGE_SIZE);
   const accent = clientColor || '#1B2B8A';
+  // eslint-disable-next-line no-console
+  console.log('[PartnershipsTab] chart accent →', { clientColor, accent });
   const gradientId = useMemo(() => `emvBar-${Math.random().toString(36).slice(2, 8)}`, []);
+
 
   const emvData: CampaignStat[] = useMemo(() => {
     const top = partnerships
