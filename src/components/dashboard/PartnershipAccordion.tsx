@@ -32,6 +32,7 @@ interface PostLite {
   campaign_name: string | null;
   reach: number | null;
   emv: number | null;
+  engagement_rate: number | null;
   post_link: string | null;
   posted_at: string | null;
 }
