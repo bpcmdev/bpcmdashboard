@@ -146,19 +146,26 @@ const PartnershipsTab = () => {
   const yTicks = useMemo(() => [0, 0.25, 0.5, 0.75, 1].map(f => yMax * f), [yMax]);
   const labelThreshold = yMax * 0.12;
 
-  const handleBarClick = (data: CampaignStat) => {
-    if (!data?.id) return;
-    const idx = active.findIndex(p => p.id === data.id);
+  const handleBarClick = (data: CampaignStat | undefined | null) => {
+    // Recharts sometimes wraps the entry; normalize.
+    const payload = (data && 'payload' in (data as object)
+      ? (data as unknown as { payload: CampaignStat }).payload
+      : (data as CampaignStat | null | undefined));
+    // eslint-disable-next-line no-console
+    console.log('[PartnershipsTab] bar click →', payload?.program, payload?.id);
+    if (!payload?.id) return;
+    const idx = active.findIndex(p => p.id === payload.id);
     if (idx >= 0) {
       const page = Math.floor(idx / PAGE_SIZE) + 1;
       setActivePage(page);
     }
-    setOpenSignals(prev => ({ ...prev, [data.id]: (prev[data.id] ?? 0) + 1 }));
+    setOpenSignals(prev => ({ ...prev, [payload.id]: (prev[payload.id] ?? 0) + 1 }));
   };
 
-  // Right-aligned y-axis tick (campaign name) for horizontal bar chart
-  const renderYTick = (props: { x: number; y: number; payload: { value: string } }) => {
+  // Right-aligned y-axis tick (campaign name) for horizontal bar chart — clickable
+  const renderYTick = (props: { x: number; y: number; payload: { value: string; index?: number } }) => {
     const { x, y, payload } = props;
+    const entry = emvData.find(d => d.program === payload.value);
     return (
       <text
         x={x - 8}
@@ -167,11 +174,14 @@ const PartnershipsTab = () => {
         dominantBaseline="middle"
         fontSize={11}
         fill="hsl(0 0% 20%)"
+        style={{ cursor: entry ? 'pointer' : 'default' }}
+        onClick={() => entry && handleBarClick(entry)}
       >
         {payload.value}
       </text>
     );
   };
+
 
 
   // Custom tooltip
