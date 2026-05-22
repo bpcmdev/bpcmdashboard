@@ -1,1 +1,3 @@
 project_id = "jjywooqvswdrjdsksefr"
+[functions.fetch-link-preview]
+verify_jwt = false

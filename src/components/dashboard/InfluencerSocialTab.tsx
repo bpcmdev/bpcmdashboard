@@ -6,6 +6,7 @@ import { useAdmin } from '@/hooks/useAdmin';
 import DataStateWrapper from './DataStateWrapper';
 import EmptyState from './EmptyState';
 import { formatReach, formatMoney } from '@/lib/format';
+import { LinkPreviewTrigger } from './LinkPreviewDrawer';
 
 interface LeftyPost {
   id: string;
@@ -180,7 +181,20 @@ const InfluencerSocialTab = () => {
                         <td className="py-3 pr-4 font-mono-ui text-xs text-muted-foreground">{i + 1}</td>
                         <td className="py-3 pr-4 font-medium text-foreground">
                           {p.post_link ? (
-                            <a href={p.post_link} target="_blank" rel="noreferrer" className="hover:underline">{p.author_name ?? '—'}</a>
+                            <LinkPreviewTrigger
+                              url={p.post_link}
+                              meta={[
+                                { label: 'Author', value: p.author_name ?? '—' },
+                                { label: 'Campaign', value: p.campaign_name ?? '—' },
+                                { label: 'Network', value: normalizeNetwork(p.network) },
+                                { label: 'EMV', value: fmtMoney(p.emv ?? 0) },
+                                { label: 'Reach', value: formatReach(p.reach ?? 0) },
+                                ...(p.engagement_rate != null ? [{ label: 'Engagement', value: `${(p.engagement_rate * 100).toFixed(2)}%` }] : []),
+                              ]}
+                              className="hover:underline text-left"
+                            >
+                              {p.author_name ?? '—'}
+                            </LinkPreviewTrigger>
                           ) : (p.author_name ?? '—')}
                         </td>
                         <td className="py-3 pr-4 text-foreground/80 truncate max-w-xs">{p.campaign_name ?? '—'}</td>

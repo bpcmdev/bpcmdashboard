@@ -3,6 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recha
 import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
 import { useAdmin } from '@/hooks/useAdmin';
+import { LinkPreviewTrigger } from './LinkPreviewDrawer';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ViewToggle } from './AIVisibilityTab';
 import PaginationControls from './PaginationControls';
@@ -591,11 +592,12 @@ const GeoAISovTab = () => {
                           const url = typeof s === 'string' ? s : s.url || s.link || '';
                           const domain = typeof s === 'object' && s.domain ? s.domain : (() => { try { return new URL(url).hostname; } catch { return url; } })();
                           return (
-                            <a key={i} href={url} target="_blank" rel="noopener noreferrer"
-                              className="flex items-center justify-between bg-secondary/30 px-3 py-1.5 border border-border hover:bg-secondary/60 transition-colors">
+                            <LinkPreviewTrigger key={i} url={url}
+                              meta={[{ label: 'Domain', value: domain }]}
+                              className="flex w-full items-center justify-between bg-secondary/30 px-3 py-1.5 border border-border hover:bg-secondary/60 transition-colors text-left">
                               <span className="text-xs font-medium text-foreground truncate">{domain}</span>
                               <span className="text-[10px] text-muted-foreground shrink-0 ml-2">↗</span>
-                            </a>
+                            </LinkPreviewTrigger>
                           );
                         })}
                       </div>

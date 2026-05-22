@@ -18,6 +18,7 @@ import PartnershipsTab from '@/components/dashboard/PartnershipsTab';
 import TikTokShopTab from '@/components/dashboard/TikTokShopTab';
 import GettingStarted, { useIsNewClient } from '@/components/dashboard/GettingStarted';
 import NotableThisWeek from '@/components/dashboard/NotableThisWeek';
+import { LinkPreviewProvider } from '@/components/dashboard/LinkPreviewDrawer';
 
 const TAB_MAP: Record<string, React.ComponentType> = {
   'KEY WINS': KeyWinsTab,
@@ -125,7 +126,9 @@ const Index = () => {
 
   return (
     <WeekProvider>
-      <DashboardContent />
+      <LinkPreviewProvider>
+        <DashboardContent />
+      </LinkPreviewProvider>
     </WeekProvider>
   );
 };
