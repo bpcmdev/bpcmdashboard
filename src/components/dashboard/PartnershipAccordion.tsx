@@ -219,7 +219,7 @@ const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, varia
                       key={a.name}
                       url={a.topPost.post_link ?? undefined}
                       meta={postMeta(a.topPost, { posts: a.posts })}
-                      className="bg-white border border-black/[0.08] px-3 py-2 text-left hover:bg-black/[0.02] transition-colors w-full"
+                      className="bg-white border border-black/[0.08] px-3 py-2 text-left hover:bg-black/[0.02] transition-colors w-full cursor-pointer"
                     >
                       <p className="text-sm font-semibold text-foreground truncate">{a.name}</p>
                       <p className="text-[11px] text-muted-foreground">
@@ -244,7 +244,7 @@ const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, varia
                       key={p.id}
                       url={p.post_link ?? undefined}
                       meta={postMeta(p)}
-                      className="flex w-full items-center gap-3 px-3 py-2 hover:bg-black/[0.02] text-left"
+                      className="flex w-full items-center gap-3 px-3 py-2 hover:bg-black/[0.02] text-left cursor-pointer"
                     >
                       <span className="font-mono-ui text-[10px] text-muted-foreground w-4">{i + 1}</span>
                       <div className="flex-1 min-w-0">
