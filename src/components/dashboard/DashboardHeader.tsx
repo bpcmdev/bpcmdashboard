@@ -34,7 +34,10 @@ const DashboardHeader = () => {
   }, []);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const currentLabel = weeks.find(w => w.weekStart === selectedWeek)?.label ?? 'Loading…';
+  const isAllTime = selectedWeek === 'all-time';
+  const currentLabel = isAllTime
+    ? 'All Time'
+    : (weeks.find(w => w.weekStart === selectedWeek)?.label ?? 'Loading…');
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
