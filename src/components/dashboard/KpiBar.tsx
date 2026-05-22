@@ -97,10 +97,39 @@ function formatCompact(n: number): string {
   return String(n);
 }
 
-function formatDelta(val: number, suffix: string): { delta: string; deltaType: 'positive' | 'negative' | 'neutral' } {
-  if (val > 0) return { delta: `${val}${suffix}`, deltaType: 'positive' };
-  if (val < 0) return { delta: `${Math.abs(val)}${suffix}`, deltaType: 'negative' };
-  return { delta: 'stable', deltaType: 'neutral' };
+type DeltaFmt = 'int' | 'currency' | 'compact' | 'points';
+
+function formatDeltaValue(val: number, fmt: DeltaFmt): string {
+  const abs = Math.abs(val);
+  switch (fmt) {
+    case 'currency':
+      return abs >= 1_000_000
+        ? `$${(abs / 1_000_000).toFixed(1)}M`
+        : abs >= 1_000
+        ? `$${(abs / 1_000).toFixed(1)}K`
+        : `$${abs.toLocaleString()}`;
+    case 'compact':
+      return abs >= 1_000_000
+        ? `${(abs / 1_000_000).toFixed(1)}M`
+        : abs >= 1_000
+        ? `${(abs / 1_000).toFixed(0)}K`
+        : String(abs);
+    case 'points':
+      return `${abs} pts`;
+    case 'int':
+    default:
+      return String(abs);
+  }
+}
+
+function formatDelta(val: number, fmt: DeltaFmt, suffix = 'vs prior week'): { delta: string; deltaType: 'positive' | 'negative' | 'neutral' } {
+  if (!val || !Number.isFinite(val)) return { delta: 'stable', deltaType: 'neutral' };
+  const sign = val > 0 ? '+' : '−';
+  const formatted = formatDeltaValue(val, fmt);
+  return {
+    delta: `${sign}${formatted} ${suffix}`,
+    deltaType: val > 0 ? 'positive' : 'negative',
+  };
 }
 
 const KpiBar = () => {
