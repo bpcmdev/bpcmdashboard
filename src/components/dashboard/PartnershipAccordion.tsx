@@ -71,15 +71,16 @@ const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, varia
   const [posts, setPosts] = useState<PostLite[] | null>(null);
   const [loading, setLoading] = useState(false);
   const { activeClientId, isAllTime, effectiveFrom, effectiveTo } = useWeek();
-  const rootRef = (typeof window !== 'undefined') ? (useState(() => ({ current: null as HTMLDivElement | null }))[0]) : null;
+  const rootRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!openSignal) return;
     setOpen(true);
     requestAnimationFrame(() => {
-      rootRef?.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      rootRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
-  }, [openSignal, rootRef]);
+  }, [openSignal]);
+
 
 
   useEffect(() => {
