@@ -6,6 +6,7 @@ import { useAdmin } from '@/hooks/useAdmin';
 import DataStateWrapper from './DataStateWrapper';
 import EmptyState from './EmptyState';
 import { formatReach, formatMoney } from '@/lib/format';
+import { LinkPreviewTrigger } from './LinkPreviewDrawer';
 
 interface LeftyPost {
   id: string;
