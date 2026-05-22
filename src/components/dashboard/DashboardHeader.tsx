@@ -34,7 +34,10 @@ const DashboardHeader = () => {
   }, []);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const currentLabel = weeks.find(w => w.weekStart === selectedWeek)?.label ?? 'Loading…';
+  const isAllTime = selectedWeek === 'all-time';
+  const currentLabel = isAllTime
+    ? 'All Time'
+    : (weeks.find(w => w.weekStart === selectedWeek)?.label ?? 'Loading…');
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -101,7 +104,7 @@ const DashboardHeader = () => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="header-chip">
-                Week of {currentLabel}
+                {isAllTime ? currentLabel : `Week of ${currentLabel}`}
                 <ChevronDown className="w-3 h-3 opacity-60" />
               </button>
             </DropdownMenuTrigger>

@@ -8,6 +8,8 @@ interface WeekOption {
 
 export type DateRangeMode = 'week' | 'range';
 
+export const ALL_TIME_VALUE = 'all-time';
+
 interface WeekContextType {
   selectedWeek: string;
   setSelectedWeek: (week: string) => void;
@@ -19,20 +21,21 @@ interface WeekContextType {
   overrideClientId: string | null;
   setOverrideClientId: (id: string | null) => void;
   activeClientId: string | null;
-  /** Earned Media date-range mode + bounds (YYYY-MM-DD). When mode='week', range mirrors selected week. */
   rangeMode: DateRangeMode;
   setRangeMode: (m: DateRangeMode) => void;
   rangeFrom: string;
   rangeTo: string;
   setRangeFrom: (d: string) => void;
   setRangeTo: (d: string) => void;
-  /** Effective start/end derived from week or custom range — use these in queries. */
+  /** Effective start/end derived from week or custom range — empty strings when in All Time mode. */
   effectiveFrom: string;
   effectiveTo: string;
+  /** True when the dashboard should aggregate all-time data (no date filter). */
+  isAllTime: boolean;
 }
 
 const WeekContext = createContext<WeekContextType>({
-  selectedWeek: '',
+  selectedWeek: ALL_TIME_VALUE,
   setSelectedWeek: () => {},
   weeks: [],
   loading: true,
@@ -50,6 +53,7 @@ const WeekContext = createContext<WeekContextType>({
   setRangeTo: () => {},
   effectiveFrom: '',
   effectiveTo: '',
+  isAllTime: true,
 });
 
 export const useWeek = () => useContext(WeekContext);
@@ -95,7 +99,7 @@ function formatWeekLabel(weekStart: string): string {
 
 export const WeekProvider = ({ children }: { children: ReactNode }) => {
   const [weeks, setWeeks] = useState<WeekOption[]>([]);
-  const [selectedWeek, setSelectedWeek] = useState('');
+  const [selectedWeek, setSelectedWeek] = useState<string>(ALL_TIME_VALUE);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -164,22 +168,23 @@ export const WeekProvider = ({ children }: { children: ReactNode }) => {
         weekOptions = generateLast12Weeks();
       }
 
-      setWeeks(weekOptions);
-      if (weekOptions.length > 0) {
-        setSelectedWeek(weekOptions[0].weekStart);
-      }
+      // Always prepend the synthetic "All Time" option so it's the default + always available.
+      const withAllTime: WeekOption[] = [{ label: 'All Time', weekStart: ALL_TIME_VALUE }, ...weekOptions];
+      setWeeks(withAllTime);
       setLastUpdated(new Date());
       setLoading(false);
     };
     fetchWeeks();
   }, [activeClientId, userClientId]);
 
+  const isAllTime = rangeMode === 'week' && (selectedWeek === ALL_TIME_VALUE || !selectedWeek);
+
   let effectiveFrom = '';
   let effectiveTo = '';
   if (rangeMode === 'range' && rangeFrom && rangeTo) {
     effectiveFrom = rangeFrom;
     effectiveTo = rangeTo;
-  } else if (selectedWeek) {
+  } else if (!isAllTime && selectedWeek) {
     const end = new Date(selectedWeek + 'T00:00:00');
     end.setDate(end.getDate() + 6);
     effectiveFrom = selectedWeek;
@@ -191,7 +196,7 @@ export const WeekProvider = ({ children }: { children: ReactNode }) => {
       selectedWeek, setSelectedWeek, weeks, loading, lastUpdated, refreshData, refreshKey,
       overrideClientId, setOverrideClientId, activeClientId,
       rangeMode, setRangeMode, rangeFrom, rangeTo, setRangeFrom, setRangeTo,
-      effectiveFrom, effectiveTo,
+      effectiveFrom, effectiveTo, isAllTime,
     }}>
       {children}
     </WeekContext.Provider>
