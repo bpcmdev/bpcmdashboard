@@ -24,7 +24,10 @@ interface Props {
   accent: string;
   isAdmin?: boolean;
   variant?: 'card' | 'row';
+  /** When this number changes (and is > 0), force the accordion open and scroll into view. */
+  openSignal?: number;
 }
+
 
 interface PostLite {
   id: string;
