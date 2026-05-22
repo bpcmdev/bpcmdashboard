@@ -223,7 +223,11 @@ function LinkPreviewDrawer({ args, onClose }: { args: OpenArgs | null; onClose: 
 
           <Button asChild variant="outline" size="sm" className="w-full gap-2 text-xs">
             <a href={args?.url} target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="w-3.5 h-3.5" /> View Original
+              <ExternalLink className="w-3.5 h-3.5" />
+              {data?.platform === 'instagram' ? 'View on Instagram'
+                : data?.platform === 'tiktok' ? 'View on TikTok'
+                : data?.platform === 'youtube' ? 'View on YouTube'
+                : 'View Original'}
             </a>
           </Button>
         </div>
