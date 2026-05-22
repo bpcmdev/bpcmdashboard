@@ -32,6 +32,8 @@ const niceCeil = (n: number) => {
   return nice * pow;
 };
 
+const normalizeCampaignName = (value: string | null | undefined) => value?.trim().toLowerCase() ?? '';
+
 interface CampaignStat {
   id: string;
   program: string;
@@ -149,20 +151,25 @@ const PartnershipsTab = () => {
   const yTicks = useMemo(() => [0, 0.25, 0.5, 0.75, 1].map(f => yMax * f), [yMax]);
   const labelThreshold = yMax * 0.12;
 
-  const handleBarClick = (data: CampaignStat | undefined | null) => {
-    // Recharts sometimes wraps the entry; normalize.
-    const payload = (data && 'payload' in (data as object)
-      ? (data as unknown as { payload: CampaignStat }).payload
-      : (data as CampaignStat | null | undefined));
+  const handleBarClick = (data: unknown, index?: number) => {
+    const candidate = data as Partial<CampaignStat> & { payload?: CampaignStat; name?: string } | null | undefined;
+    const payload = candidate?.payload ?? (candidate?.program ? candidate as CampaignStat : undefined) ?? (typeof index === 'number' ? emvData[index] : undefined);
+    const label = payload?.program ?? candidate?.name ?? '';
+    const normalizedLabel = normalizeCampaignName(label);
+    const match = partnerships.find(p => normalizeCampaignName(p.partner_name) === normalizedLabel);
+    const activeIdx = match ? active.findIndex(p => p.id === match.id) : -1;
+    const pastIdx = match ? past.findIndex(p => p.id === match.id) : -1;
     // eslint-disable-next-line no-console
-    console.log('[PartnershipsTab] bar click →', payload?.program, payload?.id);
-    if (!payload?.id) return;
-    const idx = active.findIndex(p => p.id === payload.id);
-    if (idx >= 0) {
-      const page = Math.floor(idx / PAGE_SIZE) + 1;
+    console.log(`[BarClick] clicked: '${label}' | searching partnerships: ${partnerships.length} | match found: ${Boolean(match)}`);
+    if (!match) return;
+    if (activeIdx >= 0) {
+      const page = Math.floor(activeIdx / PAGE_SIZE) + 1;
       setActivePage(page);
+    } else if (pastIdx >= 0) {
+      const page = Math.floor(pastIdx / PAGE_SIZE) + 1;
+      setPastPage(page);
     }
-    setOpenSignals(prev => ({ ...prev, [payload.id]: (prev[payload.id] ?? 0) + 1 }));
+    setOpenSignals(prev => ({ ...prev, [match.id]: (prev[match.id] ?? 0) + 1 }));
   };
 
   // Right-aligned y-axis tick (campaign name) for horizontal bar chart — clickable
@@ -314,7 +321,7 @@ const PartnershipsTab = () => {
                         radius={[0, 2, 2, 0]}
                         fill={`url(#${gradientId})`}
                         isAnimationActive={false}
-                        onClick={(d) => handleBarClick(d as unknown as CampaignStat)}
+                        onClick={(d, index) => handleBarClick(d, index)}
                         style={{ cursor: 'pointer' }}
                       >
                         {emvData.map((entry, i) => {
@@ -328,7 +335,6 @@ const PartnershipsTab = () => {
                               fillOpacity={dim ? 0.5 : 1}
                               style={{ cursor: 'pointer' }}
                               onMouseEnter={() => setHoverIdx(i)}
-                              onClick={() => handleBarClick(entry)}
                             />
                           );
                         })}
@@ -380,6 +386,7 @@ const PartnershipsTab = () => {
                     accent={accent}
                     isAdmin={isAdmin}
                     variant="row"
+                    openSignal={openSignals[h.id]}
                   />
                 ))}
               </div>
