@@ -190,7 +190,12 @@ const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, varia
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                   {breakdown.topAuthors.map((a) => (
-                    <div key={a.name} className="bg-white border border-black/[0.08] px-3 py-2">
+                    <LinkPreviewTrigger
+                      key={a.name}
+                      url={a.topPost.post_link ?? undefined}
+                      meta={postMeta(a.topPost, { posts: a.posts })}
+                      className="bg-white border border-black/[0.08] px-3 py-2 text-left hover:bg-black/[0.02] transition-colors w-full"
+                    >
                       <p className="text-sm font-semibold text-foreground truncate">{a.name}</p>
                       <p className="text-[11px] text-muted-foreground">
                         {a.posts} post{a.posts === 1 ? '' : 's'} · {formatCount(a.reach)} reach
@@ -198,7 +203,7 @@ const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, varia
                       <p className="font-display text-sm font-bold mt-0.5" style={{ color: accent }}>
                         {formatMoney(a.emv)}
                       </p>
-                    </div>
+                    </LinkPreviewTrigger>
                   ))}
                 </div>
               </div>
@@ -213,13 +218,7 @@ const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, varia
                     <LinkPreviewTrigger
                       key={p.id}
                       url={p.post_link ?? undefined}
-                      meta={[
-                        { label: 'Partner', value: partnership.partner_name },
-                        { label: 'Creator', value: p.author_name ?? '—' },
-                        { label: 'Network', value: (p.network ?? '—').toString() },
-                        { label: 'EMV', value: formatMoney(p.emv ?? 0) },
-                        ...(p.reach ? [{ label: 'Reach', value: formatCount(p.reach) }] : []),
-                      ]}
+                      meta={postMeta(p)}
                       className="flex w-full items-center gap-3 px-3 py-2 hover:bg-black/[0.02] text-left"
                     >
                       <span className="font-mono-ui text-[10px] text-muted-foreground w-4">{i + 1}</span>
