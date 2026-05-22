@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid, LabelList } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid, LabelList, Cell } from 'recharts';
 import { supabase } from '@/lib/supabase';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useWeek } from '@/contexts/WeekContext';
@@ -8,10 +8,39 @@ import DeleteEntryButton from './DeleteEntryButton';
 import EditPartnershipDialog from './EditPartnershipDialog';
 import EmptyState from './EmptyState';
 import PartnershipAccordion from './PartnershipAccordion';
-import { formatMoney } from '@/lib/format';
+import { formatMoney, formatCount } from '@/lib/format';
 
 const PAGE_SIZE = 10;
 const formatEmv = formatMoney;
+
+// Same keyword extraction used inside PartnershipAccordion — keep in sync.
+const coreKeyword = (name: string) => {
+  const core = name
+    .replace(/\b(all|event|events|campaign|campaigns|seeding|rollup|influencer|influencers)\b/gi, '')
+    .replace(/[-–—_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return core.length >= 4 ? core.toLowerCase() : name.trim().toLowerCase();
+};
+
+// Round up to a "nice" max for evenly-spaced y-axis ticks (multiples of 1/2/2.5/5 × 10^n).
+const niceCeil = (n: number) => {
+  if (n <= 0) return 1;
+  const pow = Math.pow(10, Math.floor(Math.log10(n)));
+  const frac = n / pow;
+  const nice = frac <= 1 ? 1 : frac <= 2 ? 2 : frac <= 2.5 ? 2.5 : frac <= 5 ? 5 : 10;
+  return nice * pow;
+};
+
+interface CampaignStat {
+  id: string;
+  program: string;
+  emv: number;
+  posts: number;
+  influencers: number;
+  reach: number;
+}
+
 
 interface Partnership {
   id: string;
