@@ -37,6 +37,31 @@ interface PostLite {
   posted_at: string | null;
 }
 
+const getPostUrl = (post: Partial<PostLite> & Record<string, unknown>) => {
+  const candidates = [
+    post.post_link,
+    post.url,
+    post.link,
+    post.post_url,
+    post.permalink,
+    post.media_url,
+    post.source_url,
+  ];
+  return candidates.find((value): value is string => typeof value === 'string' && /^https?:\/\//i.test(value.trim()))?.trim();
+};
+
+const normalizePost = (post: Record<string, unknown>): PostLite => ({
+  id: String(post.id ?? crypto.randomUUID()),
+  author_name: typeof post.author_name === 'string' ? post.author_name : null,
+  network: typeof post.network === 'string' ? post.network : null,
+  campaign_name: typeof post.campaign_name === 'string' ? post.campaign_name : null,
+  reach: typeof post.reach === 'number' ? post.reach : null,
+  emv: typeof post.emv === 'number' ? post.emv : null,
+  engagement_rate: typeof post.engagement_rate === 'number' ? post.engagement_rate : null,
+  post_link: getPostUrl(post) ?? null,
+  posted_at: typeof post.posted_at === 'string' ? post.posted_at : null,
+});
+
 const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, variant = 'card' }: Props) => {
   const [open, setOpen] = useState(false);
   const [posts, setPosts] = useState<PostLite[] | null>(null);
