@@ -104,7 +104,7 @@ const DashboardHeader = () => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="header-chip">
-                Week of {currentLabel}
+                {isAllTime ? currentLabel : `Week of ${currentLabel}`}
                 <ChevronDown className="w-3 h-3 opacity-60" />
               </button>
             </DropdownMenuTrigger>
