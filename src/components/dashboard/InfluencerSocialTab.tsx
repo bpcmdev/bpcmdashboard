@@ -39,13 +39,15 @@ const normalizeNetwork = (n: string | null): string => {
 };
 
 const InfluencerSocialTab = () => {
-  const { activeClientId, refreshKey, effectiveFrom, effectiveTo } = useWeek();
+  const { activeClientId, refreshKey, effectiveFrom, effectiveTo, isAllTime } = useWeek();
   const [posts, setPosts] = useState<LeftyPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    if (!activeClientId || !effectiveFrom || !effectiveTo) return;
+    if (!activeClientId) return;
+    // In weekly/range mode we need a resolved date window; in all-time mode we skip the filter entirely.
+    if (!isAllTime && (!effectiveFrom || !effectiveTo)) return;
     let cancelled = false;
     (async () => {
       setLoading(true);
@@ -53,20 +55,19 @@ const InfluencerSocialTab = () => {
       const PAGE = 1000;
       const all: LeftyPost[] = [];
       let from = 0;
-      // Paginate to bypass PostgREST's default 1000-row cap
-      // and scope to the selected week / date range.
-      // posted_at is the publish date on lefty_posts.
-      // effectiveTo is an inclusive day; use lte on date string.
       // eslint-disable-next-line no-constant-condition
       while (true) {
-        const { data, error: err } = await supabase
+        let q = supabase
           .from('lefty_posts')
           .select('id, campaign_name, network, author_name, followers, impressions, reach, emv, engagement_rate, post_link, posted_at')
           .eq('client_id', activeClientId)
-          .gte('posted_at', effectiveFrom)
-          .lte('posted_at', `${effectiveTo}T23:59:59.999Z`)
-          .order('posted_at', { ascending: false })
-          .range(from, from + PAGE - 1);
+          .order('posted_at', { ascending: false });
+        if (!isAllTime) {
+          q = q
+            .gte('posted_at', effectiveFrom)
+            .lte('posted_at', `${effectiveTo}T23:59:59.999Z`);
+        }
+        const { data, error: err } = await q.range(from, from + PAGE - 1);
         if (cancelled) return;
         if (err) { setError(true); setLoading(false); return; }
         const batch = (data as LeftyPost[]) ?? [];
@@ -80,7 +81,7 @@ const InfluencerSocialTab = () => {
       setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [activeClientId, refreshKey, effectiveFrom, effectiveTo]);
+  }, [activeClientId, refreshKey, effectiveFrom, effectiveTo, isAllTime]);
 
   const stats = useMemo(() => {
     const totalPosts = posts.length;
