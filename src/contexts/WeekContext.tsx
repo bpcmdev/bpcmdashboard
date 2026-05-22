@@ -8,6 +8,8 @@ interface WeekOption {
 
 export type DateRangeMode = 'week' | 'range';
 
+export const ALL_TIME_VALUE = 'all-time';
+
 interface WeekContextType {
   selectedWeek: string;
   setSelectedWeek: (week: string) => void;
@@ -19,20 +21,21 @@ interface WeekContextType {
   overrideClientId: string | null;
   setOverrideClientId: (id: string | null) => void;
   activeClientId: string | null;
-  /** Earned Media date-range mode + bounds (YYYY-MM-DD). When mode='week', range mirrors selected week. */
   rangeMode: DateRangeMode;
   setRangeMode: (m: DateRangeMode) => void;
   rangeFrom: string;
   rangeTo: string;
   setRangeFrom: (d: string) => void;
   setRangeTo: (d: string) => void;
-  /** Effective start/end derived from week or custom range — use these in queries. */
+  /** Effective start/end derived from week or custom range — empty strings when in All Time mode. */
   effectiveFrom: string;
   effectiveTo: string;
+  /** True when the dashboard should aggregate all-time data (no date filter). */
+  isAllTime: boolean;
 }
 
 const WeekContext = createContext<WeekContextType>({
-  selectedWeek: '',
+  selectedWeek: ALL_TIME_VALUE,
   setSelectedWeek: () => {},
   weeks: [],
   loading: true,
@@ -50,6 +53,7 @@ const WeekContext = createContext<WeekContextType>({
   setRangeTo: () => {},
   effectiveFrom: '',
   effectiveTo: '',
+  isAllTime: true,
 });
 
 export const useWeek = () => useContext(WeekContext);
