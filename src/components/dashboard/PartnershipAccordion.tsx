@@ -15,6 +15,7 @@ interface PartnershipLite {
   status: string;
   description: string;
   emv_generated: number | null;
+  notes?: string | null;
 }
 
 interface Props {
@@ -272,7 +273,7 @@ const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, varia
               <span className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground mr-1">
                 Admin
               </span>
-              <EditPartnershipDialog entry={partnership as any} />
+              <EditPartnershipDialog entry={{ ...partnership, notes: partnership.notes ?? '' }} />
               <DeleteEntryButton table="partnerships" id={partnership.id} label="this partnership" />
             </div>
           )}
