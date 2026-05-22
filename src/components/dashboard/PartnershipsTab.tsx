@@ -1,23 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid, LabelList } from 'recharts';
-
-const PAGE_SIZE = 10;
-
-function formatEmv(v: number): string {
-  if (!Number.isFinite(v)) return '$0';
-  const abs = Math.abs(v);
-  if (abs >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
-  if (abs >= 1_000) return `$${Math.round(v / 1_000)}K`;
-  return `$${v.toLocaleString()}`;
-}
 import { supabase } from '@/lib/supabase';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useWeek } from '@/contexts/WeekContext';
 import DataStateWrapper from './DataStateWrapper';
-import PlaceholderCard from './PlaceholderCard';
 import DeleteEntryButton from './DeleteEntryButton';
 import EditPartnershipDialog from './EditPartnershipDialog';
 import EmptyState from './EmptyState';
+import { formatMoney } from '@/lib/format';
+
+const PAGE_SIZE = 10;
+const formatEmv = formatMoney;
 
 interface Partnership {
   id: string;
@@ -79,7 +72,8 @@ const PartnershipsTab = () => {
   const pastTotalPages = Math.max(1, Math.ceil(past.length / PAGE_SIZE));
   const activePaginated = active.slice((activePage - 1) * PAGE_SIZE, activePage * PAGE_SIZE);
   const pastPaginated = past.slice((pastPage - 1) * PAGE_SIZE, pastPage * PAGE_SIZE);
-  const activePlaceholders = activePage === 1 ? Math.max(0, 3 - activePaginated.length) : 0;
+  const { clientColor } = useAdmin();
+  const accent = clientColor || '#1B2B8A';
   const emvData = useMemo(() => partnerships
     .filter(p => p.emv_generated && p.emv_generated > 0)
     .map(p => ({ program: p.partner_name, emv: p.emv_generated! }))
@@ -133,7 +127,7 @@ const PartnershipsTab = () => {
                           {p.emv_generated ? (
                             <div className="flex items-baseline gap-1.5 mt-2">
                               <span className="font-mono-ui text-[8px] tracking-[0.18em] uppercase text-muted-foreground">EMV</span>
-                              <span className="font-display text-base font-bold" style={{ color: 'hsl(42 64% 38%)' }}>${p.emv_generated}K</span>
+                              <span className="font-display text-base font-bold" style={{ color: 'hsl(42 64% 38%)' }}>{formatMoney(p.emv_generated)}</span>
                             </div>
                           ) : null}
                         </div>
@@ -141,9 +135,6 @@ const PartnershipsTab = () => {
                     </div>
                   );
                 })}
-                {Array.from({ length: activePlaceholders }).map((_, i) => (
-                  <PlaceholderCard key={`ph-${i}`} />
-                ))}
                 {active.length === 0 && <p className="text-xs text-muted-foreground">No active partnerships</p>}
               </div>
               {activeTotalPages > 1 && (
@@ -198,7 +189,7 @@ const PartnershipsTab = () => {
                       contentStyle={{ backgroundColor: 'white', border: '1px solid rgba(0,0,0,0.1)', borderRadius: '4px', color: 'hsl(0 0% 8%)', fontSize: 11 }}
                       formatter={(v: number) => formatEmv(v)}
                     />
-                    <Bar dataKey="emv" fill="#1B2B8A" fillOpacity={1} maxBarSize={48} radius={[2, 2, 0, 0]}>
+                    <Bar dataKey="emv" fill={accent} fillOpacity={1} maxBarSize={48} radius={[2, 2, 0, 0]}>
                       <LabelList
                         dataKey="emv"
                         position="top"
@@ -221,7 +212,7 @@ const PartnershipsTab = () => {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold">{h.partner_name}</p>
                       <p className="text-[11px] text-muted-foreground">{h.description}</p>
-                      {h.emv_generated && <p className="text-[10px] text-muted-foreground mt-0.5">${h.emv_generated}K EMV generated</p>}
+                      {h.emv_generated ? <p className="text-[10px] text-muted-foreground mt-0.5">{formatMoney(h.emv_generated)} EMV generated</p> : null}
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="text-[10px] font-bold tracking-wider px-2 py-0.5 bg-muted text-muted-foreground">PAST</span>

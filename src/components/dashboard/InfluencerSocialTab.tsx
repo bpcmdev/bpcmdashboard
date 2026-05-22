@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from 'recharts';
 import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
+import { useAdmin } from '@/hooks/useAdmin';
 import DataStateWrapper from './DataStateWrapper';
 import EmptyState from './EmptyState';
-import { formatReach } from '@/lib/format';
+import { formatReach, formatMoney } from '@/lib/format';
 
 interface LeftyPost {
   id: string;
@@ -20,12 +21,7 @@ interface LeftyPost {
   posted_at?: string | null;
 }
 
-const fmtMoney = (n: number) => {
-  if (!n) return '$0';
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
-  return `$${Math.round(n)}`;
-};
+const fmtMoney = formatMoney;
 
 const normalizeNetwork = (n: string | null): string => {
   if (!n) return 'Other';
@@ -40,6 +36,8 @@ const normalizeNetwork = (n: string | null): string => {
 
 const InfluencerSocialTab = () => {
   const { activeClientId, refreshKey, effectiveFrom, effectiveTo, isAllTime } = useWeek();
+  const { clientColor } = useAdmin();
+  const accent = clientColor || '#1B2B8A';
   const [posts, setPosts] = useState<LeftyPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -148,7 +146,7 @@ const InfluencerSocialTab = () => {
                       return [value.toLocaleString(), name];
                     }}
                   />
-                  <Bar dataKey="posts" name="Posts" fill="#1B2B8A" maxBarSize={20} radius={[0, 2, 2, 0]} />
+                  <Bar dataKey="posts" name="Posts" fill={accent} maxBarSize={20} radius={[0, 2, 2, 0]} />
                 </BarChart>
               </ResponsiveContainer>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 pt-4 border-t border-black/10">

@@ -2,7 +2,10 @@ import { useEffect, useState, useRef } from 'react';
 import { ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
+import { useAdmin } from '@/hooks/useAdmin';
 import { Skeleton } from '@/components/ui/skeleton';
+import Sparkline from './Sparkline';
+import { formatMoney, formatCount } from '@/lib/format';
 
 interface KpiCardProps {
   label: string;
@@ -10,6 +13,9 @@ interface KpiCardProps {
   delta: string;
   deltaType: 'positive' | 'negative' | 'neutral';
   targetTab?: string;
+  spark?: number[];
+  sparkColor?: string;
+  notTracked?: boolean;
 }
 
 /** Animate a numeric value from 0 → target over `duration` ms. Non-numeric values are returned as-is. */
@@ -18,7 +24,6 @@ function useCountUp(target: string, duration = 900): string {
   const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
-    // Extract a leading number (handles "$1.2M", "78/100", "45%", "3.2x", "0")
     const match = target.match(/^([^\d-]*)(-?[\d.]+)(.*)$/);
     if (!match) {
       setDisplay(target);
@@ -36,7 +41,7 @@ function useCountUp(target: string, duration = 900): string {
 
     const tick = (now: number) => {
       const t = Math.min(1, (now - start) / duration);
-      const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
+      const eased = 1 - Math.pow(1 - t, 3);
       const cur = end * eased;
       setDisplay(`${prefix}${cur.toFixed(decimals)}${suffix}`);
       if (t < 1) rafRef.current = requestAnimationFrame(tick);
@@ -50,12 +55,17 @@ function useCountUp(target: string, duration = 900): string {
   return display;
 }
 
-const KpiCard = ({ label, value, delta, deltaType, targetTab }: KpiCardProps) => {
-  const animated = useCountUp(value);
+const KpiCard = ({ label, value, delta, deltaType, targetTab, spark, sparkColor, notTracked }: KpiCardProps) => {
+  const animated = useCountUp(notTracked ? '' : value);
   const isPos = deltaType === 'positive';
   const isNeg = deltaType === 'negative';
   const TrendIcon = isPos ? ArrowUpRight : isNeg ? ArrowDownRight : Minus;
-  const trendColor = isPos ? 'text-positive' : isNeg ? 'text-negative' : 'text-neutral-delta';
+  // Status chip palette: gold positive / red negative / gray stable
+  const chip = isPos
+    ? 'bg-[hsl(42_64%_46%)]/15 text-[hsl(42_64%_32%)]'
+    : isNeg
+    ? 'bg-[hsl(0_72%_50%)]/12 text-[hsl(0_72%_42%)]'
+    : 'bg-black/[0.06] text-muted-foreground';
 
   const handleClick = () => {
     if (!targetTab) return;
@@ -66,18 +76,52 @@ const KpiCard = ({ label, value, delta, deltaType, targetTab }: KpiCardProps) =>
     <button
       type="button"
       onClick={handleClick}
-      className={`flex-1 px-3 md:px-5 py-4 md:py-5 text-center min-w-0 relative overflow-hidden animate-fade-in bg-white border-r border-black/10 transition-all duration-200 hover:bg-[hsl(0,0%,98%)] hover:border-b-2 hover:border-b-[hsl(225,70%,35%)] ${targetTab ? 'cursor-pointer' : 'cursor-default'}`}
+      className={`group flex-1 px-3 md:px-5 py-4 md:py-5 text-center min-w-0 relative overflow-hidden animate-fade-in bg-white border-r border-black/10 transition-all duration-200 hover:bg-[hsl(0,0%,98%)] hover:-translate-y-0.5 hover:shadow-[0_8px_24px_-12px_rgba(0,0,0,0.18)] ${targetTab ? 'cursor-pointer' : 'cursor-default'}`}
+      style={
+        sparkColor
+          ? ({ ['--kpi-accent' as string]: sparkColor } as React.CSSProperties)
+          : undefined
+      }
     >
       <p className="font-mono-ui text-[9px] md:text-[10px] font-medium tracking-[0.18em] uppercase text-muted-foreground mb-1.5 truncate">
         {label}
       </p>
-      <p className="font-display text-3xl md:text-4xl font-bold tracking-tight text-foreground tabular-nums leading-none">
-        {animated}
-      </p>
-      <div className={`flex items-center justify-center gap-1 mt-2 ${trendColor}`}>
-        <TrendIcon className="w-3 h-3 md:w-3.5 md:h-3.5" strokeWidth={2.5} />
-        <span className="font-mono-ui text-[9px] md:text-[10px] font-medium tracking-[0.18em] uppercase truncate">{delta.replace(/^[▲▼]\s?/, '')}</span>
-      </div>
+      {notTracked ? (
+        <>
+          <p className="font-display text-base md:text-lg font-semibold text-muted-foreground/80 leading-tight pt-1">
+            Not Yet Tracked
+          </p>
+          <div className="h-5 mt-2" />
+        </>
+      ) : (
+        <>
+          <p className="font-display text-3xl md:text-4xl font-bold tracking-tight text-foreground tabular-nums leading-none">
+            {animated}
+          </p>
+          <div className="flex items-center justify-center mt-2 h-5">
+            {spark && spark.length >= 2 ? (
+              <Sparkline values={spark} color={sparkColor ?? '#1B2B8A'} width={88} height={20} />
+            ) : (
+              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm ${chip}`}>
+                <TrendIcon className="w-2.5 h-2.5" strokeWidth={2.5} />
+                <span className="font-mono-ui text-[9px] font-medium tracking-[0.16em] uppercase truncate">
+                  {delta.replace(/^[▲▼]\s?/, '')}
+                </span>
+              </span>
+            )}
+          </div>
+          {spark && spark.length >= 2 && (
+            <div className="flex items-center justify-center mt-1">
+              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm ${chip}`}>
+                <TrendIcon className="w-2.5 h-2.5" strokeWidth={2.5} />
+                <span className="font-mono-ui text-[9px] font-medium tracking-[0.16em] uppercase truncate">
+                  {delta.replace(/^[▲▼]\s?/, '')}
+                </span>
+              </span>
+            </div>
+          )}
+        </>
+      )}
     </button>
   );
 };
@@ -91,29 +135,15 @@ const fallbackKpis: KpiCardProps[] = [
   { label: 'Influencer ROI', value: '—', delta: '—', deltaType: 'neutral' },
 ];
 
-function formatCompact(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
-  return String(n);
-}
-
 type DeltaFmt = 'int' | 'currency' | 'compact' | 'points';
 
 function formatDeltaValue(val: number, fmt: DeltaFmt): string {
   const abs = Math.abs(val);
   switch (fmt) {
     case 'currency':
-      return abs >= 1_000_000
-        ? `$${(abs / 1_000_000).toFixed(1)}M`
-        : abs >= 1_000
-        ? `$${(abs / 1_000).toFixed(1)}K`
-        : `$${abs.toLocaleString()}`;
+      return formatMoney(abs);
     case 'compact':
-      return abs >= 1_000_000
-        ? `${(abs / 1_000_000).toFixed(1)}M`
-        : abs >= 1_000
-        ? `${(abs / 1_000).toFixed(0)}K`
-        : String(abs);
+      return formatCount(abs);
     case 'points':
       return `${abs} pts`;
     case 'int':
@@ -125,9 +155,8 @@ function formatDeltaValue(val: number, fmt: DeltaFmt): string {
 function formatDelta(val: number, fmt: DeltaFmt, suffix = 'vs prior week'): { delta: string; deltaType: 'positive' | 'negative' | 'neutral' } {
   if (!val || !Number.isFinite(val)) return { delta: 'stable', deltaType: 'neutral' };
   const sign = val > 0 ? '+' : '−';
-  const formatted = formatDeltaValue(val, fmt);
   return {
-    delta: `${sign}${formatted} ${suffix}`,
+    delta: `${sign}${formatDeltaValue(val, fmt)} ${suffix}`,
     deltaType: val > 0 ? 'positive' : 'negative',
   };
 }
@@ -137,6 +166,8 @@ const KpiBar = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const { selectedWeek, refreshKey, activeClientId, isAllTime } = useWeek();
+  const { clientColor } = useAdmin();
+  const accent = clientColor || '#1B2B8A';
 
   useEffect(() => {
     if (!selectedWeek) return;
@@ -144,8 +175,30 @@ const KpiBar = () => {
       setLoading(true);
       setError(false);
 
+      // Always fetch trailing-8-weeks history for sparklines + "not yet tracked" detection.
+      let histQuery = supabase
+        .from('weekly_snapshots')
+        .select('week_start, placement_count, emv_usd, sentiment_score, social_reach, sov_pct, influencer_roi')
+        .order('week_start', { ascending: false })
+        .limit(8);
+      if (activeClientId) histQuery = histQuery.eq('client_id', activeClientId);
+      const { data: hist } = await histQuery;
+      const histRows = ((hist ?? []) as Record<string, any>[]).slice().reverse(); // oldest → newest
+      const sparkOf = (key: string) => histRows.map(r => Number(r[key]) || 0);
+      const allZero = (arr: number[]) => arr.length === 0 || arr.every(v => !v);
+
+      const placementSpark = sparkOf('placement_count');
+      const emvSpark = sparkOf('emv_usd');
+      const sentimentSpark = sparkOf('sentiment_score');
+      const reachSpark = sparkOf('social_reach');
+      const sovSpark = sparkOf('sov_pct');
+      const roiSpark = sparkOf('influencer_roi');
+
+      const sentimentNotTracked = allZero(sentimentSpark);
+      const sovNotTracked = allZero(sovSpark);
+      const roiNotTracked = allZero(roiSpark);
+
       if (isAllTime) {
-        // Aggregate across all weekly_snapshots for the active client.
         let q = supabase.from('weekly_snapshots').select('*');
         if (activeClientId) q = q.eq('client_id', activeClientId);
         const { data, error: err } = await q;
@@ -175,12 +228,12 @@ const KpiBar = () => {
         const allTimeDelta = { delta: `${rows.length} weeks`, deltaType: 'neutral' as const };
 
         setKpis([
-          { label: 'Press Placements', value: String(placements), ...allTimeDelta, targetTab: 'EARNED MEDIA' },
-          { label: 'Earned Media Value', value: `$${formatCompact(emv)}`, ...allTimeDelta, targetTab: 'EARNED MEDIA' },
-          { label: 'Sentiment Score', value: `${sentiment}/100`, ...allTimeDelta },
-          { label: 'Social Reach', value: formatCompact(reach), ...allTimeDelta, targetTab: 'INFLUENCER & SOCIAL' },
-          { label: 'Share of Voice', value: `${sov}%`, ...allTimeDelta },
-          { label: 'Influencer ROI', value: `${roi}x`, ...allTimeDelta, targetTab: 'INFLUENCER & SOCIAL' },
+          { label: 'Press Placements', value: String(placements), ...allTimeDelta, targetTab: 'EARNED MEDIA', spark: placementSpark, sparkColor: accent },
+          { label: 'Earned Media Value', value: formatMoney(emv), ...allTimeDelta, targetTab: 'EARNED MEDIA', spark: emvSpark, sparkColor: accent },
+          { label: 'Sentiment Score', value: `${sentiment}/100`, ...allTimeDelta, spark: sentimentNotTracked ? undefined : sentimentSpark, sparkColor: accent, notTracked: sentimentNotTracked },
+          { label: 'Social Reach', value: formatCount(reach), ...allTimeDelta, targetTab: 'INFLUENCER & SOCIAL', spark: reachSpark, sparkColor: accent },
+          { label: 'Share of Voice', value: `${sov}%`, ...allTimeDelta, spark: sovNotTracked ? undefined : sovSpark, sparkColor: accent, notTracked: sovNotTracked },
+          { label: 'Influencer ROI', value: `${roi}x`, ...allTimeDelta, targetTab: 'INFLUENCER & SOCIAL', spark: roiNotTracked ? undefined : roiSpark, sparkColor: accent, notTracked: roiNotTracked },
         ]);
         setLoading(false);
         return;
@@ -220,18 +273,18 @@ const KpiBar = () => {
       const roiVal = r.influencer_roi ?? 0;
 
       setKpis([
-        { label: 'Press Placements', value: String(r.placement_count ?? 0), ...placementDelta, targetTab: 'EARNED MEDIA' },
-        { label: 'Earned Media Value', value: `$${formatCompact(r.emv_usd ?? 0)}`, ...emvDelta, targetTab: 'EARNED MEDIA' },
-        { label: 'Sentiment Score', value: `${r.sentiment_score ?? 0}/100`, ...sentimentDelta },
-        { label: 'Social Reach', value: formatCompact(r.social_reach ?? 0), ...reachDelta, targetTab: 'INFLUENCER & SOCIAL' },
-        { label: 'Share of Voice', value: `${r.sov_pct ?? 0}%`, ...sovDelta },
-        { label: 'Influencer ROI', value: `${roiVal}x`, delta: 'stable', deltaType: 'neutral', targetTab: 'INFLUENCER & SOCIAL' },
+        { label: 'Press Placements', value: String(r.placement_count ?? 0), ...placementDelta, targetTab: 'EARNED MEDIA', spark: placementSpark, sparkColor: accent },
+        { label: 'Earned Media Value', value: formatMoney(r.emv_usd ?? 0), ...emvDelta, targetTab: 'EARNED MEDIA', spark: emvSpark, sparkColor: accent },
+        { label: 'Sentiment Score', value: `${r.sentiment_score ?? 0}/100`, ...sentimentDelta, spark: sentimentNotTracked ? undefined : sentimentSpark, sparkColor: accent, notTracked: sentimentNotTracked && !(r.sentiment_score) },
+        { label: 'Social Reach', value: formatCount(r.social_reach ?? 0), ...reachDelta, targetTab: 'INFLUENCER & SOCIAL', spark: reachSpark, sparkColor: accent },
+        { label: 'Share of Voice', value: `${r.sov_pct ?? 0}%`, ...sovDelta, spark: sovNotTracked ? undefined : sovSpark, sparkColor: accent, notTracked: sovNotTracked && !(r.sov_pct) },
+        { label: 'Influencer ROI', value: `${roiVal}x`, delta: 'stable', deltaType: 'neutral', targetTab: 'INFLUENCER & SOCIAL', spark: roiNotTracked ? undefined : roiSpark, sparkColor: accent, notTracked: roiNotTracked && !roiVal },
       ]);
       setLoading(false);
     };
 
     fetchKpis();
-  }, [selectedWeek, refreshKey, activeClientId, isAllTime]);
+  }, [selectedWeek, refreshKey, activeClientId, isAllTime, accent]);
 
   if (error) {
     return (
@@ -248,7 +301,7 @@ const KpiBar = () => {
           <div key={i} className="flex-1 px-3 md:px-5 py-4 md:py-5 text-center space-y-2 border-r border-black/10">
             <Skeleton className="h-3 w-16 md:w-20 mx-auto" />
             <Skeleton className="h-7 md:h-8 w-14 md:w-20 mx-auto" />
-            <Skeleton className="h-3 w-20 md:w-24 mx-auto" />
+            <Skeleton className="h-5 w-20 md:w-24 mx-auto" />
           </div>
         ))}
       </div>
