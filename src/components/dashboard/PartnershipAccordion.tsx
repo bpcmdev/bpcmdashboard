@@ -52,7 +52,7 @@ const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, varia
       // Match posts by campaign_name containing the partner name (best-effort, no FK exists).
       let q = supabase
         .from('lefty_posts')
-        .select('id, author_name, network, campaign_name, reach, emv, post_link, posted_at')
+        .select('id, author_name, network, campaign_name, reach, emv, engagement_rate, post_link, posted_at')
         .eq('client_id', activeClientId)
         .ilike('campaign_name', `%${name}%`)
         .order('emv', { ascending: false })
