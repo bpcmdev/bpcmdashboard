@@ -292,13 +292,15 @@ const KpiDrawer = ({ open, onOpenChange, metric, label, targetTab }: KpiDrawerPr
                 </p>
               ) : (
                 topItems.map((it, i) => (
-                  <a
+                  <LinkPreviewTrigger
                     key={it.id}
-                    href={it.url ?? '#'}
-                    target={it.url ? '_blank' : undefined}
-                    rel="noreferrer"
-                    onClick={(e) => { if (!it.url) e.preventDefault(); }}
-                    className="flex items-center gap-3 px-3 py-3 hover:bg-black/[0.02] transition-colors"
+                    url={it.url ?? undefined}
+                    meta={[
+                      { label: topLabel, value: it.primary },
+                      ...(it.secondary ? [{ label: 'Detail', value: it.secondary }] : []),
+                      { label: label, value: it.metric },
+                    ]}
+                    className="flex w-full items-center gap-3 px-3 py-3 hover:bg-black/[0.02] transition-colors text-left"
                   >
                     <span className="font-mono-ui text-[10px] text-muted-foreground w-5">{i + 1}</span>
                     <div className="flex-1 min-w-0">
@@ -306,7 +308,7 @@ const KpiDrawer = ({ open, onOpenChange, metric, label, targetTab }: KpiDrawerPr
                       {it.secondary && <p className="text-[11px] text-muted-foreground truncate">{it.secondary}</p>}
                     </div>
                     <span className="font-display text-sm font-bold tabular-nums shrink-0">{it.metric}</span>
-                  </a>
+                  </LinkPreviewTrigger>
                 ))
               )}
             </div>
