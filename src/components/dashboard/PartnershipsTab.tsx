@@ -72,7 +72,8 @@ const PartnershipsTab = () => {
   const pastTotalPages = Math.max(1, Math.ceil(past.length / PAGE_SIZE));
   const activePaginated = active.slice((activePage - 1) * PAGE_SIZE, activePage * PAGE_SIZE);
   const pastPaginated = past.slice((pastPage - 1) * PAGE_SIZE, pastPage * PAGE_SIZE);
-  const activePlaceholders = activePage === 1 ? Math.max(0, 3 - activePaginated.length) : 0;
+  const { clientColor } = useAdmin();
+  const accent = clientColor || '#1B2B8A';
   const emvData = useMemo(() => partnerships
     .filter(p => p.emv_generated && p.emv_generated > 0)
     .map(p => ({ program: p.partner_name, emv: p.emv_generated! }))
@@ -126,7 +127,7 @@ const PartnershipsTab = () => {
                           {p.emv_generated ? (
                             <div className="flex items-baseline gap-1.5 mt-2">
                               <span className="font-mono-ui text-[8px] tracking-[0.18em] uppercase text-muted-foreground">EMV</span>
-                              <span className="font-display text-base font-bold" style={{ color: 'hsl(42 64% 38%)' }}>${p.emv_generated}K</span>
+                              <span className="font-display text-base font-bold" style={{ color: 'hsl(42 64% 38%)' }}>{formatMoney(p.emv_generated)}</span>
                             </div>
                           ) : null}
                         </div>
@@ -134,9 +135,6 @@ const PartnershipsTab = () => {
                     </div>
                   );
                 })}
-                {Array.from({ length: activePlaceholders }).map((_, i) => (
-                  <PlaceholderCard key={`ph-${i}`} />
-                ))}
                 {active.length === 0 && <p className="text-xs text-muted-foreground">No active partnerships</p>}
               </div>
               {activeTotalPages > 1 && (
