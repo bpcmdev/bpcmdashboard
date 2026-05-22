@@ -117,7 +117,10 @@ const PartnershipsTab = () => {
   const activePaginated = active.slice((activePage - 1) * PAGE_SIZE, activePage * PAGE_SIZE);
   const pastPaginated = past.slice((pastPage - 1) * PAGE_SIZE, pastPage * PAGE_SIZE);
   const accent = clientColor || '#1B2B8A';
+  // eslint-disable-next-line no-console
+  console.log('[PartnershipsTab] chart accent →', { clientColor, accent });
   const gradientId = useMemo(() => `emvBar-${Math.random().toString(36).slice(2, 8)}`, []);
+
 
   const emvData: CampaignStat[] = useMemo(() => {
     const top = partnerships
@@ -146,19 +149,26 @@ const PartnershipsTab = () => {
   const yTicks = useMemo(() => [0, 0.25, 0.5, 0.75, 1].map(f => yMax * f), [yMax]);
   const labelThreshold = yMax * 0.12;
 
-  const handleBarClick = (data: CampaignStat) => {
-    if (!data?.id) return;
-    const idx = active.findIndex(p => p.id === data.id);
+  const handleBarClick = (data: CampaignStat | undefined | null) => {
+    // Recharts sometimes wraps the entry; normalize.
+    const payload = (data && 'payload' in (data as object)
+      ? (data as unknown as { payload: CampaignStat }).payload
+      : (data as CampaignStat | null | undefined));
+    // eslint-disable-next-line no-console
+    console.log('[PartnershipsTab] bar click →', payload?.program, payload?.id);
+    if (!payload?.id) return;
+    const idx = active.findIndex(p => p.id === payload.id);
     if (idx >= 0) {
       const page = Math.floor(idx / PAGE_SIZE) + 1;
       setActivePage(page);
     }
-    setOpenSignals(prev => ({ ...prev, [data.id]: (prev[data.id] ?? 0) + 1 }));
+    setOpenSignals(prev => ({ ...prev, [payload.id]: (prev[payload.id] ?? 0) + 1 }));
   };
 
-  // Right-aligned y-axis tick (campaign name) for horizontal bar chart
-  const renderYTick = (props: { x: number; y: number; payload: { value: string } }) => {
+  // Right-aligned y-axis tick (campaign name) for horizontal bar chart — clickable
+  const renderYTick = (props: { x: number; y: number; payload: { value: string; index?: number } }) => {
     const { x, y, payload } = props;
+    const entry = emvData.find(d => d.program === payload.value);
     return (
       <text
         x={x - 8}
@@ -167,11 +177,14 @@ const PartnershipsTab = () => {
         dominantBaseline="middle"
         fontSize={11}
         fill="hsl(0 0% 20%)"
+        style={{ cursor: entry ? 'pointer' : 'default' }}
+        onClick={() => entry && handleBarClick(entry)}
       >
         {payload.value}
       </text>
     );
   };
+
 
 
   // Custom tooltip
@@ -299,6 +312,8 @@ const PartnershipsTab = () => {
                       <Bar
                         dataKey="emv"
                         radius={[0, 2, 2, 0]}
+                        fill={`url(#${gradientId})`}
+                        isAnimationActive={false}
                         onClick={(d) => handleBarClick(d as unknown as CampaignStat)}
                         style={{ cursor: 'pointer' }}
                       >
@@ -308,8 +323,12 @@ const PartnershipsTab = () => {
                             <Cell
                               key={entry.id}
                               fill={`url(#${gradientId})`}
+                              stroke={accent}
+                              strokeOpacity={0}
                               fillOpacity={dim ? 0.5 : 1}
+                              style={{ cursor: 'pointer' }}
                               onMouseEnter={() => setHoverIdx(i)}
+                              onClick={() => handleBarClick(entry)}
                             />
                           );
                         })}
@@ -318,6 +337,7 @@ const PartnershipsTab = () => {
                           content={(props: { x?: number; y?: number; width?: number; height?: number; value?: number; index?: number }) => {
                             const { x = 0, y = 0, width = 0, height = 0, value = 0, index = 0 } = props;
                             const dim = hoverIdx !== null && hoverIdx !== index;
+                            const entry = emvData[index];
                             return (
                               <text
                                 x={x + width + 8}
@@ -329,6 +349,8 @@ const PartnershipsTab = () => {
                                 fontWeight={600}
                                 fill="hsl(0 0% 20%)"
                                 opacity={dim ? 0.4 : 1}
+                                style={{ cursor: 'pointer' }}
+                                onClick={() => entry && handleBarClick(entry)}
                               >
                                 {formatEmv(value)}
                               </text>
@@ -336,6 +358,7 @@ const PartnershipsTab = () => {
                           }}
                         />
                       </Bar>
+
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
