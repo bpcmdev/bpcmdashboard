@@ -75,12 +75,20 @@ const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, varia
     (async () => {
       setLoading(true);
       const name = partnership.partner_name.trim();
-      // Match posts by campaign_name containing the partner name (best-effort, no FK exists).
+      // Strip common rollup suffixes/keywords to get the core brand keyword.
+      const core = name
+        .replace(/\b(all|event|events|campaign|campaigns|seeding|rollup|influencer|influencers)\b/gi, '')
+        .replace(/[-–—_]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      const keyword = core.length >= 4 ? core : name;
+      // eslint-disable-next-line no-console
+      console.log('[PartnershipAccordion] matching keyword:', { partner_name: name, keyword });
       let q = supabase
         .from('lefty_posts')
         .select('*')
         .eq('client_id', activeClientId)
-        .ilike('campaign_name', `%${name}%`)
+        .ilike('campaign_name', `%${keyword}%`)
         .order('emv', { ascending: false })
         .limit(50);
       if (!isAllTime && effectiveFrom && effectiveTo) {
