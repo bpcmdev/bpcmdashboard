@@ -107,13 +107,56 @@ const KpiBar = () => {
   const [kpis, setKpis] = useState<KpiCardProps[]>(fallbackKpis);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const { selectedWeek, refreshKey, activeClientId } = useWeek();
+  const { selectedWeek, refreshKey, activeClientId, isAllTime } = useWeek();
 
   useEffect(() => {
     if (!selectedWeek) return;
     const fetchKpis = async () => {
       setLoading(true);
       setError(false);
+
+      if (isAllTime) {
+        // Aggregate across all weekly_snapshots for the active client.
+        let q = supabase.from('weekly_snapshots').select('*');
+        if (activeClientId) q = q.eq('client_id', activeClientId);
+        const { data, error: err } = await q;
+        if (err) {
+          console.error('Failed to fetch weekly_snapshots:', err);
+          setError(true);
+          setLoading(false);
+          return;
+        }
+        const rows = (data ?? []) as Record<string, any>[];
+        if (rows.length === 0) {
+          setKpis(fallbackKpis);
+          setLoading(false);
+          return;
+        }
+        const sum = (k: string) => rows.reduce((s, r) => s + (Number(r[k]) || 0), 0);
+        const avg = (k: string) => {
+          const vals = rows.map(r => Number(r[k])).filter(v => Number.isFinite(v) && v !== 0);
+          return vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : 0;
+        };
+        const placements = sum('placement_count');
+        const emv = sum('emv_usd');
+        const reach = sum('social_reach');
+        const sentiment = Math.round(avg('sentiment_score'));
+        const sov = Number(avg('sov_pct').toFixed(1));
+        const roi = Number(avg('influencer_roi').toFixed(1));
+        const allTimeDelta = { delta: `${rows.length} weeks`, deltaType: 'neutral' as const };
+
+        setKpis([
+          { label: 'Press Placements', value: String(placements), ...allTimeDelta, targetTab: 'EARNED MEDIA' },
+          { label: 'Earned Media Value', value: `$${formatCompact(emv)}`, ...allTimeDelta, targetTab: 'EARNED MEDIA' },
+          { label: 'Sentiment Score', value: `${sentiment}/100`, ...allTimeDelta },
+          { label: 'Social Reach', value: formatCompact(reach), ...allTimeDelta, targetTab: 'INFLUENCER & SOCIAL' },
+          { label: 'Share of Voice', value: `${sov}%`, ...allTimeDelta },
+          { label: 'Influencer ROI', value: `${roi}x`, ...allTimeDelta, targetTab: 'INFLUENCER & SOCIAL' },
+        ]);
+        setLoading(false);
+        return;
+      }
+
       let query = supabase
         .from('weekly_snapshots')
         .select('*')
@@ -159,7 +202,7 @@ const KpiBar = () => {
     };
 
     fetchKpis();
-  }, [selectedWeek, refreshKey, activeClientId]);
+  }, [selectedWeek, refreshKey, activeClientId, isAllTime]);
 
   if (error) {
     return (
