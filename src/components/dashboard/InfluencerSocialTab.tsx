@@ -146,7 +146,7 @@ const InfluencerSocialTab = () => {
                       return [value.toLocaleString(), name];
                     }}
                   />
-                  <Bar dataKey="posts" name="Posts" fill="#1B2B8A" maxBarSize={20} radius={[0, 2, 2, 0]} />
+                  <Bar dataKey="posts" name="Posts" fill={accent} maxBarSize={20} radius={[0, 2, 2, 0]} />
                 </BarChart>
               </ResponsiveContainer>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 pt-4 border-t border-black/10">
