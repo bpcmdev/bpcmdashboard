@@ -75,19 +75,35 @@ const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, varia
     const list = posts ?? [];
     const totalEmv = list.reduce((s, p) => s + (p.emv ?? 0), 0);
     const totalReach = list.reduce((s, p) => s + (p.reach ?? 0), 0);
-    const byAuthor = new Map<string, { name: string; emv: number; reach: number; posts: number }>();
+    const byAuthor = new Map<string, { name: string; emv: number; reach: number; posts: number; topPost: PostLite }>();
     for (const p of list) {
       const k = p.author_name ?? '—';
-      const cur = byAuthor.get(k) ?? { name: k, emv: 0, reach: 0, posts: 0 };
+      const cur = byAuthor.get(k) ?? { name: k, emv: 0, reach: 0, posts: 0, topPost: p };
       cur.emv += p.emv ?? 0;
       cur.reach += p.reach ?? 0;
       cur.posts += 1;
+      if ((p.emv ?? 0) > (cur.topPost.emv ?? 0)) cur.topPost = p;
       byAuthor.set(k, cur);
     }
     const topAuthors = Array.from(byAuthor.values()).sort((a, b) => b.emv - a.emv).slice(0, 3);
     const topPosts = [...list].slice(0, 5);
     return { totalEmv, totalReach, topAuthors, topPosts, count: list.length };
   })();
+
+  const postMeta = (p: PostLite, extra?: { posts?: number }) => [
+    { label: 'Partner', value: partnership.partner_name },
+    { label: 'Creator', value: p.author_name ?? '—' },
+    { label: 'Network', value: (p.network ?? '—').toString() },
+    { label: 'EMV', value: formatMoney(p.emv ?? 0) },
+    ...(p.reach ? [{ label: 'Reach', value: formatCount(p.reach) }] : []),
+    ...(p.engagement_rate != null
+      ? [{ label: 'Engagement', value: `${(p.engagement_rate * 100).toFixed(2)}%` }]
+      : []),
+    ...(p.posted_at
+      ? [{ label: 'Posted', value: new Date(p.posted_at).toLocaleDateString() }]
+      : []),
+    ...(extra?.posts ? [{ label: 'Total Posts', value: String(extra.posts) }] : []),
+  ];
 
   const containerCls =
     variant === 'card'
