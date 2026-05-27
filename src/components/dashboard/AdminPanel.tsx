@@ -620,9 +620,9 @@ export function UserManagement() {
         email: inviteEmail,
         full_name: inviteName,
         role: inviteRole,
-        client_id: inviteClient,
+        client_id: inviteRole === 'admin' ? null : inviteClient,
       });
-      logActivity({ client_id: inviteClient, action: 'invited', entity_type: 'user', entity_title: inviteName, metadata: { email: inviteEmail, role: inviteRole } });
+      logActivity({ client_id: inviteRole === 'admin' ? null : inviteClient, action: 'invited', entity_type: 'user', entity_title: inviteName, metadata: { email: inviteEmail, role: inviteRole } });
       setSuccess(`Invite sent to ${inviteEmail}. They'll receive a link to set their password.`);
       setInviteName(''); setInviteEmail(''); setInviteRole(''); setInviteClient('');
       fetchUsers();
