@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
           full_name,
           email,
           role,
-          client_id,
+          client_id: role === "admin" ? null : client_id,
         });
       if (profileErr) throw profileErr;
 
