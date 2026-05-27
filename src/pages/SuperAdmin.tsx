@@ -199,26 +199,63 @@ function ClientsSection() {
                   <h3 className="text-base font-bold tracking-tight truncate">{c.name}</h3>
                   <p className="text-[11px] text-muted-foreground font-mono mt-0.5 truncate">{c.slug || '—'}</p>
                 </div>
-                <div
-                  className="w-8 h-8 rounded border border-border shrink-0"
+                <button
+                  type="button"
+                  onClick={() => setQuickColor(c)}
+                  className="w-8 h-8 rounded border border-border shrink-0 hover:ring-2 hover:ring-foreground/20 transition"
                   style={{ backgroundColor: c.primary_color || '#e5e5e5' }}
-                  title={c.primary_color || ''}
+                  title={`${c.primary_color || ''} — click to change`}
                 />
               </div>
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
                 Created {format(new Date(c.created_at), 'PP')}
               </p>
-              <Button
-                variant="outline"
-                className="w-full gap-2 text-xs uppercase tracking-wider"
-                onClick={() => handleOpenDashboard(c)}
-              >
-                <ExternalLink className="w-3.5 h-3.5" /> Open Dashboard
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1 gap-2 text-xs uppercase tracking-wider"
+                  onClick={() => handleOpenDashboard(c)}
+                >
+                  <ExternalLink className="w-3.5 h-3.5" /> Open
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setEditing(c)}
+                  title="Edit client"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setDeleting(c)}
+                  title="Delete client"
+                  className="text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </div>
             </div>
           ))}
         </div>
       )}
+
+      <EditClientModal
+        client={editing}
+        onClose={() => setEditing(null)}
+        onSaved={(patch) => { applyClientUpdate(editing!.id, patch); setEditing(null); }}
+      />
+      <QuickColorModal
+        client={quickColor}
+        onClose={() => setQuickColor(null)}
+        onSaved={(color) => { applyClientUpdate(quickColor!.id, { primary_color: color }); setQuickColor(null); }}
+      />
+      <DeleteClientModal
+        client={deleting}
+        onClose={() => setDeleting(null)}
+        onDeleted={() => { setClients(prev => prev.filter(c => c.id !== deleting!.id)); setDeleting(null); }}
+      />
     </div>
   );
 }
