@@ -260,6 +260,252 @@ function ClientsSection() {
   );
 }
 
+/* ── Edit Client Modal ── */
+function EditClientModal({ client, onClose, onSaved }: {
+  client: ClientRow | null;
+  onClose: () => void;
+  onSaved: (patch: Partial<ClientRow>) => void;
+}) {
+  const [form, setForm] = useState({ name: '', slug: '', primary_color: '#000000', logo_url: '', enabled_tabs: [] as string[] });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (client) {
+      setForm({
+        name: client.name ?? '',
+        slug: client.slug ?? '',
+        primary_color: client.primary_color ?? '#000000',
+        logo_url: client.logo_url ?? '',
+        enabled_tabs: client.enabled_tabs ?? [],
+      });
+    }
+  }, [client]);
+
+  const toggleTab = (id: string) => {
+    setForm(f => ({
+      ...f,
+      enabled_tabs: f.enabled_tabs.includes(id)
+        ? f.enabled_tabs.filter(t => t !== id)
+        : [...f.enabled_tabs, id],
+    }));
+  };
+
+  const handleSave = async () => {
+    if (!client || !form.name || !form.slug) return;
+    setSaving(true);
+    const patch = {
+      name: form.name.trim(),
+      slug: form.slug.trim(),
+      primary_color: form.primary_color,
+      logo_url: form.logo_url.trim() || null,
+      enabled_tabs: form.enabled_tabs,
+    };
+    const { error } = await supabase.from('clients').update(patch).eq('id', client.id);
+    setSaving(false);
+    if (error) { toast.error(`Save failed: ${error.message}`); return; }
+    toast.success('Client updated');
+    onSaved(patch);
+  };
+
+  return (
+    <Dialog open={!!client} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Edit Client</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2 max-h-[70vh] overflow-y-auto">
+          <div className="space-y-1.5">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Name</Label>
+            <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Slug</Label>
+            <Input value={form.slug} onChange={e => setForm(f => ({ ...f, slug: e.target.value }))} className="font-mono text-xs" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Primary Color</Label>
+            <div className="flex items-center gap-3">
+              <input
+                type="color"
+                value={form.primary_color}
+                onChange={e => setForm(f => ({ ...f, primary_color: e.target.value }))}
+                className="h-10 w-14 cursor-pointer rounded border border-border bg-transparent"
+              />
+              <Input value={form.primary_color} onChange={e => setForm(f => ({ ...f, primary_color: e.target.value }))} className="font-mono text-xs" />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Logo URL</Label>
+            <Input value={form.logo_url} onChange={e => setForm(f => ({ ...f, logo_url: e.target.value }))} placeholder="https://…" />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Enabled Tabs</Label>
+            <div className="grid grid-cols-2 gap-2 border border-border rounded-md p-3">
+              {ALL_TABS.map(tab => (
+                <label key={tab.id} className="flex items-center gap-2 text-xs cursor-pointer">
+                  <Checkbox
+                    checked={form.enabled_tabs.includes(tab.id)}
+                    onCheckedChange={() => toggleTab(tab.id)}
+                  />
+                  <span className="truncate">{tab.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={handleSave} disabled={saving || !form.name || !form.slug} className="bg-foreground text-background hover:bg-foreground/90">
+            {saving ? 'Saving…' : 'Save Changes'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ── Quick Color Modal ── */
+function QuickColorModal({ client, onClose, onSaved }: {
+  client: ClientRow | null;
+  onClose: () => void;
+  onSaved: (color: string) => void;
+}) {
+  const [color, setColor] = useState('#000000');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => { if (client) setColor(client.primary_color || '#000000'); }, [client]);
+
+  const handleSave = async () => {
+    if (!client) return;
+    setSaving(true);
+    const { error } = await supabase.from('clients').update({ primary_color: color }).eq('id', client.id);
+    setSaving(false);
+    if (error) { toast.error(`Save failed: ${error.message}`); return; }
+    toast.success('Color updated');
+    onSaved(color);
+  };
+
+  return (
+    <Dialog open={!!client} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Primary Color</DialogTitle>
+          <DialogDescription>{client?.name}</DialogDescription>
+        </DialogHeader>
+        <div className="flex items-center gap-3 py-2">
+          <input
+            type="color"
+            value={color}
+            onChange={e => setColor(e.target.value)}
+            className="h-14 w-20 cursor-pointer rounded border border-border bg-transparent"
+          />
+          <Input value={color} onChange={e => setColor(e.target.value)} className="font-mono text-xs" />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={handleSave} disabled={saving} className="bg-foreground text-background hover:bg-foreground/90">
+            {saving ? 'Saving…' : 'Save'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ── Delete Client Modal ── */
+function DeleteClientModal({ client, onClose, onDeleted }: {
+  client: ClientRow | null;
+  onClose: () => void;
+  onDeleted: () => void;
+}) {
+  const [counts, setCounts] = useState<Record<string, number> | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmText, setConfirmText] = useState('');
+
+  useEffect(() => {
+    if (!client) { setCounts(null); setConfirmText(''); return; }
+    setLoading(true);
+    Promise.all(CASCADE_TABLES.map(async (t) => {
+      const { count } = await supabase
+        .from(t)
+        .select('*', { count: 'exact', head: true })
+        .eq('client_id', client.id);
+      return [t, count ?? 0] as const;
+    })).then(entries => {
+      setCounts(Object.fromEntries(entries));
+      setLoading(false);
+    });
+  }, [client]);
+
+  const handleDelete = async () => {
+    if (!client) return;
+    setDeleting(true);
+    for (const t of CASCADE_TABLES) {
+      const { error } = await supabase.from(t).delete().eq('client_id', client.id);
+      if (error) {
+        setDeleting(false);
+        toast.error(`Failed deleting ${t}: ${error.message}`);
+        return;
+      }
+    }
+    const { error } = await supabase.from('clients').delete().eq('id', client.id);
+    setDeleting(false);
+    if (error) { toast.error(`Failed deleting client: ${error.message}`); return; }
+    toast.success(`Deleted ${client.name}`);
+    onDeleted();
+  };
+
+  const totalRecords = counts ? Object.values(counts).reduce((a, b) => a + b, 0) : 0;
+  const canDelete = confirmText.trim().toLowerCase() === (client?.name ?? '').trim().toLowerCase();
+
+  return (
+    <Dialog open={!!client} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-destructive">Delete Client</DialogTitle>
+          <DialogDescription>
+            This permanently deletes <strong>{client?.name}</strong> and all related records. This cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3 py-2">
+          {loading ? (
+            <p className="text-xs text-muted-foreground">Counting related records…</p>
+          ) : counts && (
+            <div className="border border-border rounded-md text-xs">
+              <div className="px-3 py-2 bg-muted/40 font-semibold uppercase tracking-wider text-[10px] text-muted-foreground">
+                {totalRecords} records will be deleted
+              </div>
+              <div className="divide-y divide-border">
+                {CASCADE_TABLES.map(t => (
+                  <div key={t} className="flex justify-between px-3 py-1.5">
+                    <span className="font-mono">{t}</span>
+                    <span className="tabular-nums">{counts[t] ?? 0}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="space-y-1.5">
+            <Label className="text-xs">Type <span className="font-mono">{client?.name}</span> to confirm</Label>
+            <Input value={confirmText} onChange={e => setConfirmText(e.target.value)} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button
+            onClick={handleDelete}
+            disabled={deleting || !canDelete}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {deleting ? 'Deleting…' : 'Delete Permanently'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 /* ── Overview Section ── */
 interface OverviewRow {
   client_id: string;
