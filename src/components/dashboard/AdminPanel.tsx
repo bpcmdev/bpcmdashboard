@@ -611,7 +611,8 @@ export function UserManagement() {
   }, [fetchUsers, fetchClients]);
 
   const handleInvite = async () => {
-    if (!inviteName || !inviteEmail || !inviteRole || !inviteClient) return;
+    if (!inviteName || !inviteEmail || !inviteRole) return;
+    if (inviteRole === 'client' && !inviteClient) return;
     setSubmitting(true);
     try {
       await callEdgeFunction({
