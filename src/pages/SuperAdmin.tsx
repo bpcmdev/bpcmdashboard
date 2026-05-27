@@ -72,14 +72,22 @@ function ClientsSection() {
   const [error, setError] = useState('');
   const [form, setForm] = useState({ name: '', slug: '', primary_color: '#0a1628', logo_url: '' });
 
+  const [editing, setEditing] = useState<ClientRow | null>(null);
+  const [quickColor, setQuickColor] = useState<ClientRow | null>(null);
+  const [deleting, setDeleting] = useState<ClientRow | null>(null);
+
   const fetchClients = async () => {
     setLoading(true);
     const { data } = await supabase
       .from('clients')
-      .select('id, name, slug, primary_color, logo_url, created_at')
+      .select('id, name, slug, primary_color, logo_url, enabled_tabs, created_at')
       .order('created_at', { ascending: false });
     setClients((data as ClientRow[]) || []);
     setLoading(false);
+  };
+
+  const applyClientUpdate = (id: string, patch: Partial<ClientRow>) => {
+    setClients(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
   };
 
   useEffect(() => { fetchClients(); }, []);
