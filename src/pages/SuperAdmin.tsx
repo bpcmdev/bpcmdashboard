@@ -48,8 +48,17 @@ interface ClientRow {
   slug: string | null;
   primary_color: string | null;
   logo_url: string | null;
+  enabled_tabs: string[] | null;
   created_at: string;
 }
+
+const CASCADE_TABLES = [
+  'user_profiles',
+  'client_credentials',
+  'lefty_posts',
+  'partnerships',
+  'weekly_snapshots',
+] as const;
 
 /* ── Clients Section ── */
 function ClientsSection() {
