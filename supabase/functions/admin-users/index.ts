@@ -94,8 +94,11 @@ Deno.serve(async (req) => {
 
     if (action === "invite") {
       const { email, full_name, role, client_id } = body;
-      if (!email || !full_name || !role || !client_id) {
+      if (!email || !full_name || !role) {
         return jsonResponse({ error: "Missing required fields" }, 400);
+      }
+      if (role !== "admin" && !client_id) {
+        return jsonResponse({ error: "client_id required for non-admin users" }, 400);
       }
 
       // Send invite email — user sets their own password via the link
