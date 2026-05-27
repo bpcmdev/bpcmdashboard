@@ -611,7 +611,8 @@ export function UserManagement() {
   }, [fetchUsers, fetchClients]);
 
   const handleInvite = async () => {
-    if (!inviteName || !inviteEmail || !inviteRole || !inviteClient) return;
+    if (!inviteName || !inviteEmail || !inviteRole) return;
+    if (inviteRole === 'client' && !inviteClient) return;
     setSubmitting(true);
     try {
       await callEdgeFunction({
@@ -619,9 +620,9 @@ export function UserManagement() {
         email: inviteEmail,
         full_name: inviteName,
         role: inviteRole,
-        client_id: inviteClient,
+        client_id: inviteRole === 'admin' ? null : inviteClient,
       });
-      logActivity({ client_id: inviteClient, action: 'invited', entity_type: 'user', entity_title: inviteName, metadata: { email: inviteEmail, role: inviteRole } });
+      logActivity({ client_id: inviteRole === 'admin' ? null : inviteClient, action: 'invited', entity_type: 'user', entity_title: inviteName, metadata: { email: inviteEmail, role: inviteRole } });
       setSuccess(`Invite sent to ${inviteEmail}. They'll receive a link to set their password.`);
       setInviteName(''); setInviteEmail(''); setInviteRole(''); setInviteClient('');
       fetchUsers();
@@ -711,17 +712,23 @@ export function UserManagement() {
             </Select>
           </Field>
           <Field label="Client">
-            <Select value={inviteClient} onValueChange={setInviteClient}>
-              <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
-              <SelectContent>
-                {clients.map(c => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {inviteRole === 'admin' ? (
+              <div className="flex h-10 items-center rounded-md border border-input bg-muted px-3 text-sm text-muted-foreground">
+                All Clients — admins have access to all clients
+              </div>
+            ) : (
+              <Select value={inviteClient} onValueChange={setInviteClient} disabled={!inviteRole}>
+                <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
+                <SelectContent>
+                  {clients.map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </Field>
         </div>
-        <Button onClick={handleInvite} disabled={submitting || !inviteName || !inviteEmail || !inviteRole || !inviteClient} className="w-full bg-foreground text-background hover:bg-foreground/90">
+        <Button onClick={handleInvite} disabled={submitting || !inviteName || !inviteEmail || !inviteRole || (inviteRole === 'client' && !inviteClient)} className="w-full bg-foreground text-background hover:bg-foreground/90">
           {submitting ? 'Inviting…' : 'Invite User'}
         </Button>
       </div>
