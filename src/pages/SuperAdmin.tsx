@@ -1,7 +1,8 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { LayoutDashboard, Users, FileText, Database, Building2, LogOut, Plus, ExternalLink, Activity, ToggleLeft } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, Database, Building2, LogOut, Plus, ExternalLink, Activity, ToggleLeft, Pencil, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { WeekProvider } from '@/contexts/WeekContext';
@@ -9,8 +10,10 @@ import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ALL_TABS } from '@/lib/dashboardTabs';
 import {
   PipelineForm,
   KeyWinsForm,
