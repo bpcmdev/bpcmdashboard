@@ -76,8 +76,10 @@ export default function SetPassword() {
           <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-[hsl(225_70%_35%/0.08)] mb-2">
             <Lock className="w-5 h-5" style={{ color: '#1A3A8F' }} />
           </div>
-          <h1 className="text-xl font-semibold text-foreground">Set your password</h1>
-          <p className="text-sm text-muted-foreground">Create a password to access your dashboard.</p>
+          <h1 className="text-xl font-semibold text-foreground">
+            {fullName ? `Welcome ${fullName.split(' ')[0]}` : 'Set your password'}
+          </h1>
+          <p className="text-sm text-muted-foreground">Please set your password to continue.</p>
         </div>
 
         {error && (
