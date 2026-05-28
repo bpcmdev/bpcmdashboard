@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Lock, AlertCircle, CheckCircle2 } from 'lucide-react';
@@ -11,25 +11,36 @@ export default function SetPassword() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [ready, setReady] = useState(false);
+  const [fullName, setFullName] = useState('');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    const token = searchParams.get('token');
-    const type = searchParams.get('type');
+    const init = async () => {
+      const token = searchParams.get('token');
+      const type = searchParams.get('type');
 
-    if (token && type === 'invite') {
-      supabase.auth.verifyOtp({ token_hash: token, type: 'invite' })
-        .then(({ error }) => {
-          if (error) setError('Invalid or expired invite link.');
-          else setReady(true);
+      if (token && (type === 'invite' || type === 'recovery')) {
+        const { error } = await supabase.auth.verifyOtp({
+          token_hash: token,
+          type: type as 'invite' | 'recovery',
         });
-    } else {
-      supabase.auth.getSession().then(({ data }) => {
-        if (data.session) setReady(true);
-        else setError('Invalid or expired link.');
-      });
-    }
+        if (error) {
+          setError('Invalid or expired link.');
+          return;
+        }
+      }
+
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        setReady(true);
+        const meta = (data.session.user.user_metadata ?? {}) as Record<string, unknown>;
+        setFullName((meta.full_name as string) || data.session.user.email || '');
+      } else {
+        setError('Invalid or expired link. Please request a new invite.');
+      }
+    };
+    init();
   }, [searchParams]);
 
   const handleSubmit = async () => {
@@ -43,12 +54,18 @@ export default function SetPassword() {
     }
     setLoading(true);
     setError('');
-    const { error: updateError } = await supabase.auth.updateUser({ password });
+    const { error: updateError } = await supabase.auth.updateUser({
+      password,
+      data: { password_set: true },
+    });
     setLoading(false);
     if (updateError) {
       setError(updateError.message);
     } else {
-      navigate('/dashboard');
+      if (window.location.hash) {
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+      navigate('/dashboard', { replace: true });
     }
   };
 
