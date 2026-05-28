@@ -18,6 +18,7 @@ const Login = () => {
   const [error, setError] = useState('');
   const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [showEmailForm, setShowEmailForm] = useState(false);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,11 +91,11 @@ const Login = () => {
               <p className="text-sm text-gray-500">Sign in to access your dashboard</p>
             </div>
 
-            {/* Microsoft SSO */}
+            {/* Microsoft SSO — primary */}
             <Button
               onClick={handleMicrosoftLogin}
-              className="w-full h-11 bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 font-medium text-sm shadow-sm"
-              variant="outline"
+              className="w-full h-11 font-medium text-sm text-white"
+              style={{ backgroundColor: '#0a1628' }}
             >
               <svg className="w-5 h-5 mr-2" viewBox="0 0 21 21" fill="none">
                 <rect x="1" y="1" width="9" height="9" fill="#F25022" />
@@ -102,80 +103,78 @@ const Login = () => {
                 <rect x="1" y="11" width="9" height="9" fill="#00A4EF" />
                 <rect x="11" y="11" width="9" height="9" fill="#FFB900" />
               </svg>
-              Continue with Microsoft
+              Sign in with Microsoft
             </Button>
 
-            {/* Divider */}
-            <div className="flex items-center gap-3">
-              <div className="flex-1 h-px bg-gray-200" />
-              <span className="text-xs text-gray-400">or sign in with email</span>
-              <div className="flex-1 h-px bg-gray-200" />
-            </div>
-
-            {/* Email/Password */}
-            <form onSubmit={handleEmailLogin} className="space-y-3">
-              <Input
-                type="email"
-                placeholder="you@yourbrand.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="h-11 bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400"
-              />
-              <Input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="h-11 bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400"
-              />
-              {error && (
-                <p className="text-xs text-red-500">{error}</p>
-              )}
-              <Button
-                type="submit"
-                disabled={submitting || authLoading}
-                className="w-full h-11 font-medium text-sm text-white"
-                style={{ backgroundColor: '#0a1628' }}
-              >
-                {submitting ? 'Signing in…' : 'Sign in'}
-              </Button>
+            {!showEmailForm ? (
               <button
                 type="button"
-                onClick={async () => {
-                  if (!email) {
-                    setError('Enter your email above first.');
-                    return;
-                  }
-                  await supabase.auth.signInWithOtp({
-                    email,
-                    options: { emailRedirectTo: `${window.location.origin}/dashboard` }
-                  });
-                  setMagicLinkSent(true);
-                }}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'rgba(0,0,0,0.45)',
-                  fontSize: '11px',
-                  cursor: 'pointer',
-                  marginTop: '8px',
-                  textDecoration: 'underline',
-                  display: 'block',
-                  width: '100%',
-                  textAlign: 'center'
-                }}
+                onClick={() => setShowEmailForm(true)}
+                className="w-full text-center text-xs text-gray-500 hover:text-gray-700 underline"
               >
-                Forgot password? Send me a sign-in link
+                Sign in with email instead
               </button>
-            </form>
+            ) : (
+              <>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-px bg-gray-200" />
+                  <span className="text-xs text-gray-400">sign in with email</span>
+                  <div className="flex-1 h-px bg-gray-200" />
+                </div>
 
-            {magicLinkSent && (
-              <p className="text-xs text-center" style={{ color: '#93c5fd' }}>
-                Check your email for a sign-in link
-              </p>
+                <form onSubmit={handleEmailLogin} className="space-y-3">
+                  <Input
+                    type="email"
+                    placeholder="you@yourbrand.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="h-11 bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400"
+                  />
+                  <Input
+                    type="password"
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="h-11 bg-gray-50 border-gray-200 text-gray-900 placeholder:text-gray-400"
+                  />
+                  {error && <p className="text-xs text-red-500">{error}</p>}
+                  <Button
+                    type="submit"
+                    disabled={submitting || authLoading}
+                    variant="outline"
+                    className="w-full h-11 font-medium text-sm border-gray-200"
+                  >
+                    {submitting ? 'Signing in…' : 'Sign in'}
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!email) {
+                        setError('Enter your email above first.');
+                        return;
+                      }
+                      await supabase.auth.signInWithOtp({
+                        email,
+                        options: { emailRedirectTo: `${window.location.origin}/dashboard` },
+                      });
+                      setMagicLinkSent(true);
+                    }}
+                    className="block w-full text-center text-[11px] text-gray-400 hover:text-gray-600 underline mt-2"
+                  >
+                    Forgot password? Send me a sign-in link
+                  </button>
+                </form>
+
+                {magicLinkSent && (
+                  <p className="text-xs text-center" style={{ color: '#93c5fd' }}>
+                    Check your email for a sign-in link
+                  </p>
+                )}
+              </>
             )}
+
 
             {/* Footer */}
             <div className="text-center space-y-1 pt-2">

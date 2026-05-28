@@ -6,13 +6,9 @@ import type { Session } from '@supabase/supabase-js';
 function needsPasswordSetup(session: Session | null): boolean {
   if (!session?.user) return false;
   const meta = (session.user.user_metadata ?? {}) as Record<string, unknown>;
+  // SSO users never need to set a password.
+  if (meta.auth_method === 'microsoft') return false;
   if (meta.password_set === false) return true;
-  // Fallback heuristic: brand-new user that has never updated their profile.
-  const created = session.user.created_at ? new Date(session.user.created_at).getTime() : 0;
-  const updated = (session.user as any).updated_at ? new Date((session.user as any).updated_at).getTime() : 0;
-  if (created && updated && Math.abs(updated - created) < 2000 && meta.password_set !== true) {
-    return true;
-  }
   return false;
 }
 
