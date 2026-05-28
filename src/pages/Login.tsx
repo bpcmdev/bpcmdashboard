@@ -18,6 +18,7 @@ const Login = () => {
   const [error, setError] = useState('');
   const [magicLinkSent, setMagicLinkSent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [showEmailForm, setShowEmailForm] = useState(false);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
