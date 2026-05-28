@@ -101,18 +101,39 @@ Deno.serve(async (req) => {
         return jsonResponse({ error: "client_id required for non-admin users" }, 400);
       }
 
-      // Send invite email — user sets their own password via the link
-      const { data: authUser, error: authErr } = await adminClient.auth.admin.inviteUserByEmail(
-        email,
-        { data: { full_name, password_set: false } },
-      );
-      if (authErr) throw authErr;
+      const isBpcm = typeof email === "string" && email.toLowerCase().endsWith("@bpcm.com");
+      const authMethod = isBpcm ? "microsoft" : "email";
 
-      // Insert profile
+      let userId: string;
+
+      if (isBpcm) {
+        // BPCM employees sign in via Microsoft SSO — no password setup email.
+        // Pre-create a confirmed auth user so the profile FK is satisfied;
+        // first Azure OAuth sign-in will link to this user by verified email.
+        const { data: created, error: createErr } = await adminClient.auth.admin.createUser({
+          email,
+          email_confirm: true,
+          user_metadata: { full_name, auth_method: "microsoft", password_set: true },
+        });
+        if (createErr) throw createErr;
+        userId = created.user.id;
+        // NOTE: A branded "welcome — sign in with Microsoft" email requires
+        // transactional email infrastructure. Skipped here per spec; can be
+        // wired once email infra is configured.
+      } else {
+        // External users: send the standard invite / password-setup email.
+        const { data: authUser, error: authErr } = await adminClient.auth.admin.inviteUserByEmail(
+          email,
+          { data: { full_name, auth_method: "email", password_set: false } },
+        );
+        if (authErr) throw authErr;
+        userId = authUser.user.id;
+      }
+
       const { error: profileErr } = await adminClient
         .from("user_profiles")
         .insert({
-          id: authUser.user.id,
+          id: userId,
           full_name,
           email,
           role,
@@ -120,7 +141,7 @@ Deno.serve(async (req) => {
         });
       if (profileErr) throw profileErr;
 
-      return jsonResponse({ success: true, userId: authUser.user.id });
+      return jsonResponse({ success: true, userId, auth_method: authMethod });
     }
 
     if (action === "update") {
