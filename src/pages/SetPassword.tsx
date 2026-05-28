@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Lock, AlertCircle, CheckCircle2 } from 'lucide-react';
@@ -11,25 +11,36 @@ export default function SetPassword() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [ready, setReady] = useState(false);
+  const [fullName, setFullName] = useState('');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    const token = searchParams.get('token');
-    const type = searchParams.get('type');
+    const init = async () => {
+      const token = searchParams.get('token');
+      const type = searchParams.get('type');
 
-    if (token && type === 'invite') {
-      supabase.auth.verifyOtp({ token_hash: token, type: 'invite' })
-        .then(({ error }) => {
-          if (error) setError('Invalid or expired invite link.');
-          else setReady(true);
+      if (token && (type === 'invite' || type === 'recovery')) {
+        const { error } = await supabase.auth.verifyOtp({
+          token_hash: token,
+          type: type as 'invite' | 'recovery',
         });
-    } else {
-      supabase.auth.getSession().then(({ data }) => {
-        if (data.session) setReady(true);
-        else setError('Invalid or expired link.');
-      });
-    }
+        if (error) {
+          setError('Invalid or expired link.');
+          return;
+        }
+      }
+
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        setReady(true);
+        const meta = (data.session.user.user_metadata ?? {}) as Record<string, unknown>;
+        setFullName((meta.full_name as string) || data.session.user.email || '');
+      } else {
+        setError('Invalid or expired link. Please request a new invite.');
+      }
+    };
+    init();
   }, [searchParams]);
 
   const handleSubmit = async () => {
@@ -43,12 +54,18 @@ export default function SetPassword() {
     }
     setLoading(true);
     setError('');
-    const { error: updateError } = await supabase.auth.updateUser({ password });
+    const { error: updateError } = await supabase.auth.updateUser({
+      password,
+      data: { password_set: true },
+    });
     setLoading(false);
     if (updateError) {
       setError(updateError.message);
     } else {
-      navigate('/dashboard');
+      if (window.location.hash) {
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+      navigate('/dashboard', { replace: true });
     }
   };
 
@@ -59,8 +76,10 @@ export default function SetPassword() {
           <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-[hsl(225_70%_35%/0.08)] mb-2">
             <Lock className="w-5 h-5" style={{ color: '#1A3A8F' }} />
           </div>
-          <h1 className="text-xl font-semibold text-foreground">Set your password</h1>
-          <p className="text-sm text-muted-foreground">Create a password to access your dashboard.</p>
+          <h1 className="text-xl font-semibold text-foreground">
+            {fullName ? `Welcome ${fullName.split(' ')[0]}` : 'Set your password'}
+          </h1>
+          <p className="text-sm text-muted-foreground">Please set your password to continue.</p>
         </div>
 
         {error && (

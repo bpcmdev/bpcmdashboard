@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
       // Send invite email — user sets their own password via the link
       const { data: authUser, error: authErr } = await adminClient.auth.admin.inviteUserByEmail(
         email,
-        { data: { full_name } },
+        { data: { full_name, password_set: false } },
       );
       if (authErr) throw authErr;
 
