@@ -16,6 +16,7 @@ import AIVisibilityTab from '@/components/dashboard/AIVisibilityTab';
 import GeoAISovTab from '@/components/dashboard/GeoAISovTab';
 import PartnershipsTab from '@/components/dashboard/PartnershipsTab';
 import TikTokShopTab from '@/components/dashboard/TikTokShopTab';
+import ResourceManagementTab from '@/components/dashboard/ResourceManagementTab';
 import GettingStarted, { useIsNewClient } from '@/components/dashboard/GettingStarted';
 import NotableThisWeek from '@/components/dashboard/NotableThisWeek';
 import { LinkPreviewProvider } from '@/components/dashboard/LinkPreviewDrawer';
@@ -33,6 +34,7 @@ const TAB_MAP: Record<string, React.ComponentType> = {
   'GEO / AI SOV': GeoAISovTab,
   'PARTNERSHIPS': PartnershipsTab,
   'TIKTOK SHOP': TikTokShopTab,
+  'RESOURCE MANAGEMENT': ResourceManagementTab,
 };
 
 /** Inner component that can access WeekContext */
@@ -137,6 +139,7 @@ function DashboardContent() {
         'GEO / AI SOV': 'geo_ai_sov',
         'PARTNERSHIPS': 'partnerships',
         'TIKTOK SHOP': 'tiktok_shop',
+        'RESOURCE MANAGEMENT': 'resource_mgmt',
       };
       return enabledTabs.includes(idMap[label]);
     });
