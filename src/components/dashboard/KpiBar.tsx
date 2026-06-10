@@ -272,7 +272,7 @@ const KpiBar = () => {
           { label: 'Sentiment Score', value: `${sentiment}/100`, ...allTimeDelta, metricKey: 'sentiment_score', spark: sentimentNotTracked ? undefined : sentimentSpark, sparkColor: accent, notTracked: sentimentNotTracked },
           { label: 'Social Reach', value: formatCount(reach), ...allTimeDelta, targetTab: 'INFLUENCER & SOCIAL', metricKey: 'social_reach', spark: reachSpark, sparkColor: accent },
           { label: 'Share of Voice', value: `${sov}%`, ...allTimeDelta, metricKey: 'sov_pct', spark: sovNotTracked ? undefined : sovSpark, sparkColor: accent, notTracked: sovNotTracked },
-          { label: 'Influencer ROI', value: `${roi}x`, ...allTimeDelta, targetTab: 'INFLUENCER & SOCIAL', metricKey: 'influencer_roi', spark: roiNotTracked ? undefined : roiSpark, sparkColor: accent, notTracked: roiNotTracked },
+          roiTile,
         ]);
         setLoading(false);
         return;
