@@ -309,7 +309,6 @@ const KpiBar = () => {
       const sentimentDelta = formatDelta(r.mom_sentiment_delta ?? 0, 'points', 'MoM');
       const reachDelta = formatDelta(r.wow_reach_delta ?? 0, 'compact');
       const sovDelta = formatDelta(r.sov_delta_pts ?? 0, 'points');
-      const roiVal = r.influencer_roi ?? 0;
 
       setKpis([
         { label: 'Press Placements', value: String(r.placement_count ?? 0), ...placementDelta, targetTab: 'EARNED MEDIA', metricKey: 'placement_count', spark: placementSpark, sparkColor: accent },
@@ -317,7 +316,7 @@ const KpiBar = () => {
         { label: 'Sentiment Score', value: `${r.sentiment_score ?? 0}/100`, ...sentimentDelta, metricKey: 'sentiment_score', spark: sentimentNotTracked ? undefined : sentimentSpark, sparkColor: accent, notTracked: sentimentNotTracked && !(r.sentiment_score) },
         { label: 'Social Reach', value: formatCount(r.social_reach ?? 0), ...reachDelta, targetTab: 'INFLUENCER & SOCIAL', metricKey: 'social_reach', spark: reachSpark, sparkColor: accent },
         { label: 'Share of Voice', value: `${r.sov_pct ?? 0}%`, ...sovDelta, metricKey: 'sov_pct', spark: sovNotTracked ? undefined : sovSpark, sparkColor: accent, notTracked: sovNotTracked && !(r.sov_pct) },
-        { label: 'Influencer ROI', value: `${roiVal}x`, delta: 'stable', deltaType: 'neutral', targetTab: 'INFLUENCER & SOCIAL', metricKey: 'influencer_roi', spark: roiNotTracked ? undefined : roiSpark, sparkColor: accent, notTracked: roiNotTracked && !roiVal },
+        roiTile,
       ]);
       setLoading(false);
     };
