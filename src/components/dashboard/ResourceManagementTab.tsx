@@ -580,7 +580,7 @@ const KpiCard = ({ label, value, valueColor }: { label: string; value: string; v
 );
 
 const MonthRow = ({
-  label, months, get, total, signed, isLast,
+  label, months, get, total, signed, isLast, dashWhen,
 }: {
   label: string;
   months: string[];
@@ -588,10 +588,16 @@ const MonthRow = ({
   total: number;
   signed?: boolean;
   isLast?: boolean;
+  dashWhen?: (m: string) => boolean;
 }) => (
   <tr className={isLast ? 'border-t border-black/10' : 'border-t border-black/5'}>
     <td className="px-4 py-2.5 font-medium">{label}</td>
     {months.map(m => {
+      if (dashWhen?.(m)) {
+        return (
+          <td key={m} className="px-4 py-2.5 text-right tabular-nums text-muted-foreground/60">—</td>
+        );
+      }
       const v = get(m);
       const color = signed ? (v < 0 ? RED : v > 0 ? GREEN : undefined) : undefined;
       return (
@@ -608,5 +614,6 @@ const MonthRow = ({
     </td>
   </tr>
 );
+
 
 export default ResourceManagementTab;
