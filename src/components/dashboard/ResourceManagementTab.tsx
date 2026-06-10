@@ -137,10 +137,13 @@ const ResourceManagementTab = () => {
     if (isAllTime || !effectiveFrom || !effectiveTo) return 'Showing all months (monthly data)';
     const startIso = effectiveFrom.slice(0, 7) + '-01';
     const endIso = effectiveTo.slice(0, 7) + '-01';
-    const fmt = (iso: string) => new Date(iso + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-    return startIso === endIso
-      ? `Showing ${fmt(startIso)} (monthly data)`
-      : `Showing ${fmt(startIso)} – ${fmt(endIso)} (monthly data)`;
+    const fmtFull = (iso: string) => new Date(iso + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    const fmtMonth = (iso: string) => new Date(iso + 'T00:00:00').toLocaleDateString('en-US', { month: 'long' });
+    if (startIso === endIso) return `Showing ${fmtFull(startIso)} (monthly data)`;
+    const sameYear = startIso.slice(0, 4) === endIso.slice(0, 4);
+    return sameYear
+      ? `Showing ${fmtMonth(startIso)}–${fmtFull(endIso)} (monthly data)`
+      : `Showing ${fmtFull(startIso)} – ${fmtFull(endIso)} (monthly data)`;
   }, [isAllTime, effectiveFrom, effectiveTo]);
 
   /* ----- Aggregations --------------------------------------------------- */
@@ -149,23 +152,32 @@ const ResourceManagementTab = () => {
     const rows = monthly ?? [];
     const totalHours = rows.reduce((s, r) => s + Number(r.worked_hours || 0), 0);
     const totalBilled = rows.reduce((s, r) => s + Number(r.billable_value || 0), 0);
-    const totalBudget = rows.reduce((s, r) => s + Number(r.monthly_budget || 0), 0);
-    const overBudget = rows.reduce((s, r) => s + Number(r.budget_remaining || 0), 0);
 
     // Months actually present in the data (sorted ascending).
     const monthSet = Array.from(new Set(rows.map(r => r.budget_month))).sort();
-    const monthsCount = monthSet.length;
-    // Working weeks ≈ months × 4.345 (avg weeks per month). Falls back to 1 to avoid div-by-zero.
-    const workingWeeks = Math.max(monthsCount * 4.345, 1);
 
     // Per-month aggregates.
-    const byMonth = new Map<string, { budget: number; worked: number }>();
-    for (const m of monthSet) byMonth.set(m, { budget: 0, worked: 0 });
+    const byMonth = new Map<string, { budget: number; worked: number; hours: number }>();
+    for (const m of monthSet) byMonth.set(m, { budget: 0, worked: 0, hours: 0 });
     for (const r of rows) {
       const b = byMonth.get(r.budget_month)!;
       b.budget += Number(r.monthly_budget || 0);
       b.worked += Number(r.billable_value || 0);
+      b.hours += Number(r.worked_hours || 0);
     }
+
+    // Months without ClickTime budget loaded yet — exclude from over/under and utilization.
+    const budgetedMonths = monthSet.filter(m => (byMonth.get(m)?.budget ?? 0) > 0);
+    const unbudgetedMonths = monthSet.filter(m => (byMonth.get(m)?.budget ?? 0) === 0);
+    const monthHasBudget = (m: string) => (byMonth.get(m)?.budget ?? 0) > 0;
+
+    // Totals scoped to budgeted months only for over/under math.
+    const budgetedWorked = budgetedMonths.reduce((s, m) => s + (byMonth.get(m)?.worked ?? 0), 0);
+    const totalBudget = budgetedMonths.reduce((s, m) => s + (byMonth.get(m)?.budget ?? 0), 0);
+    const overBudget = totalBudget - budgetedWorked; // positive = under, negative = over
+
+    // Working weeks based on budgeted months only.
+    const workingWeeks = Math.max(budgetedMonths.length * 4.345, 1);
     const latestMonth = monthSet[monthSet.length - 1];
 
     // Latest month pacing — billable / (days in month / 7).
@@ -191,14 +203,15 @@ const ResourceManagementTab = () => {
       .map(([name, v]) => ({ name, ...v, share: totalBilled > 0 ? (v.billing / totalBilled) * 100 : 0 }))
       .sort((a, b) => b.billing - a.billing);
 
-    const overPct = totalBudget > 0 ? Math.round(((totalBilled / totalBudget) - 1) * 100) : 0;
+    const overPct = totalBudget > 0 ? Math.round(((budgetedWorked / totalBudget) - 1) * 100) : 0;
 
     return {
-      totalHours, totalBilled, totalBudget, overBudget,
+      totalHours, totalBilled, totalBudget, overBudget, budgetedWorked,
       monthSet, byMonth, workingWeeks, latestMonth, latestPerWeek,
-      workstreams, overPct,
+      workstreams, overPct, budgetedMonths, unbudgetedMonths, monthHasBudget,
     };
   }, [monthly]);
+
 
   /* Section 7 left: top contributors by hours (sum across jobs + months in range). */
   const topContributors = useMemo(() => {
@@ -308,7 +321,13 @@ const ResourceManagementTab = () => {
                 </tr>
               </thead>
               <tbody>
-                <MonthRow label="Budget" months={agg.monthSet} get={m => agg.byMonth.get(m)?.budget ?? 0} total={agg.totalBudget} />
+                <MonthRow
+                  label="Budget"
+                  months={agg.monthSet}
+                  get={m => agg.byMonth.get(m)?.budget ?? 0}
+                  total={agg.totalBudget}
+                  dashWhen={m => !agg.monthHasBudget(m)}
+                />
                 <MonthRow label="Worked" months={agg.monthSet} get={m => agg.byMonth.get(m)?.worked ?? 0} total={agg.totalBilled} />
                 <MonthRow
                   label="Over/Under"
@@ -317,13 +336,20 @@ const ResourceManagementTab = () => {
                     const b = agg.byMonth.get(m);
                     return (b?.budget ?? 0) - (b?.worked ?? 0);
                   }}
-                  total={agg.totalBudget - agg.totalBilled}
+                  total={agg.overBudget}
                   signed
                   isLast
+                  dashWhen={m => !agg.monthHasBudget(m)}
                 />
               </tbody>
             </table>
           </div>
+          {agg.unbudgetedMonths.length > 0 && (
+            <div className="mt-2 text-[11px] text-muted-foreground italic">
+              Budget not yet loaded for {agg.unbudgetedMonths.map(m => monthLabel(m, { month: 'long', year: 'numeric' })).join(', ')}.
+              Over/Under and utilization exclude {agg.unbudgetedMonths.length === 1 ? 'this month' : 'these months'}.
+            </div>
+          )}
         </section>
 
         {/* ===== Section 3 — Over-pace alert ===== */}
@@ -350,21 +376,21 @@ const ResourceManagementTab = () => {
             <KpiCard label="Budget / Week" value={fmtUSD(agg.totalBudget / agg.workingWeeks)} />
             <KpiCard
               label="Actual / Week"
-              value={fmtUSD(agg.totalBilled / agg.workingWeeks)}
-              valueColor={agg.totalBilled > agg.totalBudget ? RED : undefined}
+              value={fmtUSD(agg.budgetedWorked / agg.workingWeeks)}
+              valueColor={agg.budgetedWorked > agg.totalBudget ? RED : undefined}
             />
             <KpiCard
               label="Over / Week Avg"
-              value={fmtUSDsigned((agg.totalBilled - agg.totalBudget) / agg.workingWeeks)}
-              valueColor={agg.totalBilled > agg.totalBudget ? RED : GREEN}
+              value={fmtUSDsigned((agg.budgetedWorked - agg.totalBudget) / agg.workingWeeks)}
+              valueColor={agg.budgetedWorked > agg.totalBudget ? RED : GREEN}
             />
             <KpiCard
               label="Latest Month Pace"
               value={fmtUSD(agg.latestPerWeek)}
               valueColor={
-                agg.latestMonth && (agg.byMonth.get(agg.latestMonth)?.worked ?? 0) <= (agg.byMonth.get(agg.latestMonth)?.budget ?? 0)
-                  ? GREEN
-                  : RED
+                agg.latestMonth && agg.monthHasBudget(agg.latestMonth)
+                  ? ((agg.byMonth.get(agg.latestMonth)?.worked ?? 0) <= (agg.byMonth.get(agg.latestMonth)?.budget ?? 0) ? GREEN : RED)
+                  : undefined
               }
             />
           </div>
@@ -374,7 +400,7 @@ const ResourceManagementTab = () => {
         <section>
           <SectionLabel>YTD Budget Utilization</SectionLabel>
           {(() => {
-            const pct = agg.totalBudget > 0 ? (agg.totalBilled / agg.totalBudget) * 100 : 0;
+            const pct = agg.totalBudget > 0 ? (agg.budgetedWorked / agg.totalBudget) * 100 : 0;
             const baseW = Math.min(pct, 100);
             const overW = Math.max(pct - 100, 0);
             // Scale the visual track so values >100% still fit.
@@ -402,14 +428,20 @@ const ResourceManagementTab = () => {
                   <span>$0</span>
                   <span>Budget cap: <span className="text-foreground font-medium">{fmtUSD(agg.totalBudget)}</span></span>
                   <span>
-                    Worked: <span className="text-foreground font-medium">{fmtUSD(agg.totalBilled)}</span>{' '}
+                    Worked: <span className="text-foreground font-medium">{fmtUSD(agg.budgetedWorked)}</span>{' '}
                     (<span style={{ color: pct > 100 ? RED : undefined }}>{fmtPct(pct)}</span>)
                   </span>
                 </div>
+                {agg.unbudgetedMonths.length > 0 && (
+                  <div className="mt-1 text-[11px] text-muted-foreground italic">
+                    Excludes {agg.unbudgetedMonths.map(m => monthLabel(m, { month: 'long' })).join(', ')} — budget not yet loaded.
+                  </div>
+                )}
               </div>
             );
           })()}
         </section>
+
 
         {/* ===== Section 6 — Hours & Billing by Workstream ===== */}
         <section>
@@ -548,7 +580,7 @@ const KpiCard = ({ label, value, valueColor }: { label: string; value: string; v
 );
 
 const MonthRow = ({
-  label, months, get, total, signed, isLast,
+  label, months, get, total, signed, isLast, dashWhen,
 }: {
   label: string;
   months: string[];
@@ -556,10 +588,16 @@ const MonthRow = ({
   total: number;
   signed?: boolean;
   isLast?: boolean;
+  dashWhen?: (m: string) => boolean;
 }) => (
   <tr className={isLast ? 'border-t border-black/10' : 'border-t border-black/5'}>
     <td className="px-4 py-2.5 font-medium">{label}</td>
     {months.map(m => {
+      if (dashWhen?.(m)) {
+        return (
+          <td key={m} className="px-4 py-2.5 text-right tabular-nums text-muted-foreground/60">—</td>
+        );
+      }
       const v = get(m);
       const color = signed ? (v < 0 ? RED : v > 0 ? GREEN : undefined) : undefined;
       return (
@@ -576,5 +614,6 @@ const MonthRow = ({
     </td>
   </tr>
 );
+
 
 export default ResourceManagementTab;
