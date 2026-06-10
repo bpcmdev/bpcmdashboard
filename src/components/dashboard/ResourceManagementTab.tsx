@@ -88,12 +88,13 @@ const ResourceManagementTab = () => {
 
     (async () => {
       try {
-        // The *_secure RPCs enforce auth.uid()-based visibility server-side
-        // (BPCM internal users see all clients; client logins see only their own).
-        // Monthly RPC takes (p_client_id, p_month) — pass null for all months, filter client-side.
-        // Tasks/Employees RPCs take (p_client_id, p_from, p_to) and filter server-side.
-        const fromArg = isAllTime || !effectiveFrom ? null : effectiveFrom;
-        const toArg   = isAllTime || !effectiveTo   ? null : effectiveTo;
+        // ClickTime budgets are MONTHLY (budget_month = 1st of month). A mid-month
+        // week window would filter everything out, so expand the active range to
+        // full month boundaries: p_from = 1st of the start month, p_to = 1st of
+        // the end month. All Time leaves both null and the RPC returns everything.
+        const firstOfMonth = (iso: string) => iso.slice(0, 7) + '-01';
+        const fromArg = isAllTime || !effectiveFrom ? null : firstOfMonth(effectiveFrom);
+        const toArg   = isAllTime || !effectiveTo   ? null : firstOfMonth(effectiveTo);
 
         const [
           { data: mData, error: mErr },
@@ -108,12 +109,10 @@ const ResourceManagementTab = () => {
         if (tErr) throw tErr;
         if (eErr) throw eErr;
 
-        // Monthly RPC returns all months — filter to active range here.
+        // Monthly RPC returns all months — filter to active month range here.
         const inRange = <T extends { budget_month: string }>(rows: T[]): T[] => {
-          if (isAllTime || !effectiveFrom || !effectiveTo) return rows;
-          const startMonth = effectiveFrom.slice(0, 7) + '-01';
-          const endMonth = effectiveTo.slice(0, 7) + '-01';
-          return rows.filter(r => r.budget_month >= startMonth && r.budget_month <= endMonth);
+          if (!fromArg || !toArg) return rows;
+          return rows.filter(r => r.budget_month >= fromArg && r.budget_month <= toArg);
         };
 
         if (!cancelled) {
@@ -132,6 +131,17 @@ const ResourceManagementTab = () => {
 
     return () => { cancelled = true; };
   }, [activeClientId, effectiveFrom, effectiveTo, isAllTime, refreshKey]);
+
+  /* Banner label so users understand the monthly granularity of the data shown. */
+  const granularityLabel = useMemo(() => {
+    if (isAllTime || !effectiveFrom || !effectiveTo) return 'Showing all months (monthly data)';
+    const startIso = effectiveFrom.slice(0, 7) + '-01';
+    const endIso = effectiveTo.slice(0, 7) + '-01';
+    const fmt = (iso: string) => new Date(iso + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    return startIso === endIso
+      ? `Showing ${fmt(startIso)} (monthly data)`
+      : `Showing ${fmt(startIso)} – ${fmt(endIso)} (monthly data)`;
+  }, [isAllTime, effectiveFrom, effectiveTo]);
 
   /* ----- Aggregations --------------------------------------------------- */
 
@@ -262,6 +272,9 @@ const ResourceManagementTab = () => {
     <DataStateWrapper loading={loading} error={!!error}>
 
       <div className="px-6 py-6 space-y-8 tabular-nums">
+        <div className="text-[10px] tracking-[0.12em] uppercase text-muted-foreground">
+          {granularityLabel}
+        </div>
         {/* ===== Section 1 — KPI strip ===== */}
         <section>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">

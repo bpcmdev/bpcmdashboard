@@ -58,29 +58,20 @@ const WeekContext = createContext<WeekContextType>({
 
 export const useWeek = () => useContext(WeekContext);
 
-function generateLast12Weeks(): WeekOption[] {
-  const weeks: WeekOption[] = [];
-  const baseDate = new Date('2026-03-23T00:00:00');
-  for (let i = 0; i < 12; i++) {
-    const endDate = new Date(baseDate);
-    endDate.setDate(endDate.getDate() - i * 7);
-    const startDate = new Date(endDate);
-    startDate.setDate(startDate.getDate() - 6);
+/** Monday of the week containing `d` (local time). */
+function mondayOf(d: Date): Date {
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const day = x.getDay(); // 0=Sun..6=Sat
+  const diff = (day + 6) % 7; // days since Monday
+  x.setDate(x.getDate() - diff);
+  return x;
+}
 
-    const startMonth = startDate.toLocaleDateString('en-US', { month: 'short' });
-    const endMonth = endDate.toLocaleDateString('en-US', { month: 'short' });
-    const startDay = startDate.getDate();
-    const endDay = endDate.getDate();
-    const year = endDate.getFullYear();
-
-    const label = startMonth === endMonth
-      ? `${startMonth} ${startDay}–${endDay}, ${year}`
-      : `${startMonth} ${startDay} – ${endMonth} ${endDay}, ${year}`;
-
-    const iso = startDate.toISOString().split('T')[0];
-    weeks.push({ label, weekStart: iso });
-  }
-  return weeks;
+function toIso(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 function formatWeekLabel(weekStart: string): string {
@@ -95,6 +86,20 @@ function formatWeekLabel(weekStart: string): string {
   return startMonth === endMonth
     ? `${startMonth} ${startDay}–${endDay}, ${year}`
     : `${startMonth} ${startDay} – ${endMonth} ${endDay}, ${year}`;
+}
+
+/** Generate every Monday-start week from `startIso` through the current week (descending). */
+function generateCalendarWeeks(startIso: string): WeekOption[] {
+  const start = mondayOf(new Date(startIso + 'T00:00:00'));
+  const end = mondayOf(new Date());
+  const weeks: WeekOption[] = [];
+  const cursor = new Date(end);
+  while (cursor >= start) {
+    const iso = toIso(cursor);
+    weeks.push({ label: formatWeekLabel(iso), weekStart: iso });
+    cursor.setDate(cursor.getDate() - 7);
+  }
+  return weeks;
 }
 
 export const WeekProvider = ({ children }: { children: ReactNode }) => {
@@ -144,7 +149,7 @@ export const WeekProvider = ({ children }: { children: ReactNode }) => {
       let query = supabase
         .from('weekly_snapshots')
         .select('week_start')
-        .order('week_start', { ascending: false });
+        .order('week_start', { ascending: true });
 
       if (activeClientId) {
         query = query.eq('client_id', activeClientId);
@@ -152,21 +157,17 @@ export const WeekProvider = ({ children }: { children: ReactNode }) => {
 
       const { data } = await query;
 
-      let weekOptions: WeekOption[];
+      // Earliest week we ever want to show: Jan 2026, or earlier if the client has older data.
+      const DEFAULT_START = '2026-01-05'; // first Monday of 2026
+      let earliest = DEFAULT_START;
       if (data && data.length > 0) {
-        const seen = new Set<string>();
-        const unique = data.filter((row: any) => {
-          if (seen.has(row.week_start)) return false;
-          seen.add(row.week_start);
-          return true;
-        });
-        weekOptions = unique.map((row: any) => ({
-          label: formatWeekLabel(row.week_start),
-          weekStart: row.week_start,
-        }));
-      } else {
-        weekOptions = generateLast12Weeks();
+        const earliestRow = (data[0] as { week_start: string }).week_start;
+        if (earliestRow && earliestRow < earliest) earliest = earliestRow;
       }
+
+      // Build a continuous Monday-by-Monday calendar so weeks with no snapshot
+      // are still selectable (empty states render per-tab).
+      const weekOptions = generateCalendarWeeks(earliest);
 
       // Always prepend the synthetic "All Time" option so it's the default + always available.
       const withAllTime: WeekOption[] = [{ label: 'All Time', weekStart: ALL_TIME_VALUE }, ...weekOptions];
