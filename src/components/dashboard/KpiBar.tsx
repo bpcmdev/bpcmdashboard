@@ -322,7 +322,7 @@ const KpiBar = () => {
     };
 
     fetchKpis();
-  }, [selectedWeek, refreshKey, activeClientId, isAllTime, accent]);
+  }, [selectedWeek, refreshKey, activeClientId, isAllTime, effectiveFrom, effectiveTo, accent]);
 
   if (error) {
     return (
