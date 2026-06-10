@@ -260,18 +260,20 @@ const ResourceManagementTab = () => {
     return <EmptyState title="No client selected" description="Choose a client to view resource analytics." />;
   }
 
-  return (
-    <DataStateWrapper
-      loading={loading}
-      error={error}
-      isEmpty={!loading && (monthly?.length ?? 0) === 0}
-      emptyState={
+  if (!loading && !error && (monthly?.length ?? 0) === 0) {
+    return (
+      <div className="px-6 py-6">
         <EmptyState
           title="No ClickTime data"
           description="No billing or budget data is available for this client in the selected range."
         />
-      }
-    >
+      </div>
+    );
+  }
+
+  return (
+    <DataStateWrapper loading={loading} error={!!error}>
+
       <div className="px-6 py-6 space-y-8 tabular-nums">
         {/* ===== Section 1 — KPI strip ===== */}
         <section>
