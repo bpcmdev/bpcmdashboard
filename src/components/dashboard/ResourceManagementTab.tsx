@@ -23,6 +23,7 @@ interface MonthlyRow {
 }
 
 interface TaskRow {
+  project_name: string;
   clicktime_job_id: string;
   budget_month: string;
   task_name: string;
@@ -31,6 +32,7 @@ interface TaskRow {
 }
 
 interface EmployeeRow {
+  project_name: string;
   clicktime_job_id: string;
   budget_month: string;
   full_name: string;
