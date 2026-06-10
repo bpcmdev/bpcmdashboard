@@ -146,28 +146,12 @@ export const WeekProvider = ({ children }: { children: ReactNode }) => {
     if (activeClientId === null && userClientId === null) return;
     const fetchWeeks = async () => {
       setLoading(true);
-      let query = supabase
-        .from('weekly_snapshots')
-        .select('week_start')
-        .order('week_start', { ascending: true });
 
-      if (activeClientId) {
-        query = query.eq('client_id', activeClientId);
-      }
-
-      const { data } = await query;
-
-      // Earliest week we ever want to show: Jan 2026, or earlier if the client has older data.
-      const DEFAULT_START = '2026-01-05'; // first Monday of 2026
-      let earliest = DEFAULT_START;
-      if (data && data.length > 0) {
-        const earliestRow = (data[0] as { week_start: string }).week_start;
-        if (earliestRow && earliestRow < earliest) earliest = earliestRow;
-      }
-
-      // Build a continuous Monday-by-Monday calendar so weeks with no snapshot
-      // are still selectable (empty states render per-tab).
-      const weekOptions = generateCalendarWeeks(earliest);
+      // Week dropdown is calendar-generated (NOT data-derived): every Monday-start
+      // week from Jan 2025 through the current week. Identical for every client.
+      // Weeks with no PR snapshot still render their per-tab empty states.
+      const CALENDAR_START = '2025-01-06'; // first Monday of 2025
+      const weekOptions = generateCalendarWeeks(CALENDAR_START);
 
       // Always prepend the synthetic "All Time" option so it's the default + always available.
       const withAllTime: WeekOption[] = [{ label: 'All Time', weekStart: ALL_TIME_VALUE }, ...weekOptions];
@@ -177,6 +161,7 @@ export const WeekProvider = ({ children }: { children: ReactNode }) => {
     };
     fetchWeeks();
   }, [activeClientId, userClientId]);
+
 
   const isAllTime = rangeMode === 'week' && (selectedWeek === ALL_TIME_VALUE || !selectedWeek);
 
