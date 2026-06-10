@@ -3,6 +3,7 @@
 export const WORKSTREAM_MAP: Record<string, string> = {
   'VW - Lifestyle / Brand':    'Brand & Lifestyle',
   'VW - Product/Technology':   'Product & Technology',
+  'VW - Technology':           'Product & Technology',
   'VW - Corporate':            'Corporate Comms',
   'VW - Workforce':            'Workforce',
   'VW - Strategic Comms':      'Strategic Comms / Planning',
