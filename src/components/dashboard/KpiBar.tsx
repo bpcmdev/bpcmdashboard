@@ -209,7 +209,33 @@ const KpiBar = () => {
 
       const sentimentNotTracked = allZero(sentimentSpark);
       const sovNotTracked = allZero(sovSpark);
-      const roiNotTracked = allZero(roiSpark);
+
+      // Influencer ROI now comes from ct_influencer_roi_secure (not weekly_snapshots).
+      // All Time → no dates; otherwise pass the effective range start/end.
+      const roiParams: Record<string, any> = { p_client_id: activeClientId };
+      if (!isAllTime && effectiveFrom && effectiveTo) {
+        roiParams.p_start = effectiveFrom;
+        roiParams.p_end = effectiveTo;
+      }
+      const { data: roiData } = await supabase.rpc('ct_influencer_roi_secure' as any, roiParams);
+      const roiRow = Array.isArray(roiData) ? (roiData[0] ?? null) : (roiData ?? null);
+      const roiEmv = roiRow ? Number(roiRow.emv) : null;
+      const roiBillings = roiRow ? Number(roiRow.billings) : null;
+      const roiVal = roiRow && roiRow.roi != null ? Number(roiRow.roi) : null;
+      const roiTracked = roiVal != null && Number.isFinite(roiVal);
+      const roiTile: KpiCardProps = {
+        label: 'Influencer ROI',
+        value: roiTracked ? `${roiVal!.toFixed(1)}x` : '—',
+        delta: roiTracked ? 'EMV per $1 billed' : 'Not yet tracked',
+        deltaType: 'neutral',
+        targetTab: 'INFLUENCER & SOCIAL',
+        metricKey: 'influencer_roi',
+        sparkColor: accent,
+        notTracked: !roiTracked,
+        tooltip: roiTracked
+          ? `EMV generated per $1 billed · ${formatMoney(roiEmv ?? 0)} EMV ÷ ${formatMoney(roiBillings ?? 0)} billed`
+          : 'Influencer ROI not yet tracked for this period',
+      };
 
       if (isAllTime) {
         let q = supabase.from('weekly_snapshots').select('*');
