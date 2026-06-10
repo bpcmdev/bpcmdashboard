@@ -272,6 +272,9 @@ const ResourceManagementTab = () => {
     <DataStateWrapper loading={loading} error={!!error}>
 
       <div className="px-6 py-6 space-y-8 tabular-nums">
+        <div className="text-[10px] tracking-[0.12em] uppercase text-muted-foreground">
+          {granularityLabel}
+        </div>
         {/* ===== Section 1 — KPI strip ===== */}
         <section>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
