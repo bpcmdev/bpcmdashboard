@@ -16,6 +16,7 @@ export const ALL_TABS: TabDef[] = [
   { id: 'geo_ai_sov',        label: 'GEO / AI SOV' },
   { id: 'partnerships',      label: 'PARTNERSHIPS' },
   { id: 'tiktok_shop',       label: 'TIKTOK SHOP' },
+  { id: 'resource_mgmt',     label: 'RESOURCE MANAGEMENT' },
 ];
 
 export const ALL_TAB_IDS = ALL_TABS.map(t => t.id);
