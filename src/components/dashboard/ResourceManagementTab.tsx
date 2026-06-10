@@ -321,7 +321,13 @@ const ResourceManagementTab = () => {
                 </tr>
               </thead>
               <tbody>
-                <MonthRow label="Budget" months={agg.monthSet} get={m => agg.byMonth.get(m)?.budget ?? 0} total={agg.totalBudget} />
+                <MonthRow
+                  label="Budget"
+                  months={agg.monthSet}
+                  get={m => agg.byMonth.get(m)?.budget ?? 0}
+                  total={agg.totalBudget}
+                  dashWhen={m => !agg.monthHasBudget(m)}
+                />
                 <MonthRow label="Worked" months={agg.monthSet} get={m => agg.byMonth.get(m)?.worked ?? 0} total={agg.totalBilled} />
                 <MonthRow
                   label="Over/Under"
@@ -330,13 +336,20 @@ const ResourceManagementTab = () => {
                     const b = agg.byMonth.get(m);
                     return (b?.budget ?? 0) - (b?.worked ?? 0);
                   }}
-                  total={agg.totalBudget - agg.totalBilled}
+                  total={agg.overBudget}
                   signed
                   isLast
+                  dashWhen={m => !agg.monthHasBudget(m)}
                 />
               </tbody>
             </table>
           </div>
+          {agg.unbudgetedMonths.length > 0 && (
+            <div className="mt-2 text-[11px] text-muted-foreground italic">
+              Budget not yet loaded for {agg.unbudgetedMonths.map(m => monthLabel(m, { month: 'long', year: 'numeric' })).join(', ')}.
+              Over/Under and utilization exclude {agg.unbudgetedMonths.length === 1 ? 'this month' : 'these months'}.
+            </div>
+          )}
         </section>
 
         {/* ===== Section 3 — Over-pace alert ===== */}
@@ -363,21 +376,21 @@ const ResourceManagementTab = () => {
             <KpiCard label="Budget / Week" value={fmtUSD(agg.totalBudget / agg.workingWeeks)} />
             <KpiCard
               label="Actual / Week"
-              value={fmtUSD(agg.totalBilled / agg.workingWeeks)}
-              valueColor={agg.totalBilled > agg.totalBudget ? RED : undefined}
+              value={fmtUSD(agg.budgetedWorked / agg.workingWeeks)}
+              valueColor={agg.budgetedWorked > agg.totalBudget ? RED : undefined}
             />
             <KpiCard
               label="Over / Week Avg"
-              value={fmtUSDsigned((agg.totalBilled - agg.totalBudget) / agg.workingWeeks)}
-              valueColor={agg.totalBilled > agg.totalBudget ? RED : GREEN}
+              value={fmtUSDsigned((agg.budgetedWorked - agg.totalBudget) / agg.workingWeeks)}
+              valueColor={agg.budgetedWorked > agg.totalBudget ? RED : GREEN}
             />
             <KpiCard
               label="Latest Month Pace"
               value={fmtUSD(agg.latestPerWeek)}
               valueColor={
-                agg.latestMonth && (agg.byMonth.get(agg.latestMonth)?.worked ?? 0) <= (agg.byMonth.get(agg.latestMonth)?.budget ?? 0)
-                  ? GREEN
-                  : RED
+                agg.latestMonth && agg.monthHasBudget(agg.latestMonth)
+                  ? ((agg.byMonth.get(agg.latestMonth)?.worked ?? 0) <= (agg.byMonth.get(agg.latestMonth)?.budget ?? 0) ? GREEN : RED)
+                  : undefined
               }
             />
           </div>
@@ -387,7 +400,7 @@ const ResourceManagementTab = () => {
         <section>
           <SectionLabel>YTD Budget Utilization</SectionLabel>
           {(() => {
-            const pct = agg.totalBudget > 0 ? (agg.totalBilled / agg.totalBudget) * 100 : 0;
+            const pct = agg.totalBudget > 0 ? (agg.budgetedWorked / agg.totalBudget) * 100 : 0;
             const baseW = Math.min(pct, 100);
             const overW = Math.max(pct - 100, 0);
             // Scale the visual track so values >100% still fit.
@@ -415,14 +428,20 @@ const ResourceManagementTab = () => {
                   <span>$0</span>
                   <span>Budget cap: <span className="text-foreground font-medium">{fmtUSD(agg.totalBudget)}</span></span>
                   <span>
-                    Worked: <span className="text-foreground font-medium">{fmtUSD(agg.totalBilled)}</span>{' '}
+                    Worked: <span className="text-foreground font-medium">{fmtUSD(agg.budgetedWorked)}</span>{' '}
                     (<span style={{ color: pct > 100 ? RED : undefined }}>{fmtPct(pct)}</span>)
                   </span>
                 </div>
+                {agg.unbudgetedMonths.length > 0 && (
+                  <div className="mt-1 text-[11px] text-muted-foreground italic">
+                    Excludes {agg.unbudgetedMonths.map(m => monthLabel(m, { month: 'long' })).join(', ')} — budget not yet loaded.
+                  </div>
+                )}
               </div>
             );
           })()}
         </section>
+
 
         {/* ===== Section 6 — Hours & Billing by Workstream ===== */}
         <section>
