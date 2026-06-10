@@ -13,7 +13,6 @@ import { workstreamFor, colorFor } from '@/lib/workstreamMap';
 interface MonthlyRow {
   clicktime_job_id: string;
   project_name: string;
-  supabase_client_id: string | null;
   budget_month: string;          // 'YYYY-MM-01'
   monthly_budget: number;
   worked_hours: number;
@@ -98,7 +97,7 @@ const ResourceManagementTab = () => {
         ] = await Promise.all([
           supabase.rpc('ct_overservice_monthly_secure',   { p_client_id: activeClientId }),
           supabase.rpc('ct_overservice_tasks_secure',     { p_client_id: activeClientId }),
-          supabase.rpc('ct_overservice_employees_secure', { p_client_id: activeClientId, p_job_id: null }),
+          supabase.rpc('ct_overservice_employees_secure', { p_client_id: activeClientId }),
         ]);
         if (mErr) throw mErr;
         if (tErr) throw tErr;
