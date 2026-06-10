@@ -59,7 +59,7 @@ function useCountUp(target: string, duration = 900): string {
   return display;
 }
 
-const KpiCard = ({ label, value, delta, deltaType, targetTab, metricKey, onSelect, spark, sparkColor, notTracked }: KpiCardProps) => {
+const KpiCard = ({ label, value, delta, deltaType, targetTab, metricKey, onSelect, spark, sparkColor, notTracked, tooltip }: KpiCardProps) => {
   const animated = useCountUp(notTracked ? '' : value);
   const isPos = deltaType === 'positive';
   const isNeg = deltaType === 'negative';
@@ -79,6 +79,7 @@ const KpiCard = ({ label, value, delta, deltaType, targetTab, metricKey, onSelec
     <button
       type="button"
       onClick={handleClick}
+      title={tooltip}
       className={`group flex-1 px-3 md:px-5 py-4 md:py-5 text-center min-w-0 relative overflow-hidden animate-fade-in bg-white border-r border-black/10 transition-all duration-200 hover:bg-[hsl(0,0%,98%)] hover:-translate-y-0.5 hover:shadow-[0_8px_24px_-12px_rgba(0,0,0,0.18)] ${clickable ? 'cursor-pointer' : 'cursor-default'}`}
       style={
         sparkColor
