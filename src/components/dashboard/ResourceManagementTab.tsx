@@ -88,24 +88,27 @@ const ResourceManagementTab = () => {
 
     (async () => {
       try {
-        // The *_secure RPCs use auth.uid() server-side to enforce visibility
+        // The *_secure RPCs enforce auth.uid()-based visibility server-side
         // (BPCM internal users see all clients; client logins see only their own).
-        // We pass p_client_id to scope to the client picked in the switcher.
-        // No client-side supabase_client_id filter — the server enforces it.
+        // Monthly RPC takes (p_client_id, p_month) — pass null for all months, filter client-side.
+        // Tasks/Employees RPCs take (p_client_id, p_from, p_to) and filter server-side.
+        const fromArg = isAllTime || !effectiveFrom ? null : effectiveFrom;
+        const toArg   = isAllTime || !effectiveTo   ? null : effectiveTo;
+
         const [
           { data: mData, error: mErr },
           { data: tData, error: tErr },
           { data: eData, error: eErr },
         ] = await Promise.all([
-          supabase.rpc('ct_overservice_monthly_secure',   { p_client_id: activeClientId }),
-          supabase.rpc('ct_overservice_tasks_secure',     { p_client_id: activeClientId }),
-          supabase.rpc('ct_overservice_employees_secure', { p_client_id: activeClientId }),
+          supabase.rpc('ct_overservice_monthly_secure',          { p_client_id: activeClientId, p_month: null }),
+          supabase.rpc('ct_overservice_tasks_client_secure',     { p_client_id: activeClientId, p_from: fromArg, p_to: toArg }),
+          supabase.rpc('ct_overservice_employees_client_secure', { p_client_id: activeClientId, p_from: fromArg, p_to: toArg }),
         ]);
         if (mErr) throw mErr;
         if (tErr) throw tErr;
         if (eErr) throw eErr;
 
-        // Apply date-range filter client-side (RPCs return full history).
+        // Monthly RPC returns all months — filter to active range here.
         const inRange = <T extends { budget_month: string }>(rows: T[]): T[] => {
           if (isAllTime || !effectiveFrom || !effectiveTo) return rows;
           const startMonth = effectiveFrom.slice(0, 7) + '-01';
@@ -115,8 +118,8 @@ const ResourceManagementTab = () => {
 
         if (!cancelled) {
           setMonthly(inRange((mData ?? []) as MonthlyRow[]));
-          setTasks(inRange((tData ?? []) as TaskRow[]));
-          setEmployees(inRange((eData ?? []) as EmployeeRow[]));
+          setTasks((tData ?? []) as TaskRow[]);
+          setEmployees((eData ?? []) as EmployeeRow[]);
           setLoading(false);
         }
       } catch (e: any) {
