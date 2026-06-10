@@ -19,6 +19,7 @@ interface KpiCardProps {
   spark?: number[];
   sparkColor?: string;
   notTracked?: boolean;
+  tooltip?: string;
 }
 
 /** Animate a numeric value from 0 → target over `duration` ms. Non-numeric values are returned as-is. */
@@ -58,7 +59,7 @@ function useCountUp(target: string, duration = 900): string {
   return display;
 }
 
-const KpiCard = ({ label, value, delta, deltaType, targetTab, metricKey, onSelect, spark, sparkColor, notTracked }: KpiCardProps) => {
+const KpiCard = ({ label, value, delta, deltaType, targetTab, metricKey, onSelect, spark, sparkColor, notTracked, tooltip }: KpiCardProps) => {
   const animated = useCountUp(notTracked ? '' : value);
   const isPos = deltaType === 'positive';
   const isNeg = deltaType === 'negative';
@@ -78,6 +79,7 @@ const KpiCard = ({ label, value, delta, deltaType, targetTab, metricKey, onSelec
     <button
       type="button"
       onClick={handleClick}
+      title={tooltip}
       className={`group flex-1 px-3 md:px-5 py-4 md:py-5 text-center min-w-0 relative overflow-hidden animate-fade-in bg-white border-r border-black/10 transition-all duration-200 hover:bg-[hsl(0,0%,98%)] hover:-translate-y-0.5 hover:shadow-[0_8px_24px_-12px_rgba(0,0,0,0.18)] ${clickable ? 'cursor-pointer' : 'cursor-default'}`}
       style={
         sparkColor
@@ -170,7 +172,7 @@ const KpiBar = () => {
   const [drawerMetric, setDrawerMetric] = useState<KpiMetricKey | null>(null);
   const [drawerLabel, setDrawerLabel] = useState('');
   const [drawerTab, setDrawerTab] = useState<string | undefined>(undefined);
-  const { selectedWeek, refreshKey, activeClientId, isAllTime } = useWeek();
+  const { selectedWeek, refreshKey, activeClientId, isAllTime, effectiveFrom, effectiveTo } = useWeek();
   const { clientColor } = useAdmin();
   const accent = clientColor || '#1B2B8A';
 
@@ -207,7 +209,33 @@ const KpiBar = () => {
 
       const sentimentNotTracked = allZero(sentimentSpark);
       const sovNotTracked = allZero(sovSpark);
-      const roiNotTracked = allZero(roiSpark);
+
+      // Influencer ROI now comes from ct_influencer_roi_secure (not weekly_snapshots).
+      // All Time → no dates; otherwise pass the effective range start/end.
+      const roiParams: Record<string, any> = { p_client_id: activeClientId };
+      if (!isAllTime && effectiveFrom && effectiveTo) {
+        roiParams.p_start = effectiveFrom;
+        roiParams.p_end = effectiveTo;
+      }
+      const { data: roiData } = await supabase.rpc('ct_influencer_roi_secure' as any, roiParams);
+      const roiRow = Array.isArray(roiData) ? (roiData[0] ?? null) : (roiData ?? null);
+      const roiEmv = roiRow ? Number(roiRow.emv) : null;
+      const roiBillings = roiRow ? Number(roiRow.billings) : null;
+      const roiVal = roiRow && roiRow.roi != null ? Number(roiRow.roi) : null;
+      const roiTracked = roiVal != null && Number.isFinite(roiVal);
+      const roiTile: KpiCardProps = {
+        label: 'Influencer ROI',
+        value: roiTracked ? `${roiVal!.toFixed(1)}x` : '—',
+        delta: roiTracked ? 'EMV per $1 billed' : 'Not yet tracked',
+        deltaType: 'neutral',
+        targetTab: 'INFLUENCER & SOCIAL',
+        metricKey: 'influencer_roi',
+        sparkColor: accent,
+        notTracked: !roiTracked,
+        tooltip: roiTracked
+          ? `EMV generated per $1 billed · ${formatMoney(roiEmv ?? 0)} EMV ÷ ${formatMoney(roiBillings ?? 0)} billed`
+          : 'Influencer ROI not yet tracked for this period',
+      };
 
       if (isAllTime) {
         let q = supabase.from('weekly_snapshots').select('*');
@@ -244,7 +272,7 @@ const KpiBar = () => {
           { label: 'Sentiment Score', value: `${sentiment}/100`, ...allTimeDelta, metricKey: 'sentiment_score', spark: sentimentNotTracked ? undefined : sentimentSpark, sparkColor: accent, notTracked: sentimentNotTracked },
           { label: 'Social Reach', value: formatCount(reach), ...allTimeDelta, targetTab: 'INFLUENCER & SOCIAL', metricKey: 'social_reach', spark: reachSpark, sparkColor: accent },
           { label: 'Share of Voice', value: `${sov}%`, ...allTimeDelta, metricKey: 'sov_pct', spark: sovNotTracked ? undefined : sovSpark, sparkColor: accent, notTracked: sovNotTracked },
-          { label: 'Influencer ROI', value: `${roi}x`, ...allTimeDelta, targetTab: 'INFLUENCER & SOCIAL', metricKey: 'influencer_roi', spark: roiNotTracked ? undefined : roiSpark, sparkColor: accent, notTracked: roiNotTracked },
+          roiTile,
         ]);
         setLoading(false);
         return;
@@ -281,7 +309,6 @@ const KpiBar = () => {
       const sentimentDelta = formatDelta(r.mom_sentiment_delta ?? 0, 'points', 'MoM');
       const reachDelta = formatDelta(r.wow_reach_delta ?? 0, 'compact');
       const sovDelta = formatDelta(r.sov_delta_pts ?? 0, 'points');
-      const roiVal = r.influencer_roi ?? 0;
 
       setKpis([
         { label: 'Press Placements', value: String(r.placement_count ?? 0), ...placementDelta, targetTab: 'EARNED MEDIA', metricKey: 'placement_count', spark: placementSpark, sparkColor: accent },
@@ -289,13 +316,13 @@ const KpiBar = () => {
         { label: 'Sentiment Score', value: `${r.sentiment_score ?? 0}/100`, ...sentimentDelta, metricKey: 'sentiment_score', spark: sentimentNotTracked ? undefined : sentimentSpark, sparkColor: accent, notTracked: sentimentNotTracked && !(r.sentiment_score) },
         { label: 'Social Reach', value: formatCount(r.social_reach ?? 0), ...reachDelta, targetTab: 'INFLUENCER & SOCIAL', metricKey: 'social_reach', spark: reachSpark, sparkColor: accent },
         { label: 'Share of Voice', value: `${r.sov_pct ?? 0}%`, ...sovDelta, metricKey: 'sov_pct', spark: sovNotTracked ? undefined : sovSpark, sparkColor: accent, notTracked: sovNotTracked && !(r.sov_pct) },
-        { label: 'Influencer ROI', value: `${roiVal}x`, delta: 'stable', deltaType: 'neutral', targetTab: 'INFLUENCER & SOCIAL', metricKey: 'influencer_roi', spark: roiNotTracked ? undefined : roiSpark, sparkColor: accent, notTracked: roiNotTracked && !roiVal },
+        roiTile,
       ]);
       setLoading(false);
     };
 
     fetchKpis();
-  }, [selectedWeek, refreshKey, activeClientId, isAllTime, accent]);
+  }, [selectedWeek, refreshKey, activeClientId, isAllTime, effectiveFrom, effectiveTo, accent]);
 
   if (error) {
     return (
