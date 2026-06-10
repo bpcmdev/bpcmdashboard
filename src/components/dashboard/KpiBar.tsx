@@ -19,6 +19,7 @@ interface KpiCardProps {
   spark?: number[];
   sparkColor?: string;
   notTracked?: boolean;
+  tooltip?: string;
 }
 
 /** Animate a numeric value from 0 → target over `duration` ms. Non-numeric values are returned as-is. */
