@@ -205,14 +205,11 @@ const ResourceManagementTab = () => {
       .slice(0, 10);
   }, [employees]);
 
-  /* Section 7 right: workstream → tasks (need job_id → project_name from monthly rows). */
+  /* Section 7 right: workstream → tasks. New RPC returns project_name directly. */
   const workstreamTasks = useMemo(() => {
-    const jobToProject = new Map<string, string>();
-    for (const m of monthly ?? []) jobToProject.set(m.clicktime_job_id, m.project_name);
-
     const wsTaskMap = new Map<string, Map<string, { hours: number; billing: number }>>();
     for (const t of tasks ?? []) {
-      const ws = workstreamFor(jobToProject.get(t.clicktime_job_id));
+      const ws = workstreamFor(t.project_name);
       const inner = wsTaskMap.get(ws) ?? new Map();
       const cur = inner.get(t.task_name) ?? { hours: 0, billing: 0 };
       cur.hours += Number(t.worked_hours || 0);
