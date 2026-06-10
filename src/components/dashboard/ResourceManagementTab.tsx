@@ -87,49 +87,35 @@ const ResourceManagementTab = () => {
 
     (async () => {
       try {
-        // 1) Monthly rows scoped to the active client (and date range when set).
-        let mq = supabase
-          .from('ct_overservice_monthly')
-          .select('clicktime_job_id,project_name,supabase_client_id,budget_month,monthly_budget,worked_hours,billable_value,budget_remaining,is_over_serviced,utilization_pct')
-          .eq('supabase_client_id', activeClientId);
-        if (!isAllTime && effectiveFrom && effectiveTo) {
-          // budget_month is the first of the month; include any month overlapping the range.
-          const startMonth = effectiveFrom.slice(0, 7) + '-01';
-          const endMonth = effectiveTo.slice(0, 7) + '-01';
-          mq = mq.gte('budget_month', startMonth).lte('budget_month', endMonth);
-        }
-        const { data: mData, error: mErr } = await mq;
-        if (mErr) throw mErr;
-        const monthlyRows = (mData ?? []) as MonthlyRow[];
-
-        const jobIds = Array.from(new Set(monthlyRows.map(r => r.clicktime_job_id)));
-        if (jobIds.length === 0) {
-          if (!cancelled) { setMonthly([]); setTasks([]); setEmployees([]); setLoading(false); }
-          return;
-        }
-
-        // 2 + 3) Tasks & employees scoped by those job ids + same date range.
-        const buildScoped = (table: 'ct_overservice_by_task' | 'ct_overservice_by_employee') => {
-          let q = supabase.from(table).select('*').in('clicktime_job_id', jobIds);
-          if (!isAllTime && effectiveFrom && effectiveTo) {
-            const startMonth = effectiveFrom.slice(0, 7) + '-01';
-            const endMonth = effectiveTo.slice(0, 7) + '-01';
-            q = q.gte('budget_month', startMonth).lte('budget_month', endMonth);
-          }
-          return q;
-        };
-
-        const [{ data: tData, error: tErr }, { data: eData, error: eErr }] = await Promise.all([
-          buildScoped('ct_overservice_by_task'),
-          buildScoped('ct_overservice_by_employee'),
+        // The *_secure RPCs use auth.uid() server-side to enforce visibility
+        // (BPCM internal users see all clients; client logins see only their own).
+        // We pass p_client_id to scope to the client picked in the switcher.
+        // No client-side supabase_client_id filter — the server enforces it.
+        const [
+          { data: mData, error: mErr },
+          { data: tData, error: tErr },
+          { data: eData, error: eErr },
+        ] = await Promise.all([
+          supabase.rpc('ct_overservice_monthly_secure',   { p_client_id: activeClientId }),
+          supabase.rpc('ct_overservice_tasks_secure',     { p_client_id: activeClientId }),
+          supabase.rpc('ct_overservice_employees_secure', { p_client_id: activeClientId, p_job_id: null }),
         ]);
+        if (mErr) throw mErr;
         if (tErr) throw tErr;
         if (eErr) throw eErr;
 
+        // Apply date-range filter client-side (RPCs return full history).
+        const inRange = <T extends { budget_month: string }>(rows: T[]): T[] => {
+          if (isAllTime || !effectiveFrom || !effectiveTo) return rows;
+          const startMonth = effectiveFrom.slice(0, 7) + '-01';
+          const endMonth = effectiveTo.slice(0, 7) + '-01';
+          return rows.filter(r => r.budget_month >= startMonth && r.budget_month <= endMonth);
+        };
+
         if (!cancelled) {
-          setMonthly(monthlyRows);
-          setTasks((tData ?? []) as TaskRow[]);
-          setEmployees((eData ?? []) as EmployeeRow[]);
+          setMonthly(inRange((mData ?? []) as MonthlyRow[]));
+          setTasks(inRange((tData ?? []) as TaskRow[]));
+          setEmployees(inRange((eData ?? []) as EmployeeRow[]));
           setLoading(false);
         }
       } catch (e: any) {
