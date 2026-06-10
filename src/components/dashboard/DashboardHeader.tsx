@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ChevronDown, LogOut, Shield, ShieldCheck, Menu, X } from 'lucide-react';
+import { ChevronDown, LogOut, Shield, ShieldCheck, Menu, X, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useWeek } from '@/contexts/WeekContext';
 import { supabase } from '@/lib/supabase';
@@ -25,6 +25,10 @@ const DashboardHeader = () => {
   const { isAdmin, clientId, clientName, clientLogo, clientColor, allClients, switchClient } = useAdmin();
   const [adminOpen, setAdminOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [clientSearch, setClientSearch] = useState('');
+  const filteredClients = allClients.filter(c =>
+    c.name.toLowerCase().includes(clientSearch.toLowerCase())
+  );
 
   // Allow other parts of the app (e.g. Getting Started checklist) to open the admin panel.
   useEffect(() => {
@@ -47,6 +51,7 @@ const DashboardHeader = () => {
   const handleClientSwitch = (newClientId: string) => {
     switchClient(newClientId);
     setOverrideClientId(newClientId);
+    setClientSearch('');
     setTimeout(() => refreshData(), 100);
   };
 
@@ -75,25 +80,46 @@ const DashboardHeader = () => {
         <div className="hidden md:flex items-center gap-2 text-[11px] tracking-widest uppercase opacity-80">
           {isAdmin && allClients.length > 1 && (
             <>
-              <DropdownMenu>
+              <DropdownMenu onOpenChange={(open) => { if (!open) setClientSearch(''); }}>
                 <DropdownMenuTrigger asChild>
                   <button className="header-chip">
                     Switch Client
                     <ChevronDown className="w-3 h-3 opacity-60" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="center" className="w-56 max-h-80 overflow-y-auto bg-card border-border">
-                  {allClients.map((c) => (
-                    <DropdownMenuItem
-                      key={c.id}
-                      onClick={() => handleClientSwitch(c.id)}
-                      className={`text-xs tracking-wider cursor-pointer ${
-                        c.id === clientId ? 'font-bold text-foreground bg-accent' : 'text-muted-foreground'
-                      }`}
-                    >
-                      {c.name}
-                    </DropdownMenuItem>
-                  ))}
+                <DropdownMenuContent
+                  align="center"
+                  className="w-64 max-h-96 overflow-hidden bg-card border-border p-0"
+                  onCloseAutoFocus={(e) => e.preventDefault()}
+                >
+                  <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-border bg-card px-2 py-2">
+                    <Search className="w-3 h-3 opacity-60" />
+                    <input
+                      autoFocus
+                      value={clientSearch}
+                      onChange={(e) => setClientSearch(e.target.value)}
+                      onKeyDown={(e) => e.stopPropagation()}
+                      placeholder="Search clients…"
+                      className="flex-1 bg-transparent text-xs tracking-wider outline-none placeholder:text-muted-foreground"
+                    />
+                  </div>
+                  <div className="max-h-80 overflow-y-auto">
+                    {filteredClients.length === 0 ? (
+                      <div className="px-2 py-3 text-xs text-muted-foreground tracking-wider">No clients found</div>
+                    ) : (
+                      filteredClients.map((c) => (
+                        <DropdownMenuItem
+                          key={c.id}
+                          onClick={() => handleClientSwitch(c.id)}
+                          className={`text-xs tracking-wider cursor-pointer ${
+                            c.id === clientId ? 'font-bold text-foreground bg-accent' : 'text-muted-foreground'
+                          }`}
+                        >
+                          {c.name}
+                        </DropdownMenuItem>
+                      ))
+                    )}
+                  </div>
                 </DropdownMenuContent>
               </DropdownMenu>
               <span className="opacity-40">|</span>

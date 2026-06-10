@@ -139,7 +139,7 @@ function DashboardContent() {
         'GEO / AI SOV': 'geo_ai_sov',
         'PARTNERSHIPS': 'partnerships',
         'TIKTOK SHOP': 'tiktok_shop',
-        'RESOURCE MANAGEMENT': 'resource_mgmt',
+        'RESOURCE MANAGEMENT': 'resource_management',
       };
       return enabledTabs.includes(idMap[label]);
     });
