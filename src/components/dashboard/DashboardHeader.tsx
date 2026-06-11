@@ -169,6 +169,11 @@ const DashboardHeader = () => {
           >
             Export PDF
           </button>
+          {isAdmin && (
+            <button onClick={() => setExplainOpen(true)} className="header-chip">
+              Explain This Month
+            </button>
+          )}
           <button onClick={refreshData} className="header-chip">
             Refresh
           </button>
