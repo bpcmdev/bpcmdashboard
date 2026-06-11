@@ -292,6 +292,20 @@ const DashboardHeader = () => {
       )}
 
       {isAdmin && <AdminPanel open={adminOpen} onOpenChange={setAdminOpen} clientId={clientId} />}
+      {isAdmin && (
+        <ExplainMonthDrawer
+          open={explainOpen}
+          onOpenChange={setExplainOpen}
+          clientId={clientId}
+          clientName={clientName}
+          month={(() => {
+            const base = !isAllTime && selectedWeek ? new Date(selectedWeek + 'T00:00:00') : new Date();
+            const y = base.getFullYear();
+            const m = String(base.getMonth() + 1).padStart(2, '0');
+            return `${y}-${m}-01`;
+          })()}
+        />
+      )}
     </header>
   );
 };
