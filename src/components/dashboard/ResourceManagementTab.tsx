@@ -382,16 +382,16 @@ const ResourceManagementTab = () => {
 
         {/* ===== Section 1 — KPI strip ===== */}
         <section>
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-            <KpiCard label="Total Hours Worked" value={fmtHours(agg.totalHours)} />
-            <KpiCard label="Total Billed"        value={fmtUSD(agg.totalBilled)} />
-            <KpiCard label="Total Budget"        value={fmtUSD(agg.totalBudget)} />
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-px bg-black/10 border border-black/10 rounded-md overflow-hidden">
+            <KpiCard label="Hours Worked"   value={fmtHours(agg.totalHours)} />
+            <KpiCard label="Billed"          value={fmtUSD(agg.totalBilled)} />
+            <KpiCard label="Budget"          value={fmtUSD(agg.totalBudget)} />
             <KpiCard
-              label={overYTD ? 'Over Budget YTD' : 'Under Budget YTD'}
-              value={(overYTD ? '-' : '+') + fmtUSD(Math.abs(agg.remaining))}
-              valueColor={overYTD ? RED : GREEN}
+              label={overYTD ? 'Over Budget · YTD' : 'Under Budget · YTD'}
+              value={fmtUSD(Math.abs(agg.remaining))}
+              signed={agg.remaining}
             />
-            <KpiCard label="Avg Weekly Burn" value={fmtUSD(agg.totalBilled / agg.workingWeeks)} />
+            <KpiCard label="Weekly Burn"     value={fmtUSD(agg.totalBilled / agg.workingWeeks)} />
             <KpiCard label="Effective Rate"  value={`${fmtUSD(agg.effectiveRate)}/h`} />
           </div>
         </section>
