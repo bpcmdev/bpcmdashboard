@@ -25,6 +25,7 @@ const DashboardHeader = () => {
   const { selectedWeek, setSelectedWeek, weeks, lastUpdated, refreshData, setOverrideClientId } = useWeek();
   const { isAdmin, clientId, clientName, clientLogo, clientColor, allClients, switchClient } = useAdmin();
   const [adminOpen, setAdminOpen] = useState(false);
+  const [explainOpen, setExplainOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [clientSearch, setClientSearch] = useState('');
   const filteredClients = allClients.filter(c =>
