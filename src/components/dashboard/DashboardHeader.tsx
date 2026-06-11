@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useIsMobile } from '@/hooks/use-mobile';
 import AdminPanel from '@/components/dashboard/AdminPanel';
+import ExplainMonthDrawer from '@/components/dashboard/ExplainMonthDrawer';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
