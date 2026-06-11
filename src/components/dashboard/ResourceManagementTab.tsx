@@ -382,16 +382,16 @@ const ResourceManagementTab = () => {
 
         {/* ===== Section 1 — KPI strip ===== */}
         <section>
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-            <KpiCard label="Total Hours Worked" value={fmtHours(agg.totalHours)} />
-            <KpiCard label="Total Billed"        value={fmtUSD(agg.totalBilled)} />
-            <KpiCard label="Total Budget"        value={fmtUSD(agg.totalBudget)} />
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-px bg-black/10 border border-black/10 rounded-md overflow-hidden">
+            <KpiCard label="Hours Worked"   value={fmtHours(agg.totalHours)} />
+            <KpiCard label="Billed"          value={fmtUSD(agg.totalBilled)} />
+            <KpiCard label="Budget"          value={fmtUSD(agg.totalBudget)} />
             <KpiCard
-              label={overYTD ? 'Over Budget YTD' : 'Under Budget YTD'}
-              value={(overYTD ? '-' : '+') + fmtUSD(Math.abs(agg.remaining))}
-              valueColor={overYTD ? RED : GREEN}
+              label={overYTD ? 'Over Budget · YTD' : 'Under Budget · YTD'}
+              value={fmtUSD(Math.abs(agg.remaining))}
+              signed={agg.remaining}
             />
-            <KpiCard label="Avg Weekly Burn" value={fmtUSD(agg.totalBilled / agg.workingWeeks)} />
+            <KpiCard label="Weekly Burn"     value={fmtUSD(agg.totalBilled / agg.workingWeeks)} />
             <KpiCard label="Effective Rate"  value={`${fmtUSD(agg.effectiveRate)}/h`} />
           </div>
         </section>
@@ -492,8 +492,7 @@ const ResourceManagementTab = () => {
               const delta = (agg.budgetedWorked - agg.totalBudget) / agg.workingWeeks;
               const over = delta > 0;
               const label = over ? 'Over / Week Avg' : 'Under / Week Avg';
-              const value = over ? `-${fmtUSD(Math.abs(delta))}` : `+${fmtUSD(Math.abs(delta))}`;
-              return <KpiCard label={label} value={value} valueColor={over ? RED : GREEN} />;
+              return <KpiCard label={label} value={fmtUSD(Math.abs(delta))} signed={-delta} />;
             })()}
             {(() => {
               const hasBudget = agg.latestMonth && agg.monthHasBudget(agg.latestMonth);
@@ -706,17 +705,40 @@ const ResourceManagementTab = () => {
 /* ------------------------------------------------------------------------- */
 
 const SectionLabel = ({ children }: { children: React.ReactNode }) => (
-  <div className="text-[10px] uppercase tracking-[0.14em] font-semibold text-muted-foreground mb-3">{children}</div>
-);
-
-const KpiCard = ({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) => (
-  <div className="border border-black/10 rounded-md px-4 py-3 bg-card">
-    <div className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground mb-1.5">{label}</div>
-    <div className="text-xl font-semibold tabular-nums" style={valueColor ? { color: valueColor } : undefined}>
-      {value}
-    </div>
+  <div className="font-mono-ui text-[10px] uppercase tracking-[0.22em] font-medium text-muted-foreground mb-4">
+    {children}
   </div>
 );
+
+const KpiCard = ({
+  label,
+  value,
+  valueColor,
+  signed,
+}: {
+  label: string;
+  value: string;
+  valueColor?: string;
+  /** If provided, negative => red parenthesised, positive => default. */
+  signed?: number;
+}) => {
+  const isNeg = typeof signed === 'number' && signed < 0;
+  const color = isNeg ? RED : valueColor;
+  const display = isNeg ? `(${value})` : value;
+  return (
+    <div className="bg-card px-5 py-5 flex flex-col gap-3">
+      <div className="font-mono-ui text-[9px] uppercase tracking-[0.24em] text-muted-foreground">
+        {label}
+      </div>
+      <div
+        className="font-display text-[28px] leading-none tabular-nums tracking-tight"
+        style={color ? { color } : undefined}
+      >
+        {display}
+      </div>
+    </div>
+  );
+};
 
 const MonthRow = ({
   label, months, get, total, signed, isLast, dashWhen,
