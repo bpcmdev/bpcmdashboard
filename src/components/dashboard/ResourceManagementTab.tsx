@@ -492,8 +492,7 @@ const ResourceManagementTab = () => {
               const delta = (agg.budgetedWorked - agg.totalBudget) / agg.workingWeeks;
               const over = delta > 0;
               const label = over ? 'Over / Week Avg' : 'Under / Week Avg';
-              const value = over ? `-${fmtUSD(Math.abs(delta))}` : `+${fmtUSD(Math.abs(delta))}`;
-              return <KpiCard label={label} value={value} valueColor={over ? RED : GREEN} />;
+              return <KpiCard label={label} value={fmtUSD(Math.abs(delta))} signed={-delta} />;
             })()}
             {(() => {
               const hasBudget = agg.latestMonth && agg.monthHasBudget(agg.latestMonth);
