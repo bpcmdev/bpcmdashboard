@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useIsMobile } from '@/hooks/use-mobile';
 import AdminPanel from '@/components/dashboard/AdminPanel';
+import ExplainMonthDrawer from '@/components/dashboard/ExplainMonthDrawer';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -24,6 +25,7 @@ const DashboardHeader = () => {
   const { selectedWeek, setSelectedWeek, weeks, lastUpdated, refreshData, setOverrideClientId } = useWeek();
   const { isAdmin, clientId, clientName, clientLogo, clientColor, allClients, switchClient } = useAdmin();
   const [adminOpen, setAdminOpen] = useState(false);
+  const [explainOpen, setExplainOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [clientSearch, setClientSearch] = useState('');
   const filteredClients = allClients.filter(c =>
@@ -167,6 +169,11 @@ const DashboardHeader = () => {
           >
             Export PDF
           </button>
+          {isAdmin && (
+            <button onClick={() => setExplainOpen(true)} className="header-chip">
+              Explain This Month
+            </button>
+          )}
           <button onClick={refreshData} className="header-chip">
             Refresh
           </button>
@@ -285,6 +292,20 @@ const DashboardHeader = () => {
       )}
 
       {isAdmin && <AdminPanel open={adminOpen} onOpenChange={setAdminOpen} clientId={clientId} />}
+      {isAdmin && (
+        <ExplainMonthDrawer
+          open={explainOpen}
+          onOpenChange={setExplainOpen}
+          clientId={clientId}
+          clientName={clientName}
+          month={(() => {
+            const base = !isAllTime && selectedWeek ? new Date(selectedWeek + 'T00:00:00') : new Date();
+            const y = base.getFullYear();
+            const m = String(base.getMonth() + 1).padStart(2, '0');
+            return `${y}-${m}-01`;
+          })()}
+        />
+      )}
     </header>
   );
 };
