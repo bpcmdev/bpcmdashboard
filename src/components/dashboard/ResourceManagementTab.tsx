@@ -705,8 +705,11 @@ const ResourceManagementTab = () => {
 /* ------------------------------------------------------------------------- */
 
 const SectionLabel = ({ children }: { children: React.ReactNode }) => (
-  <div className="font-mono-ui text-[10px] uppercase tracking-[0.22em] font-medium text-muted-foreground mb-4">
-    {children}
+  <div className="flex items-center gap-3 mb-5">
+    <span className="font-mono-ui text-[10px] uppercase tracking-[0.28em] font-medium text-foreground/70">
+      {children}
+    </span>
+    <span className="flex-1 h-px bg-black/10" />
   </div>
 );
 
@@ -726,12 +729,15 @@ const KpiCard = ({
   const color = isNeg ? RED : valueColor;
   const display = isNeg ? `(${value})` : value;
   return (
-    <div className="bg-card px-5 py-5 flex flex-col gap-3">
-      <div className="font-mono-ui text-[9px] uppercase tracking-[0.24em] text-muted-foreground">
-        {label}
+    <div className="bg-card px-6 py-7 flex flex-col gap-5 min-h-[120px] justify-between">
+      <div className="flex items-center gap-2">
+        <span className="inline-block w-1 h-1 rounded-full bg-foreground/30" />
+        <span className="font-mono-ui text-[9px] uppercase tracking-[0.26em] text-muted-foreground">
+          {label}
+        </span>
       </div>
       <div
-        className="font-display text-[28px] leading-none tabular-nums tracking-tight"
+        className="font-display text-[34px] leading-none tabular-nums tracking-tight font-medium"
         style={color ? { color } : undefined}
       >
         {display}
@@ -739,6 +745,7 @@ const KpiCard = ({
     </div>
   );
 };
+
 
 const MonthRow = ({
   label, months, get, total, signed, isLast, dashWhen,
