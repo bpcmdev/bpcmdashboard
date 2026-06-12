@@ -130,10 +130,16 @@ const ResourceManagementTab = () => {
 
     (async () => {
       try {
-        // Expand the active range to month boundaries.
+        // Expand the active range to month boundaries. Local month-range
+        // override (if both set) takes precedence over global week/range.
         const firstOfMonth = (iso: string) => iso.slice(0, 7) + '-01';
-        const fromArg = isAllTime || !effectiveFrom ? null : firstOfMonth(effectiveFrom);
-        const toArg   = isAllTime || !effectiveTo   ? null : firstOfMonth(effectiveTo);
+        const hasLocal = monthFrom && monthTo;
+        const fromArg = hasLocal
+          ? `${monthFrom}-01`
+          : (isAllTime || !effectiveFrom ? null : firstOfMonth(effectiveFrom));
+        const toArg = hasLocal
+          ? `${monthTo}-01`
+          : (isAllTime || !effectiveTo ? null : firstOfMonth(effectiveTo));
 
         const [
           { data: mData, error: mErr },
