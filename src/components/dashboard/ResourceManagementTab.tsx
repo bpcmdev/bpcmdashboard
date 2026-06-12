@@ -170,7 +170,7 @@ const ResourceManagementTab = () => {
     })();
 
     return () => { cancelled = true; };
-  }, [activeClientId, effectiveFrom, effectiveTo, isAllTime, refreshKey]);
+  }, [activeClientId, effectiveFrom, effectiveTo, isAllTime, refreshKey, monthFrom, monthTo]);
 
   /* Admin-only portfolio query — current month, all clients. */
   useEffect(() => {
