@@ -17,6 +17,9 @@ import GeoAISovTab from '@/components/dashboard/GeoAISovTab';
 import PartnershipsTab from '@/components/dashboard/PartnershipsTab';
 import TikTokShopTab from '@/components/dashboard/TikTokShopTab';
 import ResourceManagementTab from '@/components/dashboard/ResourceManagementTab';
+import AtAGlanceTab from '@/components/dashboard/AtAGlanceTab';
+import ProductIntelligenceTab from '@/components/dashboard/ProductIntelligenceTab';
+import WholesaleRetailTab from '@/components/dashboard/WholesaleRetailTab';
 import GettingStarted, { useIsNewClient } from '@/components/dashboard/GettingStarted';
 import NotableThisWeek from '@/components/dashboard/NotableThisWeek';
 import { LinkPreviewProvider } from '@/components/dashboard/LinkPreviewDrawer';
@@ -24,6 +27,8 @@ import { exportDashboardPdf } from '@/lib/exportPdf';
 import { toast } from '@/hooks/use-toast';
 
 const TAB_MAP: Record<string, React.ComponentType> = {
+  'AT A GLANCE': AtAGlanceTab,
+  'PRODUCT INTELLIGENCE': ProductIntelligenceTab,
   'KEY WINS': KeyWinsTab,
   'PRODUCT LAUNCHES': ProductLaunchesTab,
   'PIPELINE & MOMENTS': PipelineMomentsTab,
@@ -33,6 +38,7 @@ const TAB_MAP: Record<string, React.ComponentType> = {
   'AI VISIBILITY': AIVisibilityTab,
   'GEO / AI SOV': GeoAISovTab,
   'PARTNERSHIPS': PartnershipsTab,
+  'WHOLESALE / RETAIL': WholesaleRetailTab,
   'TIKTOK SHOP': TikTokShopTab,
   'RESOURCE MANAGEMENT': ResourceManagementTab,
 };
@@ -129,6 +135,8 @@ function DashboardContent() {
     const labels = Object.keys(TAB_MAP);
     const enabledLabels = labels.filter((label) => {
       const idMap: Record<string, string> = {
+        'AT A GLANCE': 'at_a_glance',
+        'PRODUCT INTELLIGENCE': 'product_intelligence',
         'PIPELINE & MOMENTS': 'pipeline',
         'KEY WINS': 'key_wins',
         'PRODUCT LAUNCHES': 'product_launches',
@@ -138,6 +146,7 @@ function DashboardContent() {
         'AI VISIBILITY': 'ai_visibility',
         'GEO / AI SOV': 'geo_ai_sov',
         'PARTNERSHIPS': 'partnerships',
+        'WHOLESALE / RETAIL': 'wholesale_retail',
         'TIKTOK SHOP': 'tiktok_shop',
         'RESOURCE MANAGEMENT': 'resource_management',
       };
