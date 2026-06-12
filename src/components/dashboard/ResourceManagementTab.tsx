@@ -382,16 +382,16 @@ const ResourceManagementTab = () => {
 
         {/* ===== Section 1 — KPI strip ===== */}
         <section>
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-px bg-black/10 border border-black/10 rounded-md overflow-hidden">
+          <div className="grid grid-cols-2 md:grid-cols-6 bg-card border border-black/10 rounded-md overflow-hidden divide-x divide-y md:divide-y-0 divide-black/10">
             <KpiCard label="Hours Worked"   value={fmtHours(agg.totalHours)} />
-            <KpiCard label="Billed"          value={fmtUSD(agg.totalBilled)} />
-            <KpiCard label="Budget"          value={fmtUSD(agg.totalBudget)} />
+            <KpiCard label="Total Billed"   value={fmtUSD(agg.totalBilled)} />
+            <KpiCard label="Total Budget"   value={fmtUSD(agg.totalBudget)} />
             <KpiCard
               label={overYTD ? 'Over Budget · YTD' : 'Under Budget · YTD'}
               value={fmtUSD(Math.abs(agg.remaining))}
               signed={agg.remaining}
             />
-            <KpiCard label="Weekly Burn"     value={fmtUSD(agg.totalBilled / agg.workingWeeks)} />
+            <KpiCard label="Avg Weekly Burn" value={fmtUSD(agg.totalBilled / agg.workingWeeks)} />
             <KpiCard label="Effective Rate"  value={`${fmtUSD(agg.effectiveRate)}/h`} />
           </div>
         </section>
@@ -705,8 +705,11 @@ const ResourceManagementTab = () => {
 /* ------------------------------------------------------------------------- */
 
 const SectionLabel = ({ children }: { children: React.ReactNode }) => (
-  <div className="font-mono-ui text-[10px] uppercase tracking-[0.22em] font-medium text-muted-foreground mb-4">
-    {children}
+  <div className="flex items-center gap-3 mb-5">
+    <span className="font-mono-ui text-[10px] uppercase tracking-[0.28em] font-medium text-foreground/70">
+      {children}
+    </span>
+    <span className="flex-1 h-px bg-black/10" />
   </div>
 );
 
@@ -726,12 +729,15 @@ const KpiCard = ({
   const color = isNeg ? RED : valueColor;
   const display = isNeg ? `(${value})` : value;
   return (
-    <div className="bg-card px-5 py-5 flex flex-col gap-3">
-      <div className="font-mono-ui text-[9px] uppercase tracking-[0.24em] text-muted-foreground">
-        {label}
+    <div className="bg-card px-6 py-7 flex flex-col gap-5 min-h-[120px] justify-between">
+      <div className="flex items-center gap-2">
+        <span className="inline-block w-1 h-1 rounded-full bg-foreground/30" />
+        <span className="font-mono-ui text-[9px] uppercase tracking-[0.26em] text-muted-foreground">
+          {label}
+        </span>
       </div>
       <div
-        className="font-display text-[28px] leading-none tabular-nums tracking-tight"
+        className="font-display text-[34px] leading-none tabular-nums tracking-tight font-medium"
         style={color ? { color } : undefined}
       >
         {display}
@@ -739,6 +745,7 @@ const KpiCard = ({
     </div>
   );
 };
+
 
 const MonthRow = ({
   label, months, get, total, signed, isLast, dashWhen,
