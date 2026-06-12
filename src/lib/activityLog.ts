@@ -9,7 +9,9 @@ export type ActivityEntityType =
   | 'product_launch'
   | 'user'
   | 'weekly_snapshot'
-  | 'narrative_watch';
+  | 'narrative_watch'
+  | 'glance_card'
+  | 'asset_tracker';
 
 interface LogActivityArgs {
   client_id?: string | null;
