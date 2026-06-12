@@ -792,24 +792,33 @@ const MonthlyBarChart = ({
 }) => {
   const data = months.map(m => ({ m, ...get(m) }));
   const max = Math.max(1, ...data.flatMap(d => [d.budget ?? 0, d.worked]));
+  const bar3D = (color: string, dashed = false) => ({
+    background: dashed
+      ? 'transparent'
+      : `linear-gradient(180deg, ${color} 0%, ${color} 55%, rgba(0,0,0,0.35) 100%), ${color}`,
+    boxShadow: dashed
+      ? undefined
+      : `inset -3px 0 0 rgba(0,0,0,0.18), inset 2px 2px 0 rgba(255,255,255,0.25), 3px 4px 6px -2px rgba(0,0,0,0.25)`,
+    border: dashed ? '1px dashed hsl(0 0% 70%)' : undefined,
+  });
   return (
     <div className="border border-black/10 rounded-md p-4">
-      <div className="flex items-end gap-4 h-44">
+      <div className="flex items-end gap-4 h-44 pl-1">
         {data.map(d => {
           const bH = d.budget == null ? 0 : (d.budget / max) * 100;
           const wH = (d.worked / max) * 100;
           const over = d.budget != null && d.worked > d.budget;
           return (
             <div key={d.m} className="flex-1 flex flex-col items-center gap-1 h-full">
-              <div className="flex-1 w-full flex items-end justify-center gap-1">
+              <div className="flex-1 w-full flex items-end justify-center gap-1.5">
                 <div
-                  className="w-1/2 rounded-sm"
-                  style={{ height: `${bH}%`, background: d.budget == null ? 'transparent' : 'hsl(0 0% 75%)', border: d.budget == null ? '1px dashed hsl(0 0% 70%)' : undefined }}
+                  className="w-1/2 rounded-t-sm"
+                  style={{ height: `${bH}%`, ...bar3D('hsl(0 0% 75%)', d.budget == null) }}
                   title={d.budget == null ? 'Budget not yet loaded' : `Budget: ${fmtUSD(d.budget)}`}
                 />
                 <div
-                  className="w-1/2 rounded-sm"
-                  style={{ height: `${wH}%`, background: over ? RED : BLUE }}
+                  className="w-1/2 rounded-t-sm"
+                  style={{ height: `${wH}%`, ...bar3D(over ? RED : BLUE) }}
                   title={`Worked: ${fmtUSD(d.worked)}`}
                 />
               </div>
@@ -819,9 +828,9 @@ const MonthlyBarChart = ({
         })}
       </div>
       <div className="flex items-center gap-4 mt-3 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm" style={{ background: 'hsl(0 0% 75%)' }} /> Budget</span>
-        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm" style={{ background: BLUE }} /> Worked</span>
-        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm" style={{ background: RED }} /> Over budget</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm" style={bar3D('hsl(0 0% 75%)')} /> Budget</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm" style={bar3D(BLUE)} /> Worked</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm" style={bar3D(RED)} /> Over budget</span>
       </div>
     </div>
   );
