@@ -183,6 +183,117 @@ export function KeyWinsForm({ clientId }: { clientId: string | null }) {
   );
 }
 
+/* ── Glance Cards Form ── */
+export function GlanceCardsForm({ clientId }: { clientId: string | null }) {
+  const { selectedWeek } = useWeek();
+  const [weekStart, setWeekStart] = useState<Date | undefined>(selectedWeek ? new Date(selectedWeek + 'T00:00:00') : undefined);
+  const [category, setCategory] = useState('');
+  const [headline, setHeadline] = useState('');
+  const [body, setBody] = useState('');
+  const [statLine, setStatLine] = useState('');
+  const [featured, setFeatured] = useState(false);
+  const [sortOrder, setSortOrder] = useState('');
+  const [success, setSuccess] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!headline) return;
+    setSubmitting(true);
+    const payload = {
+      client_id: clientId,
+      week_start: weekStart ? format(weekStart, 'yyyy-MM-dd') : null,
+      category, headline, body, stat_line: statLine, featured,
+      sort_order: sortOrder ? Number(sortOrder) : 0,
+    };
+    console.log('[AdminPanel] glance_cards insert payload:', payload);
+    const { data: inserted, error } = await supabase.from('glance_cards').insert(payload).select('id').single();
+    if (error) console.error('[AdminPanel] glance_cards insert error:', error);
+    setSubmitting(false);
+    if (!error) {
+      logActivity({ client_id: clientId, action: 'created', entity_type: 'glance_card', entity_id: inserted?.id, entity_title: headline, metadata: { category, featured } });
+      setSuccess('Glance card added');
+      setCategory(''); setHeadline(''); setBody(''); setStatLine(''); setFeatured(false); setSortOrder('');
+      setTimeout(() => setSuccess(''), 3000);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {success && <SuccessMessage message={success} />}
+      <DateField date={weekStart} onSelect={setWeekStart} label="Week Start" />
+      <Field label="Category"><Input value={category} onChange={e => setCategory(e.target.value)} placeholder="e.g. Earned Media" /></Field>
+      <Field label="Headline"><Input value={headline} onChange={e => setHeadline(e.target.value)} placeholder="Bold headline" /></Field>
+      <Field label="Body"><Textarea value={body} onChange={e => setBody(e.target.value)} placeholder="1-2 line summary" /></Field>
+      <Field label="Stat Line"><Input value={statLine} onChange={e => setStatLine(e.target.value)} placeholder="e.g. 3.2M IMPRESSIONS · 14 PLACEMENTS" /></Field>
+      <div className="flex items-center justify-between border border-border rounded px-3 py-2">
+        <label className="text-xs font-medium tracking-wider uppercase text-muted-foreground">Featured</label>
+        <Switch checked={featured} onCheckedChange={setFeatured} />
+      </div>
+      <Field label="Sort Order"><Input type="number" value={sortOrder} onChange={e => setSortOrder(e.target.value)} placeholder="0" /></Field>
+      <Button onClick={handleSubmit} disabled={submitting || !headline} className="w-full bg-foreground text-background hover:bg-foreground/90">
+        {submitting ? 'Submitting…' : 'Add Glance Card'}
+      </Button>
+    </div>
+  );
+}
+
+/* ── Asset Tracker Form ── */
+export function AssetTrackerForm({ clientId }: { clientId: string | null }) {
+  const [launch, setLaunch] = useState('');
+  const [targetDate, setTargetDate] = useState<Date>();
+  const [status, setStatus] = useState('');
+  const [assetsNeeded, setAssetsNeeded] = useState('');
+  const [notes, setNotes] = useState('');
+  const [success, setSuccess] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!launch || !status) return;
+    setSubmitting(true);
+    const payload = {
+      client_id: clientId,
+      launch,
+      target_date: targetDate ? format(targetDate, 'yyyy-MM-dd') : null,
+      status,
+      assets_needed: assetsNeeded,
+      notes,
+    };
+    console.log('[AdminPanel] asset_tracker insert payload:', payload);
+    const { data: inserted, error } = await supabase.from('asset_tracker').insert(payload).select('id').single();
+    if (error) console.error('[AdminPanel] asset_tracker insert error:', error);
+    setSubmitting(false);
+    if (!error) {
+      logActivity({ client_id: clientId, action: 'created', entity_type: 'asset_tracker', entity_id: inserted?.id, entity_title: launch, metadata: { status } });
+      setSuccess('Asset tracker entry added');
+      setLaunch(''); setTargetDate(undefined); setStatus(''); setAssetsNeeded(''); setNotes('');
+      setTimeout(() => setSuccess(''), 3000);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {success && <SuccessMessage message={success} />}
+      <Field label="Launch"><Input value={launch} onChange={e => setLaunch(e.target.value)} placeholder="Launch / project name" /></Field>
+      <DateField date={targetDate} onSelect={setTargetDate} label="Target Date" />
+      <Field label="Status">
+        <Select value={status} onValueChange={setStatus}>
+          <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="received">Received</SelectItem>
+            <SelectItem value="due_soon">Due soon</SelectItem>
+            <SelectItem value="urgent">Urgent</SelectItem>
+          </SelectContent>
+        </Select>
+      </Field>
+      <Field label="Assets Needed"><Textarea value={assetsNeeded} onChange={e => setAssetsNeeded(e.target.value)} placeholder="What's outstanding" /></Field>
+      <Field label="Notes"><Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Optional context" /></Field>
+      <Button onClick={handleSubmit} disabled={submitting || !launch || !status} className="w-full bg-foreground text-background hover:bg-foreground/90">
+        {submitting ? 'Submitting…' : 'Add Asset Entry'}
+      </Button>
+    </div>
+  );
+}
+
 /* ── Partnerships Form ── */
 export function PartnershipsForm({ clientId }: { clientId: string | null }) {
   const [partnerName, setPartnerName] = useState('');
