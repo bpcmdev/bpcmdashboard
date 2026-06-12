@@ -729,15 +729,15 @@ const KpiCard = ({
   const color = isNeg ? RED : valueColor;
   const display = isNeg ? `(${value})` : value;
   return (
-    <div className="bg-card px-6 py-7 flex flex-col gap-5 min-h-[120px] justify-between">
+    <div className="bg-card px-4 py-5 flex flex-col gap-3 min-h-[110px] justify-between overflow-hidden">
       <div className="flex items-center gap-2">
         <span className="inline-block w-1 h-1 rounded-full bg-foreground/30" />
-        <span className="font-mono-ui text-[9px] uppercase tracking-[0.26em] text-muted-foreground">
+        <span className="font-mono-ui text-[9px] uppercase tracking-[0.26em] text-muted-foreground truncate">
           {label}
         </span>
       </div>
       <div
-        className="font-display text-[34px] leading-none tabular-nums tracking-tight font-medium"
+        className="font-display text-[22px] leading-none tabular-nums tracking-tight font-medium whitespace-nowrap"
         style={color ? { color } : undefined}
       >
         {display}
