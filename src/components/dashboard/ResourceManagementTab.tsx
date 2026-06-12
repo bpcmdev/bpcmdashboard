@@ -114,6 +114,10 @@ const ResourceManagementTab = () => {
   const [portfolio, setPortfolio] = useState<PortfolioRow[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Local month-range override for the Resource tab. When both set, these
+  // drive the RPC date filter regardless of the global week/range picker.
+  const [monthFrom, setMonthFrom] = useState<string>(''); // 'YYYY-MM'
+  const [monthTo, setMonthTo] = useState<string>('');     // 'YYYY-MM'
 
   useEffect(() => {
     let cancelled = false;
