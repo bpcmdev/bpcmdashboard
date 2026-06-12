@@ -1438,6 +1438,8 @@ export default function AdminPanel({ open, onOpenChange, clientId }: AdminPanelP
               <SelectItem value="placements" className="text-xs tracking-wider uppercase">Placements</SelectItem>
               <SelectItem value="snapshot" className="text-xs tracking-wider uppercase">Snapshot</SelectItem>
               <SelectItem value="narrative" className="text-xs tracking-wider uppercase">Narrative Watch</SelectItem>
+              <SelectItem value="glance" className="text-xs tracking-wider uppercase">Glance Cards</SelectItem>
+              <SelectItem value="assets" className="text-xs tracking-wider uppercase">Asset Tracker</SelectItem>
               <SelectItem value="users" className="text-xs tracking-wider uppercase">Users</SelectItem>
               <SelectItem value="tab_access" className="text-xs tracking-wider uppercase">Tab Access</SelectItem>
             </SelectContent>
@@ -1449,6 +1451,8 @@ export default function AdminPanel({ open, onOpenChange, clientId }: AdminPanelP
           {adminSection === 'placements' && <PlacementsForm clientId={clientId} />}
           {adminSection === 'snapshot' && <WeeklySnapshotForm clientId={clientId} />}
           {adminSection === 'narrative' && <NarrativeWatchForm defaultClientId={clientId} />}
+          {adminSection === 'glance' && <GlanceCardsForm clientId={clientId} />}
+          {adminSection === 'assets' && <AssetTrackerForm clientId={clientId} />}
           {adminSection === 'users' && <UserManagement />}
           {adminSection === 'tab_access' && <TabAccessManager />}
 
