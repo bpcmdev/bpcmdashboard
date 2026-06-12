@@ -60,7 +60,7 @@ const fmtUSD = (n: number, opts: Intl.NumberFormatOptions = {}) =>
 
 const fmtUSDsigned = (n: number) => (n < 0 ? '-' : '+') + fmtUSD(Math.abs(n));
 
-const fmtHours = (n: number) => `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(n)}h`;
+const fmtHours = (n: number) => new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(n);
 
 const fmtKUSD = (n: number) => {
   if (Math.abs(n) >= 1000) return `$${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}K`;
