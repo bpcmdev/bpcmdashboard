@@ -379,25 +379,51 @@ const ResourceManagementTab = () => {
       <div className="px-6 py-6 space-y-8 tabular-nums">
 
         {/* Caption row */}
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="text-[10px] tracking-[0.12em] uppercase text-muted-foreground">
             {granularityLabel}
           </div>
-          {freshness && (
-            <div className="text-[10px] tracking-[0.12em] uppercase text-muted-foreground">
-              ClickTime data through {freshness}
-            </div>
-          )}
+          <div className="flex items-center gap-2 text-[10px] tracking-[0.12em] uppercase text-muted-foreground">
+            <span>ClickTime data{freshness ? ` through ${freshness}` : ''}</span>
+            <span className="mx-1 text-foreground/30">·</span>
+            <label className="flex items-center gap-1.5">
+              <span>From</span>
+              <input
+                type="month"
+                value={monthFrom}
+                onChange={e => setMonthFrom(e.target.value)}
+                className="border border-black/15 rounded px-2 py-1 text-[11px] normal-case tracking-normal bg-background"
+              />
+            </label>
+            <label className="flex items-center gap-1.5">
+              <span>To</span>
+              <input
+                type="month"
+                value={monthTo}
+                onChange={e => setMonthTo(e.target.value)}
+                className="border border-black/15 rounded px-2 py-1 text-[11px] normal-case tracking-normal bg-background"
+              />
+            </label>
+            {(monthFrom || monthTo) && (
+              <button
+                type="button"
+                onClick={() => { setMonthFrom(''); setMonthTo(''); }}
+                className="px-2 py-1 border border-black/15 rounded hover:bg-black/[0.04]"
+              >
+                Reset
+              </button>
+            )}
+          </div>
         </div>
 
         {/* ===== Section 1 — KPI strip ===== */}
         <section>
           <div className="grid grid-cols-2 md:grid-cols-6 bg-card border border-black/10 rounded-md overflow-hidden divide-x divide-y md:divide-y-0 divide-black/10">
-            <KpiCard label="Hours Worked"   value={fmtHours(agg.totalHours)} />
+            <KpiCard label="Worked"         value={fmtHours(agg.totalHours)} />
             <KpiCard label="Total Billed"   value={fmtUSD(agg.totalBilled)} />
             <KpiCard label="Total Budget"   value={fmtUSD(agg.totalBudget)} />
             <KpiCard
-              label={overYTD ? 'Over Budget · YTD' : 'Under Budget · YTD'}
+              label="(Over) / Under Serviced vs. Budget"
               value={fmtUSD(Math.abs(agg.remaining))}
               signed={agg.remaining}
             />
