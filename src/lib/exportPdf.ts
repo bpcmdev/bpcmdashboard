@@ -70,6 +70,10 @@ async function captureElement(el: HTMLElement): Promise<HTMLCanvasElement> {
     logging: false,
     windowWidth: el.scrollWidth,
     windowHeight: el.scrollHeight,
+    ignoreElements: (element) => {
+      const rect = element.getBoundingClientRect();
+      return rect.width === 0 || rect.height === 0;
+    },
   });
 }
 
