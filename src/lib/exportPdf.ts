@@ -70,22 +70,6 @@ async function captureElement(el: HTMLElement): Promise<HTMLCanvasElement> {
     logging: false,
     windowWidth: el.scrollWidth,
     windowHeight: el.scrollHeight,
-    ignoreElements: (element) => {
-      const rect = element.getBoundingClientRect();
-      return rect.width === 0 || rect.height === 0;
-    },
-    onclone: (clonedDoc) => {
-      clonedDoc.querySelectorAll('*').forEach((node) => {
-        const clonedEl = node as HTMLElement;
-        const style = window.getComputedStyle(clonedEl);
-        if (style.backgroundImage !== 'none') {
-          const rect = clonedEl.getBoundingClientRect();
-          if (rect.width === 0 || rect.height === 0) {
-            clonedEl.style.backgroundImage = 'none';
-          }
-        }
-      });
-    },
   });
 }
 

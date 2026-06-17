@@ -272,8 +272,7 @@ const PartnershipsTab = () => {
               )}
             </div>
 
-            {(() => {
-              const hasData = emvData.length > 0;
+            {emvData.length > 0 && (() => {
               const rowHeight = 40;
               const chartHeight = Math.max(220, emvData.length * rowHeight + 60);
               const yAxisWidth = Math.min(
@@ -281,99 +280,93 @@ const PartnershipsTab = () => {
                 Math.max(120, ...emvData.map(d => d.program.length * 6.5 + 16))
               );
               return (
-                <div className="p-5 min-h-[240px]">
+                <div className="p-5">
                   <h3 className="section-label mb-4">Top 10 Campaigns by EMV</h3>
-                  {hasData ? (
-                    <ResponsiveContainer width="100%" height={chartHeight}>
-                      <BarChart
-                        data={emvData}
-                        layout="vertical"
-                        margin={{ top: 8, right: 64, left: 8, bottom: 24 }}
-                        barCategoryGap="30%"
-                        onMouseLeave={() => setHoverIdx(null)}
+                  <ResponsiveContainer width="100%" height={chartHeight}>
+                    <BarChart
+                      data={emvData}
+                      layout="vertical"
+                      margin={{ top: 8, right: 64, left: 8, bottom: 24 }}
+                      barCategoryGap="30%"
+                      onMouseLeave={() => setHoverIdx(null)}
+                    >
+                      <defs>
+                        <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor={accent} stopOpacity={1} />
+                          <stop offset="100%" stopColor={accent} stopOpacity={0.8} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid stroke="rgba(0,0,0,0.08)" strokeDasharray="2 4" horizontal={false} />
+                      <XAxis
+                        type="number"
+                        domain={[0, yMax]}
+                        ticks={yTicks}
+                        tick={{ fontSize: 10, fill: 'hsl(0 0% 40%)' }}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={formatEmv}
+                      />
+                      <YAxis
+                        type="category"
+                        dataKey="program"
+                        interval={0}
+                        width={yAxisWidth}
+                        axisLine={false}
+                        tickLine={false}
+                        tick={renderYTick as unknown as ReactElement}
+                      />
+                      <Tooltip cursor={{ fill: 'rgba(0,0,0,0.04)' }} content={renderTooltip as unknown as ReactElement} />
+                      <Bar
+                        dataKey="emv"
+                        radius={[0, 2, 2, 0]}
+                        fill={`url(#${gradientId})`}
+                        isAnimationActive={false}
+                        onClick={(d, index) => handleBarClick(d, index)}
+                        style={{ cursor: 'pointer' }}
                       >
-                        <defs>
-                          <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="0">
-                            <stop offset="0%" stopColor={accent} stopOpacity={1} />
-                            <stop offset="100%" stopColor={accent} stopOpacity={0.8} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid stroke="rgba(0,0,0,0.08)" strokeDasharray="2 4" horizontal={false} />
-                        <XAxis
-                          type="number"
-                          domain={[0, yMax]}
-                          ticks={yTicks}
-                          tick={{ fontSize: 10, fill: 'hsl(0 0% 40%)' }}
-                          axisLine={false}
-                          tickLine={false}
-                          tickFormatter={formatEmv}
-                        />
-                        <YAxis
-                          type="category"
-                          dataKey="program"
-                          interval={0}
-                          width={yAxisWidth}
-                          axisLine={false}
-                          tickLine={false}
-                          tick={renderYTick as unknown as ReactElement}
-                        />
-                        <Tooltip cursor={{ fill: 'rgba(0,0,0,0.04)' }} content={renderTooltip as unknown as ReactElement} />
-                        <Bar
+                        {emvData.map((entry, i) => {
+                          const dim = hoverIdx !== null && hoverIdx !== i;
+                          return (
+                            <Cell
+                              key={entry.id}
+                              fill={`url(#${gradientId})`}
+                              stroke={accent}
+                              strokeOpacity={0}
+                              fillOpacity={dim ? 0.5 : 1}
+                              style={{ cursor: 'pointer' }}
+                              onMouseEnter={() => setHoverIdx(i)}
+                            />
+                          );
+                        })}
+                        <LabelList
                           dataKey="emv"
-                          radius={[0, 2, 2, 0]}
-                          fill={`url(#${gradientId})`}
-                          isAnimationActive={false}
-                          onClick={(d, index) => handleBarClick(d, index)}
-                          style={{ cursor: 'pointer' }}
-                        >
-                          {emvData.map((entry, i) => {
-                            const dim = hoverIdx !== null && hoverIdx !== i;
+                          content={(props: { x?: number; y?: number; width?: number; height?: number; value?: number; index?: number }) => {
+                            const { x = 0, y = 0, width = 0, height = 0, value = 0, index = 0 } = props;
+                            const dim = hoverIdx !== null && hoverIdx !== index;
+                            const entry = emvData[index];
                             return (
-                              <Cell
-                                key={entry.id}
-                                fill={`url(#${gradientId})`}
-                                stroke={accent}
-                                strokeOpacity={0}
-                                fillOpacity={dim ? 0.5 : 1}
+                              <text
+                                x={x + width + 8}
+                                y={y + height / 2}
+                                textAnchor="start"
+                                dominantBaseline="middle"
+                                fontSize={11}
+                                fontFamily="DM Mono, monospace"
+                                fontWeight={600}
+                                fill="hsl(0 0% 20%)"
+                                opacity={dim ? 0.4 : 1}
                                 style={{ cursor: 'pointer' }}
-                                onMouseEnter={() => setHoverIdx(i)}
-                              />
+                                onClick={() => entry && handleBarClick(entry)}
+                              >
+                                {formatEmv(value)}
+                              </text>
                             );
-                          })}
-                          <LabelList
-                            dataKey="emv"
-                            content={(props: { x?: number; y?: number; width?: number; height?: number; value?: number; index?: number }) => {
-                              const { x = 0, y = 0, width = 0, height = 0, value = 0, index = 0 } = props;
-                              const dim = hoverIdx !== null && hoverIdx !== index;
-                              const entry = emvData[index];
-                              return (
-                                <text
-                                  x={x + width + 8}
-                                  y={y + height / 2}
-                                  textAnchor="start"
-                                  dominantBaseline="middle"
-                                  fontSize={11}
-                                  fontFamily="DM Mono, monospace"
-                                  fontWeight={600}
-                                  fill="hsl(0 0% 20%)"
-                                  opacity={dim ? 0.4 : 1}
-                                  style={{ cursor: 'pointer' }}
-                                  onClick={() => entry && handleBarClick(entry)}
-                                >
-                                  {formatEmv(value)}
-                                </text>
-                              );
-                            }}
-                          />
-                        </Bar>
+                          }}
+                        />
+                      </Bar>
 
-                      </BarChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div className="flex items-center justify-center h-[200px] text-xs text-muted-foreground">
-                      No partnership activity in this range
-                    </div>
-                  )}
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               );
             })()}
