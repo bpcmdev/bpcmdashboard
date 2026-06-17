@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
-import { useAdmin } from '@/hooks/useAdmin';
+
 import DataStateWrapper from './DataStateWrapper';
 import EmptyState from './EmptyState';
 import { workstreamFor, colorFor } from '@/lib/workstreamMap';
@@ -96,7 +96,6 @@ function businessDaysBetween(start: Date, end: Date): number {
 
 const ResourceManagementTab = () => {
   const { activeClientId, effectiveFrom, effectiveTo, isAllTime, refreshKey } = useWeek();
-  const { isAdmin } = useAdmin();
 
   const [monthly, setMonthly] = useState<ClientMonthlyRow[] | null>(null);
   const [tasks, setTasks] = useState<TaskRow[] | null>(null);
