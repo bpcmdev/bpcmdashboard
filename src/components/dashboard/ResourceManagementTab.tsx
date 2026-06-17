@@ -40,16 +40,6 @@ interface EmployeeRow {
   billable_value: number;
 }
 
-interface PortfolioRow {
-  supabase_client_id: string;
-  client_name: string;
-  budget_month: string;
-  monthly_budget: number | null;
-  worked_hours: number;
-  billable_value: number;
-  budget_remaining: number | null;
-  utilization_pct: number | null;
-}
 
 /* ------------------------------------------------------------------------- */
 /*  Formatters                                                                */
@@ -111,7 +101,6 @@ const ResourceManagementTab = () => {
   const [monthly, setMonthly] = useState<ClientMonthlyRow[] | null>(null);
   const [tasks, setTasks] = useState<TaskRow[] | null>(null);
   const [employees, setEmployees] = useState<EmployeeRow[] | null>(null);
-  const [portfolio, setPortfolio] = useState<PortfolioRow[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   // Local month-range override for the Resource tab. When both set, these
@@ -171,19 +160,6 @@ const ResourceManagementTab = () => {
 
     return () => { cancelled = true; };
   }, [activeClientId, effectiveFrom, effectiveTo, isAllTime, refreshKey, monthFrom, monthTo]);
-
-  /* Admin-only portfolio query — current month, all clients. */
-  useEffect(() => {
-    if (!isAdmin) { setPortfolio(null); return; }
-    let cancelled = false;
-    (async () => {
-      const { data, error: pErr } = await supabase.rpc('ct_portfolio_summary_secure', {});
-      if (cancelled) return;
-      if (pErr) { setPortfolio([]); return; }
-      setPortfolio((data ?? []) as PortfolioRow[]);
-    })();
-    return () => { cancelled = true; };
-  }, [isAdmin, refreshKey]);
 
   /* Granularity caption. */
   const granularityLabel = useMemo(() => {
@@ -726,11 +702,6 @@ const ResourceManagementTab = () => {
           </div>
         </section>
 
-        {/* ===== Admin-only portfolio view ===== */}
-        {isAdmin && portfolio && portfolio.length > 0 && (
-          <PortfolioSection rows={portfolio} />
-        )}
-
       </div>
     </DataStateWrapper>
   );
@@ -866,58 +837,6 @@ const MonthlyBarChart = ({
         <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded-sm" style={bar3D(RED)} /> Over budget</span>
       </div>
     </div>
-  );
-};
-
-/* Admin portfolio — current-month view across all clients. */
-const PortfolioSection = ({ rows }: { rows: PortfolioRow[] }) => {
-  // Sort: largest over-service first (most negative budget_remaining).
-  const sorted = useMemo(() => {
-    return rows.slice().sort((a, b) => {
-      const ar = a.budget_remaining ?? Infinity;
-      const br = b.budget_remaining ?? Infinity;
-      return ar - br;
-    });
-  }, [rows]);
-  return (
-    <section>
-      <SectionLabel>All Clients — Current Month (Admin)</SectionLabel>
-      <div className="border border-black/10 rounded-md overflow-hidden">
-        <div className="max-h-[420px] overflow-y-auto">
-          <table className="w-full text-sm">
-            <thead className="sticky top-0 bg-card">
-              <tr className="bg-black/[0.03] text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-                <th className="text-left px-4 py-2 font-medium">Client</th>
-                <th className="text-right px-4 py-2 font-medium">Budget</th>
-                <th className="text-right px-4 py-2 font-medium">Worked</th>
-                <th className="text-right px-4 py-2 font-medium">Remaining</th>
-                <th className="text-right px-4 py-2 font-medium">Utilization</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map(r => {
-                const rem = r.budget_remaining;
-                const over = rem != null && rem < 0;
-                const util = r.utilization_pct ?? 0;
-                return (
-                  <tr key={r.supabase_client_id + r.budget_month} className="border-t border-black/5">
-                    <td className="px-4 py-2">{r.client_name}</td>
-                    <td className="px-4 py-2 text-right tabular-nums">{r.monthly_budget == null ? '—' : fmtUSD(r.monthly_budget)}</td>
-                    <td className="px-4 py-2 text-right tabular-nums">{fmtUSD(r.billable_value)}</td>
-                    <td className="px-4 py-2 text-right tabular-nums" style={{ color: rem == null ? undefined : over ? RED : GREEN }}>
-                      {rem == null ? '—' : fmtUSDsigned(rem)}
-                    </td>
-                    <td className="px-4 py-2 text-right tabular-nums" style={{ color: util > 100 ? RED : undefined }}>
-                      {r.utilization_pct == null ? '—' : fmtPct(util)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
   );
 };
 
