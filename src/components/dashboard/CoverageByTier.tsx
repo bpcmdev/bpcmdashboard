@@ -14,19 +14,20 @@ const CoverageByTier = () => {
   const [data, setData] = useState<TierData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const { refreshKey, activeClientId, effectiveFrom, effectiveTo } = useWeek();
+  const { refreshKey, activeClientId, effectiveFrom, effectiveTo, isAllTime } = useWeek();
 
   useEffect(() => {
-    if (!effectiveFrom || !effectiveTo) return;
+    if (!isAllTime && (!effectiveFrom || !effectiveTo)) return;
     const fetchTiers = async () => {
       setLoading(true);
       setError(false);
 
       let query = supabase
         .from('placements')
-        .select('outlet_tier')
-        .gte('published_at', effectiveFrom)
-        .lte('published_at', effectiveTo);
+        .select('outlet_tier');
+      if (!isAllTime) {
+        query = query.gte('published_at', effectiveFrom).lte('published_at', effectiveTo);
+      }
       if (activeClientId) query = query.eq('client_id', activeClientId);
 
       const { data: placements, error: err } = await query;
@@ -62,7 +63,7 @@ const CoverageByTier = () => {
       setLoading(false);
     };
     fetchTiers();
-  }, [effectiveFrom, effectiveTo, refreshKey, activeClientId]);
+  }, [effectiveFrom, effectiveTo, isAllTime, refreshKey, activeClientId]);
 
   if (error) {
     return <p className="text-sm text-destructive text-center py-8">Unable to load data. Please try refreshing.</p>;

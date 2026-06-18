@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useWeek } from '@/contexts/WeekContext';
+import { useWeek, applyWeekStartFilter } from '@/contexts/WeekContext';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const PLATFORMS = [
@@ -36,7 +36,7 @@ function formatWeekLabel(dateStr: string) {
 }
 
 const HeatmapView = () => {
-  const { activeClientId, refreshKey } = useWeek();
+  const { activeClientId, refreshKey, weekFilterCtx } = useWeek();
   const [data, setData] = useState<VisRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -44,11 +44,12 @@ const HeatmapView = () => {
     if (!activeClientId) { setData([]); setLoading(false); return; }
     const fetchAll = async () => {
       setLoading(true);
-      const { data: rows, error } = await supabase
+      let query = supabase
         .from('ai_visibility')
         .select('platform, week_start, visibility_score, status')
-        .eq('client_id', activeClientId)
-        .order('week_start', { ascending: true });
+        .eq('client_id', activeClientId);
+      query = applyWeekStartFilter(query, weekFilterCtx);
+      const { data: rows, error } = await query.order('week_start', { ascending: true });
 
       if (error) {
         console.error('Heatmap fetch error:', error);
@@ -59,7 +60,7 @@ const HeatmapView = () => {
       setLoading(false);
     };
     fetchAll();
-  }, [activeClientId, refreshKey]);
+  }, [activeClientId, refreshKey, weekFilterCtx]);
 
   if (loading) {
     return (

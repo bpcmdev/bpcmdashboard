@@ -44,6 +44,35 @@ export function applyWeekStartFilter<Q extends { eq: any; gte: any; lte: any }>(
   return query;
 }
 
+/**
+ * Generic date-column filter for tables NOT keyed on `week_start`
+ * (e.g. placements.published_at, lefty_posts.posted_at, partnerships.start_date).
+ *  - All Time → no filter
+ *  - YTD     → gte(column, Jan 1)
+ *  - Range   → gte/lte
+ *  - Week    → gte/lte the week's 7-day window
+ */
+export function applyDateRangeFilter<Q extends { eq: any; gte: any; lte: any }>(
+  query: Q,
+  ctx: WeekFilterCtx,
+  column: string,
+): Q {
+  if (ctx.isAllTime) return query;
+  if (ctx.rangeMode === 'range' && ctx.rangeFrom && ctx.rangeTo) {
+    return query.gte(column, ctx.rangeFrom).lte(column, `${ctx.rangeTo}T23:59:59.999Z`);
+  }
+  if (ctx.isYTD) {
+    return query.gte(column, ctx.ytdFrom);
+  }
+  if (ctx.selectedWeek) {
+    const end = new Date(ctx.selectedWeek + 'T00:00:00');
+    end.setDate(end.getDate() + 6);
+    const endIso = end.toISOString().split('T')[0];
+    return query.gte(column, ctx.selectedWeek).lte(column, `${endIso}T23:59:59.999Z`);
+  }
+  return query;
+}
+
 interface WeekContextType {
   selectedWeek: string;
   setSelectedWeek: (week: string) => void;
@@ -228,7 +257,11 @@ export const WeekProvider = ({ children }: { children: ReactNode }) => {
   if (rangeMode === 'range' && rangeFrom && rangeTo) {
     effectiveFrom = rangeFrom;
     effectiveTo = rangeTo;
-  } else if (!isAllTime && !isYTD && selectedWeek) {
+  } else if (isYTD) {
+    // YTD → first day of current year through today.
+    effectiveFrom = ytdFrom;
+    effectiveTo = toIso(new Date());
+  } else if (!isAllTime && selectedWeek) {
     const end = new Date(selectedWeek + 'T00:00:00');
     end.setDate(end.getDate() + 6);
     effectiveFrom = selectedWeek;
