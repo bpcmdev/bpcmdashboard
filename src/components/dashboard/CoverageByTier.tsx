@@ -63,7 +63,7 @@ const CoverageByTier = () => {
       setLoading(false);
     };
     fetchTiers();
-  }, [effectiveFrom, effectiveTo, refreshKey, activeClientId]);
+  }, [effectiveFrom, effectiveTo, isAllTime, refreshKey, activeClientId]);
 
   if (error) {
     return <p className="text-sm text-destructive text-center py-8">Unable to load data. Please try refreshing.</p>;
