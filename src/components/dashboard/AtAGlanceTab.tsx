@@ -356,7 +356,8 @@ const AtAGlanceTab = () => {
       try {
         const glancePromise = (() => {
           let q = supabase.from('glance_cards').select('*').eq('client_id', clientId).order('sort_order', { ascending: true });
-          if (!isAllTime && selectedWeek) q = q.eq('week_start', selectedWeek);
+          if (isYTD) q = q.gte('week_start', ytdFrom);
+          else if (!isAllTime && selectedWeek) q = q.eq('week_start', selectedWeek);
           return q;
         })();
         const assetsPromise   = supabase.from('asset_tracker').select('*').eq('client_id', clientId);
