@@ -231,7 +231,7 @@ function formToPayload(v: ReturnType<typeof defaultFormValues>) {
 
 /* ─── Main Component ─── */
 const PressHitsLog = () => {
-  const { selectedWeek, refreshKey, activeClientId, effectiveFrom, effectiveTo, rangeMode } = useWeek();
+  const { selectedWeek, refreshKey, activeClientId, effectiveFrom, effectiveTo, rangeMode, isAllTime } = useWeek();
   const { isAdmin } = useAdmin();
   const [placements, setPlacements] = useState<Placement[]>([]);
   const [loading, setLoading] = useState(true);
@@ -255,15 +255,17 @@ const PressHitsLog = () => {
   const updateEditForm = (field: string, value: any) => setEditForm(prev => ({ ...prev, [field]: value }));
 
   const fetchPlacements = async () => {
-    if (!effectiveFrom || !effectiveTo) return;
+    if (!isAllTime && (!effectiveFrom || !effectiveTo)) return;
     setLoading(true);
 
     let query = supabase
       .from('placements')
       .select('id, headline, url, outlet_name, outlet_tier, outlet_umv, author_name, published_at, placement_type, placed_by, sentiment, ad_value, impressions, tags, dismissed')
-      .gte('published_at', effectiveFrom)
-      .lte('published_at', effectiveTo)
       .order('published_at', { ascending: false });
+
+    if (!isAllTime) {
+      query = query.gte('published_at', effectiveFrom).lte('published_at', effectiveTo);
+    }
 
     if (activeClientId) {
       query = query.eq('client_id', activeClientId);
@@ -276,7 +278,7 @@ const PressHitsLog = () => {
 
   useEffect(() => {
     fetchPlacements();
-  }, [effectiveFrom, effectiveTo, refreshKey, activeClientId, rangeMode]);
+  }, [effectiveFrom, effectiveTo, isAllTime, refreshKey, activeClientId, rangeMode]);
 
   const visible = useMemo(
     () => placements.filter((p) => !p.dismissed),
