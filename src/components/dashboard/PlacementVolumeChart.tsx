@@ -23,13 +23,13 @@ function fmtShort(d: Date): string {
 }
 
 const PlacementVolumeChart = () => {
-  const { activeClientId, refreshKey, rangeMode, effectiveFrom, effectiveTo, selectedWeek } = useWeek();
+  const { activeClientId, refreshKey, rangeMode, effectiveFrom, effectiveTo, selectedWeek, isAllTime } = useWeek();
   const [buckets, setBuckets] = useState<Bucket[]>([]);
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState('Placement Volume');
 
   useEffect(() => {
-    if (!effectiveFrom || !effectiveTo) return;
+    if (!isAllTime && (!effectiveFrom || !effectiveTo)) return;
 
     const fetch = async () => {
       setLoading(true);
@@ -38,7 +38,7 @@ const PlacementVolumeChart = () => {
       let from = effectiveFrom;
       let to = effectiveTo;
 
-      if (rangeMode === 'week' && selectedWeek) {
+      if (rangeMode === 'week' && selectedWeek && !isAllTime && selectedWeek !== 'ytd') {
         const end = new Date(selectedWeek + 'T00:00:00');
         end.setDate(end.getDate() + 6);
         const start = new Date(selectedWeek + 'T00:00:00');
@@ -52,9 +52,10 @@ const PlacementVolumeChart = () => {
 
       let query = supabase
         .from('placements')
-        .select('published_at')
-        .gte('published_at', from)
-        .lte('published_at', to);
+        .select('published_at');
+      if (!isAllTime) {
+        query = query.gte('published_at', from).lte('published_at', to);
+      }
       if (activeClientId) query = query.eq('client_id', activeClientId);
 
       const { data, error } = await query;
@@ -65,8 +66,22 @@ const PlacementVolumeChart = () => {
         return;
       }
 
-      const fromD = new Date(from + 'T00:00:00');
-      const toD = new Date(to + 'T00:00:00');
+      // In All Time mode, derive bucket bounds from the data itself.
+      let fromD: Date;
+      let toD: Date;
+      if (isAllTime) {
+        const dates = (data ?? []).map((r: any) => r.published_at).filter(Boolean).sort();
+        if (dates.length === 0) {
+          setBuckets([]);
+          setLoading(false);
+          return;
+        }
+        fromD = new Date(dates[0] + 'T00:00:00');
+        toD = new Date(dates[dates.length - 1] + 'T00:00:00');
+      } else {
+        fromD = new Date(from + 'T00:00:00');
+        toD = new Date(to + 'T00:00:00');
+      }
       const daySpan = Math.round((toD.getTime() - fromD.getTime()) / 86400000) + 1;
       const useDaily = rangeMode === 'range' && daySpan <= 14;
 
@@ -103,7 +118,7 @@ const PlacementVolumeChart = () => {
     };
 
     fetch();
-  }, [activeClientId, refreshKey, rangeMode, effectiveFrom, effectiveTo, selectedWeek]);
+  }, [activeClientId, refreshKey, rangeMode, effectiveFrom, effectiveTo, selectedWeek, isAllTime]);
 
   const yMax = Math.max(10, ...buckets.map(b => b.placements));
 
