@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useWeek } from '@/contexts/WeekContext';
+import { useWeek, applyWeekStartFilter } from '@/contexts/WeekContext';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface SentimentData {
@@ -15,7 +15,7 @@ const SentimentBreakdown = () => {
   const [data, setData] = useState<SentimentData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const { selectedWeek, refreshKey, activeClientId, rangeMode, rangeFrom, rangeTo } = useWeek();
+  const { selectedWeek, refreshKey, activeClientId, rangeMode, rangeFrom, rangeTo, weekFilterCtx } = useWeek();
 
   useEffect(() => {
     if (rangeMode === 'week' && !selectedWeek) return;
@@ -27,11 +27,7 @@ const SentimentBreakdown = () => {
       let query = supabase
         .from('weekly_snapshots')
         .select('sentiment_score');
-      if (rangeMode === 'range') {
-        query = query.gte('week_start', rangeFrom).lte('week_start', rangeTo);
-      } else {
-        query = query.eq('week_start', selectedWeek);
-      }
+      query = applyWeekStartFilter(query, weekFilterCtx);
       if (activeClientId) query = query.eq('client_id', activeClientId);
 
       const { data: rows, error: err } = await query;
@@ -62,7 +58,7 @@ const SentimentBreakdown = () => {
       setLoading(false);
     };
     fetchSentiment();
-  }, [selectedWeek, refreshKey, activeClientId, rangeMode, rangeFrom, rangeTo]);
+  }, [selectedWeek, refreshKey, activeClientId, rangeMode, rangeFrom, rangeTo, weekFilterCtx]);
 
   if (error) {
     return <p className="text-sm text-destructive text-center py-8">Unable to load data. Please try refreshing.</p>;

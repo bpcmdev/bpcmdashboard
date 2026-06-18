@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useWeek } from '@/contexts/WeekContext';
+import { useWeek, applyWeekStartFilter } from '@/contexts/WeekContext';
 import { useAdmin } from '@/hooks/useAdmin';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronDown, ChevronRight } from 'lucide-react';
@@ -13,22 +13,22 @@ interface QueryRow {
 }
 
 const TopQueriesSovView = () => {
-  const { selectedWeek, activeClientId, refreshKey } = useWeek();
+  const { selectedWeek, activeClientId, refreshKey, weekFilterCtx } = useWeek();
   const { clientName } = useAdmin();
   const [queries, setQueries] = useState<QueryRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (!selectedWeek || !activeClientId) { setQueries([]); setLoading(false); return; }
+    if (!activeClientId) { setQueries([]); setLoading(false); return; }
     const fetchData = async () => {
       setLoading(true);
-      const { data, error } = await supabase
+      let query = supabase
         .from('ai_top_queries')
         .select('query_text, category, search_volume, sov_pct')
-        .eq('client_id', activeClientId)
-        .eq('week_start', selectedWeek)
-        .order('search_volume', { ascending: false });
+        .eq('client_id', activeClientId);
+      query = applyWeekStartFilter(query, weekFilterCtx);
+      const { data, error } = await query.order('search_volume', { ascending: false });
 
       if (error) {
         console.error('TopQueriesSov fetch error:', error);
@@ -44,7 +44,7 @@ const TopQueriesSovView = () => {
       setLoading(false);
     };
     fetchData();
-  }, [selectedWeek, activeClientId, refreshKey]);
+  }, [selectedWeek, activeClientId, refreshKey, weekFilterCtx]);
 
   const toggleCategory = (cat: string) => {
     setExpanded(prev => {

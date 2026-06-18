@@ -53,9 +53,13 @@ const DashboardHeader = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const isAllTime = selectedWeek === 'all-time';
+  const isYTD = selectedWeek === 'ytd';
+  const isSynthetic = isAllTime || isYTD;
   const currentLabel = isAllTime
     ? 'All Time'
-    : (weeks.find(w => w.weekStart === selectedWeek)?.label ?? 'Loading…');
+    : isYTD
+      ? 'Year-to-Date'
+      : (weeks.find(w => w.weekStart === selectedWeek)?.label ?? 'Loading…');
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -142,7 +146,7 @@ const DashboardHeader = () => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="header-chip">
-                {isAllTime ? currentLabel : `Week of ${currentLabel}`}
+                {isSynthetic ? currentLabel : `Week of ${currentLabel}`}
                 <ChevronDown className="w-3 h-3 opacity-60" />
               </button>
             </DropdownMenuTrigger>

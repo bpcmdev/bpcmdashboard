@@ -172,7 +172,7 @@ const KpiBar = () => {
   const [drawerMetric, setDrawerMetric] = useState<KpiMetricKey | null>(null);
   const [drawerLabel, setDrawerLabel] = useState('');
   const [drawerTab, setDrawerTab] = useState<string | undefined>(undefined);
-  const { selectedWeek, refreshKey, activeClientId, isAllTime, effectiveFrom, effectiveTo } = useWeek();
+  const { selectedWeek, refreshKey, activeClientId, isAllTime, isYTD, ytdFrom, effectiveFrom, effectiveTo } = useWeek();
   const { clientColor } = useAdmin();
   const accent = clientColor || '#1B2B8A';
 
@@ -237,9 +237,10 @@ const KpiBar = () => {
           : 'Influencer ROI not yet tracked for this period',
       };
 
-      if (isAllTime) {
+      if (isAllTime || isYTD) {
         let q = supabase.from('weekly_snapshots').select('*');
         if (activeClientId) q = q.eq('client_id', activeClientId);
+        if (isYTD) q = q.gte('week_start', ytdFrom);
         const { data, error: err } = await q;
         if (err) {
           console.error('Failed to fetch weekly_snapshots:', err);
@@ -264,14 +265,15 @@ const KpiBar = () => {
         const sentiment = Math.round(avg('sentiment_score'));
         const sov = Number(avg('sov_pct').toFixed(1));
         const roi = Number(avg('influencer_roi').toFixed(1));
-        const allTimeDelta = { delta: `${rows.length} weeks`, deltaType: 'neutral' as const };
+        const periodLabel = isYTD ? 'YTD' : 'all-time';
+        const aggDelta = { delta: `${rows.length} weeks ${periodLabel}`, deltaType: 'neutral' as const };
 
         setKpis([
-          { label: 'Press Placements', value: String(placements), ...allTimeDelta, targetTab: 'EARNED MEDIA', metricKey: 'placement_count', spark: placementSpark, sparkColor: accent },
-          { label: 'Earned Media Value', value: formatMoney(emv), ...allTimeDelta, targetTab: 'EARNED MEDIA', metricKey: 'emv_usd', spark: emvSpark, sparkColor: accent },
-          { label: 'Sentiment Score', value: `${sentiment}/100`, ...allTimeDelta, metricKey: 'sentiment_score', spark: sentimentNotTracked ? undefined : sentimentSpark, sparkColor: accent, notTracked: sentimentNotTracked },
-          { label: 'Social Reach', value: formatCount(reach), ...allTimeDelta, targetTab: 'INFLUENCER & SOCIAL', metricKey: 'social_reach', spark: reachSpark, sparkColor: accent },
-          { label: 'Share of Voice', value: `${sov}%`, ...allTimeDelta, metricKey: 'sov_pct', spark: sovNotTracked ? undefined : sovSpark, sparkColor: accent, notTracked: sovNotTracked },
+          { label: 'Press Placements', value: String(placements), ...aggDelta, targetTab: 'EARNED MEDIA', metricKey: 'placement_count', spark: placementSpark, sparkColor: accent },
+          { label: 'Earned Media Value', value: formatMoney(emv), ...aggDelta, targetTab: 'EARNED MEDIA', metricKey: 'emv_usd', spark: emvSpark, sparkColor: accent },
+          { label: 'Sentiment Score', value: `${sentiment}/100`, ...aggDelta, metricKey: 'sentiment_score', spark: sentimentNotTracked ? undefined : sentimentSpark, sparkColor: accent, notTracked: sentimentNotTracked },
+          { label: 'Social Reach', value: formatCount(reach), ...aggDelta, targetTab: 'INFLUENCER & SOCIAL', metricKey: 'social_reach', spark: reachSpark, sparkColor: accent },
+          { label: 'Share of Voice', value: `${sov}%`, ...aggDelta, metricKey: 'sov_pct', spark: sovNotTracked ? undefined : sovSpark, sparkColor: accent, notTracked: sovNotTracked },
           roiTile,
         ]);
         setLoading(false);
@@ -322,7 +324,7 @@ const KpiBar = () => {
     };
 
     fetchKpis();
-  }, [selectedWeek, refreshKey, activeClientId, isAllTime, effectiveFrom, effectiveTo, accent]);
+  }, [selectedWeek, refreshKey, activeClientId, isAllTime, isYTD, ytdFrom, effectiveFrom, effectiveTo, accent]);
 
   if (error) {
     return (

@@ -338,7 +338,7 @@ function MarketingCalendar({
    Tab root
    ───────────────────────────────────────────────────────────────── */
 const AtAGlanceTab = () => {
-  const { activeClientId: clientId, selectedWeek, isAllTime, refreshKey } = useWeek();
+  const { activeClientId: clientId, selectedWeek, isAllTime, isYTD, ytdFrom, refreshKey } = useWeek();
 
   const [cards, setCards]       = useState<GlanceCard[]>([]);
   const [assets, setAssets]     = useState<AssetRow[]>([]);
@@ -356,7 +356,8 @@ const AtAGlanceTab = () => {
       try {
         const glancePromise = (() => {
           let q = supabase.from('glance_cards').select('*').eq('client_id', clientId).order('sort_order', { ascending: true });
-          if (!isAllTime && selectedWeek) q = q.eq('week_start', selectedWeek);
+          if (isYTD) q = q.gte('week_start', ytdFrom);
+          else if (!isAllTime && selectedWeek) q = q.eq('week_start', selectedWeek);
           return q;
         })();
         const assetsPromise   = supabase.from('asset_tracker').select('*').eq('client_id', clientId);
@@ -382,7 +383,7 @@ const AtAGlanceTab = () => {
     };
     load();
     return () => { cancelled = true; };
-  }, [clientId, selectedWeek, isAllTime, refreshKey]);
+  }, [clientId, selectedWeek, isAllTime, isYTD, ytdFrom, refreshKey]);
 
   const sortedCards = useMemo(
     () => [...cards].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)),
