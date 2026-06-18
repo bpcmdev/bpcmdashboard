@@ -338,7 +338,7 @@ function MarketingCalendar({
    Tab root
    ───────────────────────────────────────────────────────────────── */
 const AtAGlanceTab = () => {
-  const { activeClientId: clientId, selectedWeek, isAllTime, refreshKey } = useWeek();
+  const { activeClientId: clientId, selectedWeek, isAllTime, isYTD, ytdFrom, refreshKey } = useWeek();
 
   const [cards, setCards]       = useState<GlanceCard[]>([]);
   const [assets, setAssets]     = useState<AssetRow[]>([]);
