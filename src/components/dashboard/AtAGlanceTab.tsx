@@ -383,7 +383,7 @@ const AtAGlanceTab = () => {
     };
     load();
     return () => { cancelled = true; };
-  }, [clientId, selectedWeek, isAllTime, refreshKey]);
+  }, [clientId, selectedWeek, isAllTime, isYTD, ytdFrom, refreshKey]);
 
   const sortedCards = useMemo(
     () => [...cards].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)),
