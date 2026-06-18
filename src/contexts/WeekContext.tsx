@@ -228,7 +228,11 @@ export const WeekProvider = ({ children }: { children: ReactNode }) => {
   if (rangeMode === 'range' && rangeFrom && rangeTo) {
     effectiveFrom = rangeFrom;
     effectiveTo = rangeTo;
-  } else if (!isAllTime && !isYTD && selectedWeek) {
+  } else if (isYTD) {
+    // YTD → first day of current year through today.
+    effectiveFrom = ytdFrom;
+    effectiveTo = toIso(new Date());
+  } else if (!isAllTime && selectedWeek) {
     const end = new Date(selectedWeek + 'T00:00:00');
     end.setDate(end.getDate() + 6);
     effectiveFrom = selectedWeek;
