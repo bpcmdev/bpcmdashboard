@@ -177,7 +177,7 @@ const DashboardHeader = () => {
           </div>
           <button
             className="header-chip"
-            onClick={() => window.dispatchEvent(new CustomEvent('bpcm:export-pdf'))}
+            onClick={openPrintReport}
           >
             Export PDF
           </button>
