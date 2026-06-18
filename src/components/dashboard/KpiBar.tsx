@@ -172,7 +172,7 @@ const KpiBar = () => {
   const [drawerMetric, setDrawerMetric] = useState<KpiMetricKey | null>(null);
   const [drawerLabel, setDrawerLabel] = useState('');
   const [drawerTab, setDrawerTab] = useState<string | undefined>(undefined);
-  const { selectedWeek, refreshKey, activeClientId, isAllTime, effectiveFrom, effectiveTo } = useWeek();
+  const { selectedWeek, refreshKey, activeClientId, isAllTime, isYTD, ytdFrom, effectiveFrom, effectiveTo } = useWeek();
   const { clientColor } = useAdmin();
   const accent = clientColor || '#1B2B8A';
 
