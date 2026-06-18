@@ -117,7 +117,7 @@ const TopPlacements = ({ searchText = '', tierFilter = 'all', sentimentFilter = 
     };
 
     fetchPlacements();
-  }, [effectiveFrom, effectiveTo, refreshKey, activeClientId]);
+  }, [effectiveFrom, effectiveTo, isAllTime, refreshKey, activeClientId]);
 
   const filtered = useMemo(() => {
     let result = rawPlacements;
