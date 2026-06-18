@@ -106,6 +106,14 @@ function ReportContent({ clientId, rangeParam }: { clientId: string; rangeParam:
     return () => clearTimeout(t);
   }, [clientId, rangeParam]);
 
+  // Auto-trigger print once content is ready (when ?autoprint=1)
+  const autoprint = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('autoprint') === '1';
+  useEffect(() => {
+    if (!ready || !autoprint) return;
+    const t = setTimeout(() => window.print(), 600);
+    return () => clearTimeout(t);
+  }, [ready, autoprint]);
+
   const rangeLabel = useMemo(() => {
     if (!rangeParam || rangeParam === 'all-time') return 'All Time';
     if (rangeParam.includes(':')) return rangeParam.replace(':', ' → ');
