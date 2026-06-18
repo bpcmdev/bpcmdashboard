@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useWeek } from '@/contexts/WeekContext';
+import { useWeek, applyWeekStartFilter } from '@/contexts/WeekContext';
 import { useAdmin } from '@/hooks/useAdmin';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -21,23 +21,25 @@ function statusLabel(status: string) {
 }
 
 const GapAnalysisView = () => {
-  const { selectedWeek, activeClientId, refreshKey } = useWeek();
+  const { selectedWeek, activeClientId, refreshKey, weekFilterCtx } = useWeek();
   const { clientName } = useAdmin();
   const [platforms, setPlatforms] = useState<PlatformGap[]>([]);
   const [sovRows, setSovRows] = useState<SovGap[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!selectedWeek || !activeClientId) { setPlatforms([]); setSovRows([]); setLoading(false); return; }
+    if (!activeClientId) { setPlatforms([]); setSovRows([]); setLoading(false); return; }
     const fetch = async () => {
       setLoading(true);
-      const [visRes, sovRes] = await Promise.all([
-        supabase.from('ai_visibility').select('platform, visibility_score, status')
-          .eq('client_id', activeClientId).eq('week_start', selectedWeek),
-        supabase.from('competitive_sov').select('brand_name, sov_pct, rank')
-          .eq('client_id', activeClientId).eq('week_start', selectedWeek)
-          .order('rank', { ascending: true }),
-      ]);
+      const visQ = applyWeekStartFilter(
+        supabase.from('ai_visibility').select('platform, visibility_score, status').eq('client_id', activeClientId),
+        weekFilterCtx,
+      );
+      const sovQ = applyWeekStartFilter(
+        supabase.from('competitive_sov').select('brand_name, sov_pct, rank').eq('client_id', activeClientId),
+        weekFilterCtx,
+      ).order('rank', { ascending: true });
+      const [visRes, sovRes] = await Promise.all([visQ, sovQ]);
       if (visRes.error) console.error(visRes.error);
       if (sovRes.error) console.error(sovRes.error);
       setPlatforms((visRes.data ?? []).map(r => ({ platform: r.platform, score: r.visibility_score, status: r.status })));
@@ -45,7 +47,7 @@ const GapAnalysisView = () => {
       setLoading(false);
     };
     fetch();
-  }, [selectedWeek, activeClientId, refreshKey]);
+  }, [selectedWeek, activeClientId, refreshKey, weekFilterCtx]);
 
   if (loading) {
     return (

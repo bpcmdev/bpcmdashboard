@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { supabase } from '@/lib/supabase';
-import { useWeek } from '@/contexts/WeekContext';
+import { useWeek, applyWeekStartFilter } from '@/contexts/WeekContext';
 import { useAdmin } from '@/hooks/useAdmin';
 import { LinkPreviewTrigger } from './LinkPreviewDrawer';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -86,7 +86,7 @@ const PAGE_SIZE = 10;
 // --- Main component ---
 const GeoAISovTab = () => {
   const [view, setView] = useState('BY PLATFORM');
-  const { selectedWeek, refreshKey, activeClientId } = useWeek();
+  const { selectedWeek, refreshKey, activeClientId, weekFilterCtx } = useWeek();
   const { clientName } = useAdmin();
 
   const [cards, setCards] = useState<PlatformCard[]>([]);
@@ -124,15 +124,15 @@ const GeoAISovTab = () => {
 
   // Fetch platform scorecards from ai_visibility
   useEffect(() => {
-    if (!selectedWeek || !activeClientId) { setCards([]); setCardsLoading(false); return; }
+    if (!activeClientId) { setCards([]); setCardsLoading(false); return; }
     const run = async () => {
       setCardsLoading(true);
-      const { data, error } = await supabase
+      let query = supabase
         .from('ai_visibility')
         .select('*')
-        .eq('client_id', activeClientId)
-        .eq('week_start', selectedWeek)
-        .order('visibility_score', { ascending: false });
+        .eq('client_id', activeClientId);
+      query = applyWeekStartFilter(query, weekFilterCtx);
+      const { data, error } = await query.order('visibility_score', { ascending: false });
       if (error) { console.error(error); setCards([]); }
       else {
         setCards((data ?? []).map((r: any) => ({
@@ -145,37 +145,37 @@ const GeoAISovTab = () => {
       setCardsLoading(false);
     };
     run();
-  }, [selectedWeek, activeClientId, refreshKey]);
+  }, [selectedWeek, activeClientId, refreshKey, weekFilterCtx]);
 
   // Fetch competitive SOV
   useEffect(() => {
-    if (!selectedWeek || !activeClientId) { setSovRows([]); setSovLoading(false); return; }
+    if (!activeClientId) { setSovRows([]); setSovLoading(false); return; }
     const run = async () => {
       setSovLoading(true);
-      const { data, error } = await supabase
+      let query = supabase
         .from('competitive_sov')
         .select('*')
-        .eq('client_id', activeClientId)
-        .eq('week_start', selectedWeek)
-        .order('rank', { ascending: true });
+        .eq('client_id', activeClientId);
+      query = applyWeekStartFilter(query, weekFilterCtx);
+      const { data, error } = await query.order('rank', { ascending: true });
       if (error) { console.error(error); setSovRows([]); }
       else { setSovRows((data ?? []).map((r: any) => ({ ...r, platform: r.platform ?? '' }))); }
       setSovLoading(false);
     };
     run();
-  }, [selectedWeek, activeClientId, refreshKey]);
+  }, [selectedWeek, activeClientId, refreshKey, weekFilterCtx]);
 
   // Fetch top queries
   useEffect(() => {
-    if (!selectedWeek || !activeClientId) { setTopQueries([]); setQueriesLoading(false); return; }
+    if (!activeClientId) { setTopQueries([]); setQueriesLoading(false); return; }
     const run = async () => {
       setQueriesLoading(true);
-      const { data, error } = await supabase
+      let query = supabase
         .from('ai_top_queries')
         .select('*')
-        .eq('client_id', activeClientId)
-        .eq('week_start', selectedWeek)
-        .order('search_volume', { ascending: false });
+        .eq('client_id', activeClientId);
+      query = applyWeekStartFilter(query, weekFilterCtx);
+      const { data, error } = await query.order('search_volume', { ascending: false });
       if (error) { console.error(error); setTopQueries([]); }
       else {
         setTopQueries((data ?? []).map((r: any) => ({
@@ -188,7 +188,7 @@ const GeoAISovTab = () => {
       setQueriesLoading(false);
     };
     run();
-  }, [selectedWeek, activeClientId, refreshKey]);
+  }, [selectedWeek, activeClientId, refreshKey, weekFilterCtx]);
 
   const cardMap = new Map(cards.map(c => [c.platform, c]));
   const lowerClient = (clientName ?? '').toLowerCase();

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useWeek } from '@/contexts/WeekContext';
+import { useWeek, applyWeekStartFilter } from '@/contexts/WeekContext';
 import { useAdmin } from '@/hooks/useAdmin';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
@@ -32,7 +32,7 @@ function faviconUrl(domain: string) {
 }
 
 const TopDomainsSection = () => {
-  const { selectedWeek, refreshKey, activeClientId } = useWeek();
+  const { selectedWeek, refreshKey, activeClientId, weekFilterCtx } = useWeek();
   const { clientName } = useAdmin();
   const [rows, setRows] = useState<DomainRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,18 +41,19 @@ const TopDomainsSection = () => {
   const PAGE_SIZE = 10;
 
   useEffect(() => {
-    if (!selectedWeek || !activeClientId) {
+    if (!activeClientId) {
       setRows([]);
       setLoading(false);
       return;
     }
     const fetchDomains = async () => {
       setLoading(true);
-      const { data, error } = await supabase
+      let query = supabase
         .from('ai_domains')
         .select('*')
-        .eq('client_id', activeClientId)
-        .eq('week_start', selectedWeek)
+        .eq('client_id', activeClientId);
+      query = applyWeekStartFilter(query, weekFilterCtx);
+      const { data, error } = await query
         .order('retrieved_percentage', { ascending: false })
         .limit(50);
 
@@ -70,7 +71,7 @@ const TopDomainsSection = () => {
       setLoading(false);
     };
     fetchDomains();
-  }, [selectedWeek, activeClientId, refreshKey]);
+  }, [selectedWeek, activeClientId, refreshKey, weekFilterCtx]);
 
   const types = ['All', ...Array.from(new Set(rows.map(r => r.classification).filter(Boolean))).sort()];
   const allFiltered = rows.filter(r => typeFilter === 'All' || r.classification === typeFilter);

@@ -9,6 +9,40 @@ interface WeekOption {
 export type DateRangeMode = 'week' | 'range';
 
 export const ALL_TIME_VALUE = 'all-time';
+export const YTD_VALUE = 'ytd';
+
+/** First day of the current calendar year, ISO (YYYY-01-01). */
+function currentYearStartIso(): string {
+  const y = new Date().getFullYear();
+  return `${y}-01-01`;
+}
+
+export interface WeekFilterCtx {
+  isAllTime: boolean;
+  isYTD: boolean;
+  ytdFrom: string;
+  rangeMode: DateRangeMode;
+  rangeFrom: string;
+  rangeTo: string;
+  selectedWeek: string;
+}
+
+/**
+ * Apply the current period selection to a Supabase query that filters on `week_start`.
+ *  - All Time  → no filter
+ *  - YTD       → gte(week_start, Jan 1 of current year)
+ *  - Range     → gte/lte the chosen range
+ *  - Week      → eq the exact week start
+ */
+export function applyWeekStartFilter<Q extends { eq: any; gte: any; lte: any }>(query: Q, ctx: WeekFilterCtx): Q {
+  if (ctx.rangeMode === 'range' && ctx.rangeFrom && ctx.rangeTo) {
+    return query.gte('week_start', ctx.rangeFrom).lte('week_start', ctx.rangeTo);
+  }
+  if (ctx.isAllTime) return query;
+  if (ctx.isYTD) return query.gte('week_start', ctx.ytdFrom);
+  if (ctx.selectedWeek) return query.eq('week_start', ctx.selectedWeek);
+  return query;
+}
 
 interface WeekContextType {
   selectedWeek: string;
@@ -32,10 +66,16 @@ interface WeekContextType {
   effectiveTo: string;
   /** True when the dashboard should aggregate all-time data (no date filter). */
   isAllTime: boolean;
+  /** True when the dashboard should aggregate year-to-date data (week_start >= Jan 1 of current year). */
+  isYTD: boolean;
+  /** First day of the current calendar year — the lower bound used for YTD queries. */
+  ytdFrom: string;
+  /** Snapshot of all fields needed to drive applyWeekStartFilter. */
+  weekFilterCtx: WeekFilterCtx;
 }
 
 const WeekContext = createContext<WeekContextType>({
-  selectedWeek: ALL_TIME_VALUE,
+  selectedWeek: YTD_VALUE,
   setSelectedWeek: () => {},
   weeks: [],
   loading: true,
@@ -53,7 +93,18 @@ const WeekContext = createContext<WeekContextType>({
   setRangeTo: () => {},
   effectiveFrom: '',
   effectiveTo: '',
-  isAllTime: true,
+  isAllTime: false,
+  isYTD: true,
+  ytdFrom: currentYearStartIso(),
+  weekFilterCtx: {
+    isAllTime: false,
+    isYTD: true,
+    ytdFrom: currentYearStartIso(),
+    rangeMode: 'week',
+    rangeFrom: '',
+    rangeTo: '',
+    selectedWeek: YTD_VALUE,
+  },
 });
 
 export const useWeek = () => useContext(WeekContext);
@@ -104,7 +155,7 @@ function generateCalendarWeeks(startIso: string): WeekOption[] {
 
 export const WeekProvider = ({ children }: { children: ReactNode }) => {
   const [weeks, setWeeks] = useState<WeekOption[]>([]);
-  const [selectedWeek, setSelectedWeek] = useState<string>(ALL_TIME_VALUE);
+  const [selectedWeek, setSelectedWeek] = useState<string>(YTD_VALUE);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -153,9 +204,14 @@ export const WeekProvider = ({ children }: { children: ReactNode }) => {
       const CALENDAR_START = '2025-01-06'; // first Monday of 2025
       const weekOptions = generateCalendarWeeks(CALENDAR_START);
 
-      // Always prepend the synthetic "All Time" option so it's the default + always available.
-      const withAllTime: WeekOption[] = [{ label: 'All Time', weekStart: ALL_TIME_VALUE }, ...weekOptions];
-      setWeeks(withAllTime);
+      // Prepend the synthetic "Year-to-Date" (default) and "All Time" options so
+      // they're always available at the top of the dropdown.
+      const withSynthetic: WeekOption[] = [
+        { label: 'Year-to-Date', weekStart: YTD_VALUE },
+        { label: 'All Time', weekStart: ALL_TIME_VALUE },
+        ...weekOptions,
+      ];
+      setWeeks(withSynthetic);
       setLastUpdated(new Date());
       setLoading(false);
     };
@@ -163,26 +219,32 @@ export const WeekProvider = ({ children }: { children: ReactNode }) => {
   }, [activeClientId, userClientId]);
 
 
-  const isAllTime = rangeMode === 'week' && (selectedWeek === ALL_TIME_VALUE || !selectedWeek);
+  const isAllTime = rangeMode === 'week' && selectedWeek === ALL_TIME_VALUE;
+  const isYTD = rangeMode === 'week' && selectedWeek === YTD_VALUE;
+  const ytdFrom = currentYearStartIso();
 
   let effectiveFrom = '';
   let effectiveTo = '';
   if (rangeMode === 'range' && rangeFrom && rangeTo) {
     effectiveFrom = rangeFrom;
     effectiveTo = rangeTo;
-  } else if (!isAllTime && selectedWeek) {
+  } else if (!isAllTime && !isYTD && selectedWeek) {
     const end = new Date(selectedWeek + 'T00:00:00');
     end.setDate(end.getDate() + 6);
     effectiveFrom = selectedWeek;
     effectiveTo = end.toISOString().split('T')[0];
   }
 
+  const weekFilterCtx: WeekFilterCtx = {
+    isAllTime, isYTD, ytdFrom, rangeMode, rangeFrom, rangeTo, selectedWeek,
+  };
+
   return (
     <WeekContext.Provider value={{
       selectedWeek, setSelectedWeek, weeks, loading, lastUpdated, refreshData, refreshKey,
       overrideClientId, setOverrideClientId, activeClientId,
       rangeMode, setRangeMode, rangeFrom, rangeTo, setRangeFrom, setRangeTo,
-      effectiveFrom, effectiveTo, isAllTime,
+      effectiveFrom, effectiveTo, isAllTime, isYTD, ytdFrom, weekFilterCtx,
     }}>
       {children}
     </WeekContext.Provider>

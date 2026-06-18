@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from 'recharts';
 import { supabase } from '@/lib/supabase';
-import { useWeek } from '@/contexts/WeekContext';
+import { useWeek, applyWeekStartFilter } from '@/contexts/WeekContext';
 import { useAdmin } from '@/hooks/useAdmin';
 import { Skeleton } from '@/components/ui/skeleton';
 import TopDomainsSection from './TopDomainsSection';
@@ -233,7 +233,7 @@ const AIVisibilityTab = () => {
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [queryPage, setQueryPage] = useState(1);
   const QUERY_PAGE_SIZE = 10;
-  const { selectedWeek, refreshKey, activeClientId } = useWeek();
+  const { selectedWeek, refreshKey, activeClientId, weekFilterCtx } = useWeek();
   const { clientName } = useAdmin();
 
   const [cards, setCards] = useState<PlatformCard[]>([]);
@@ -245,19 +245,19 @@ const AIVisibilityTab = () => {
 
   // Fetch platform scorecards
   useEffect(() => {
-    if (!selectedWeek || !activeClientId) {
+    if (!activeClientId) {
       setCards([]);
       setCardsLoading(false);
       return;
     }
     const fetch = async () => {
       setCardsLoading(true);
-      const { data, error } = await supabase
+      let query = supabase
         .from('ai_visibility')
         .select('*')
-        .eq('client_id', activeClientId)
-        .eq('week_start', selectedWeek)
-        .order('visibility_score', { ascending: false });
+        .eq('client_id', activeClientId);
+      query = applyWeekStartFilter(query, weekFilterCtx);
+      const { data, error } = await query.order('visibility_score', { ascending: false });
 
       if (error) {
         console.error('Failed to fetch ai_visibility:', error);
@@ -274,22 +274,23 @@ const AIVisibilityTab = () => {
       setCardsLoading(false);
     };
     fetch();
-  }, [selectedWeek, activeClientId, refreshKey]);
+  }, [selectedWeek, activeClientId, refreshKey, weekFilterCtx]);
 
   // Fetch competitive SOV — aggregate across platforms
   useEffect(() => {
-    if (!selectedWeek || !activeClientId) {
+    if (!activeClientId) {
       setSovRows([]);
       setSovLoading(false);
       return;
     }
     const fetch = async () => {
       setSovLoading(true);
-      const { data, error } = await supabase
+      let query = supabase
         .from('competitive_sov')
         .select('*')
-        .eq('client_id', activeClientId)
-        .eq('week_start', selectedWeek);
+        .eq('client_id', activeClientId);
+      query = applyWeekStartFilter(query, weekFilterCtx);
+      const { data, error } = await query;
 
       if (error) {
         console.error('Failed to fetch competitive_sov:', error);
@@ -325,23 +326,23 @@ const AIVisibilityTab = () => {
       setSovLoading(false);
     };
     fetch();
-  }, [selectedWeek, activeClientId, refreshKey, clientName]);
+  }, [selectedWeek, activeClientId, refreshKey, clientName, weekFilterCtx]);
 
   // Fetch top queries
   useEffect(() => {
-    if (!selectedWeek || !activeClientId) {
+    if (!activeClientId) {
       setTopQueries([]);
       setQueriesLoading(false);
       return;
     }
     const fetchQueries = async () => {
       setQueriesLoading(true);
-      const { data, error } = await supabase
+      let query = supabase
         .from('ai_top_queries')
         .select('*')
-        .eq('client_id', activeClientId)
-        .eq('week_start', selectedWeek)
-        .order('search_volume', { ascending: false });
+        .eq('client_id', activeClientId);
+      query = applyWeekStartFilter(query, weekFilterCtx);
+      const { data, error } = await query.order('search_volume', { ascending: false });
 
       if (error) {
         console.error('Failed to fetch ai_top_queries:', error);
@@ -356,7 +357,7 @@ const AIVisibilityTab = () => {
       setQueriesLoading(false);
     };
     fetchQueries();
-  }, [selectedWeek, activeClientId, refreshKey]);
+  }, [selectedWeek, activeClientId, refreshKey, weekFilterCtx]);
 
   return (
     <div className="p-6 space-y-6">
