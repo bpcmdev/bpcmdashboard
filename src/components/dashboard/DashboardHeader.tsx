@@ -23,7 +23,18 @@ import {
 } from '@/components/ui/select';
 
 const DashboardHeader = () => {
-  const { selectedWeek, setSelectedWeek, weeks, lastUpdated, refreshData, setOverrideClientId } = useWeek();
+  const { selectedWeek, setSelectedWeek, weeks, lastUpdated, refreshData, setOverrideClientId, rangeMode, rangeFrom, rangeTo, isAllTime: weekIsAllTime } = useWeek();
+
+  const openPrintReport = () => {
+    if (!clientId) return;
+    let range = 'all-time';
+    if (rangeMode === 'range' && rangeFrom && rangeTo) {
+      range = `${rangeFrom}:${rangeTo}`;
+    } else if (!weekIsAllTime && selectedWeek) {
+      range = selectedWeek;
+    }
+    window.open(`/report/${clientId}?range=${encodeURIComponent(range)}&autoprint=1`, '_blank');
+  };
   const { isAdmin, clientId, clientName, clientLogo, clientColor, allClients, switchClient } = useAdmin();
   const [adminOpen, setAdminOpen] = useState(false);
   const [explainOpen, setExplainOpen] = useState(false);
