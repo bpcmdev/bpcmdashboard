@@ -275,7 +275,7 @@ const DashboardHeader = () => {
               Refresh
             </button>
             <button
-              onClick={() => { window.dispatchEvent(new CustomEvent('bpcm:export-pdf')); setMobileMenuOpen(false); }}
+              onClick={() => { openPrintReport(); setMobileMenuOpen(false); }}
               className="text-xs font-medium tracking-wider uppercase px-3 py-1.5 border border-white/20 hover:bg-white/10 transition-colors"
             >
               Export PDF
