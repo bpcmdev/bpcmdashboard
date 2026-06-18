@@ -66,11 +66,11 @@ const TopPlacements = ({ searchText = '', tierFilter = 'all', sentimentFilter = 
   const [rawPlacements, setRawPlacements] = useState<RawPlacement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const { refreshKey, activeClientId, effectiveFrom, effectiveTo } = useWeek();
+  const { refreshKey, activeClientId, effectiveFrom, effectiveTo, isAllTime } = useWeek();
   const { isAdmin } = useAdmin();
 
   useEffect(() => {
-    if (!effectiveFrom || !effectiveTo) return;
+    if (!isAllTime && (!effectiveFrom || !effectiveTo)) return;
     const fetchPlacements = async () => {
       setLoading(true);
       setError(false);
@@ -78,9 +78,11 @@ const TopPlacements = ({ searchText = '', tierFilter = 'all', sentimentFilter = 
       let query = supabase
         .from('placements')
         .select('*')
-        .gte('published_at', effectiveFrom)
-        .lte('published_at', effectiveTo)
         .order('outlet_umv', { ascending: false });
+
+      if (!isAllTime) {
+        query = query.gte('published_at', effectiveFrom).lte('published_at', effectiveTo);
+      }
 
       if (activeClientId) {
         query = query.eq('client_id', activeClientId);
