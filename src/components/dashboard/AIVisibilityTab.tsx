@@ -1418,7 +1418,7 @@ const GeoRecommendationsSection = ({
 // ---------- Main ----------
 const AIVisibilityTab = () => {
   const { activeClientId, refreshKey } = useWeek();
-  const { clientName } = useAdmin();
+  const { clientName, isAdmin } = useAdmin();
   const [period, setPeriod] = useState<PeriodKey>('week');
   const [custom, setCustom] = useState<{ from?: Date; to?: Date }>({});
   const [platform, setPlatform] = useState<Platform>('all');
