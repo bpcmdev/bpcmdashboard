@@ -978,7 +978,16 @@ const ConversationIntelligence = ({
         <SheetContent side="right" className="w-full sm:max-w-lg p-0">
           {selected && (() => {
             const brands = Array.isArray(selected.brands_mentioned) ? selected.brands_mentioned : [];
-            const sources = Array.isArray(selected.sources) ? selected.sources : [];
+            const rawSources = Array.isArray(selected.sources) ? selected.sources : [];
+            const sources = [...rawSources].sort((a, b) => {
+              const av = a.citationPosition ?? Number.MAX_SAFE_INTEGER;
+              const bv = b.citationPosition ?? Number.MAX_SAFE_INTEGER;
+              return av - bv;
+            });
+            const rawQueries = Array.isArray(selected.queries) ? selected.queries : [];
+            const queries: string[] = rawQueries
+              .map((q: any) => (typeof q === 'string' ? q : (q && typeof q.text === 'string' ? q.text : '')))
+              .filter((s: string) => s.trim().length > 0);
             return (
               <ScrollArea className="h-full">
                 <div className="p-6 space-y-5">
@@ -996,6 +1005,11 @@ const ConversationIntelligence = ({
 
                   <div>
                     <h4 className="text-[10px] font-bold tracking-[0.1em] uppercase text-muted-foreground mb-2">Response</h4>
+                    {selected.client_mentioned && (
+                      <span className="inline-block text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[hsl(var(--chart-gold))] text-foreground mb-2">
+                        Brand Mentioned · Position #{selected.client_position ?? '—'}
+                      </span>
+                    )}
                     <p className="text-xs text-foreground leading-relaxed whitespace-pre-wrap">{selected.response_text}</p>
                   </div>
 
@@ -1003,10 +1017,38 @@ const ConversationIntelligence = ({
                     <div>
                       <h4 className="text-[10px] font-bold tracking-[0.1em] uppercase text-muted-foreground mb-2">Brands Mentioned</h4>
                       <div className="space-y-1.5">
-                        {brands.map((b, i) => (
-                          <div key={i} className="flex items-center justify-between bg-secondary/30 px-3 py-1.5 border border-border">
-                            <span className="text-xs font-medium">{b.name}</span>
-                            {b.position != null && <span className="text-[10px] text-muted-foreground">Position #{b.position}</span>}
+                        {brands.map((b, i) => {
+                          const isClient = selected.client_mentioned
+                            && b.position != null
+                            && b.position === selected.client_position;
+                          return (
+                            <div key={i} className={cn(
+                              'flex items-center justify-between px-3 py-1.5 border',
+                              isClient
+                                ? 'bg-[hsl(var(--chart-gold))]/15 border-[hsl(var(--chart-gold))]'
+                                : 'bg-secondary/30 border-border'
+                            )}>
+                              <span className={cn('text-xs', isClient ? 'font-bold' : 'font-medium')}>{b.name}</span>
+                              {b.position != null && (
+                                <span style={{ fontFamily: 'DM Mono, monospace' }} className="text-[10px] text-muted-foreground">
+                                  Position #{b.position}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {queries.length > 0 && (
+                    <div>
+                      <h4 className="text-[10px] font-bold tracking-[0.1em] uppercase text-muted-foreground mb-2">Fanout Queries</h4>
+                      <div className="space-y-1">
+                        {queries.map((q, i) => (
+                          <div key={i} className="flex items-start gap-2 text-[11px] text-muted-foreground leading-relaxed">
+                            <Search className="w-3 h-3 mt-0.5 shrink-0 opacity-60" />
+                            <span>{q}</span>
                           </div>
                         ))}
                       </div>
@@ -1020,12 +1062,20 @@ const ConversationIntelligence = ({
                         {sources.map((s, i) => {
                           const url = s.url || '';
                           const domain = s.domain || (() => { try { return new URL(url).hostname; } catch { return url; } })();
+                          const cc = s.citationCount ?? 0;
                           return (
                             <LinkPreviewTrigger key={i} url={url}
                               meta={[{ label: 'Domain', value: domain }]}
                               className="flex w-full items-center justify-between bg-secondary/30 px-3 py-1.5 border border-border hover:bg-secondary/60 transition-colors text-left">
                               <span className="text-xs font-medium text-foreground truncate">{domain}</span>
-                              <span className="text-[10px] text-muted-foreground shrink-0 ml-2">↗</span>
+                              <span className="flex items-center gap-2 shrink-0 ml-2">
+                                {cc > 0 && (
+                                  <span style={{ fontFamily: 'DM Mono, monospace' }} className="text-[10px] text-muted-foreground">
+                                    {cc} citation{cc === 1 ? '' : 's'}
+                                  </span>
+                                )}
+                                <span className="text-[10px] text-muted-foreground">↗</span>
+                              </span>
                             </LinkPreviewTrigger>
                           );
                         })}
