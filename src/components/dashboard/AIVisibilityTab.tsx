@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Search } from 'lucide-react';
 import {
-  LineChart, Line, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid, Cell,
+  LineChart, Line, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid, Cell, Legend,
 } from 'recharts';
 import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
@@ -51,12 +51,15 @@ interface KpiRow {
   current_value: number | null;
   previous_value: number | null;
 }
-interface TrendRow {
+interface CompetitiveTrendRow {
   date: string;
+  brand_id: string;
+  brand_name: string;
+  is_client_brand: boolean;
   visibility: number | null;
+  share_of_voice: number | null;
   sentiment: number | null;
   avg_position: number | null;
-  share_of_voice: number | null;
 }
 interface MatrixRow {
   platform: string;
@@ -382,21 +385,85 @@ const TREND_METRICS: { key: TrendMetric; label: string }[] = [
   { key: 'avg_position', label: 'Avg Position' },
 ];
 
-const TrendChart = ({ rows, loading }: { rows: TrendRow[]; loading: boolean }) => {
+const COMPETITOR_PALETTE = [
+  'hsl(0 0% 65%)',
+  'hsl(0 0% 50%)',
+  'hsl(0 0% 38%)',
+  'hsl(0 0% 28%)',
+  'hsl(35 70% 55%)',
+  'hsl(0 60% 60%)',
+];
+
+const TrendChart = ({ rows, loading }: { rows: CompetitiveTrendRow[]; loading: boolean }) => {
   const [metric, setMetric] = useState<TrendMetric>('visibility');
-  const data = useMemo(() => rows.map(r => ({
-    date: r.date,
-    label: format(new Date(r.date), 'MMM d'),
-    value: r[metric],
-  })), [rows, metric]);
+
+  const { brands, data } = useMemo(() => {
+    const brandMap = new Map<string, { brand_id: string; brand_name: string; is_client_brand: boolean }>();
+    rows.forEach(r => {
+      if (!brandMap.has(r.brand_id)) {
+        brandMap.set(r.brand_id, {
+          brand_id: r.brand_id,
+          brand_name: r.brand_name,
+          is_client_brand: r.is_client_brand,
+        });
+      }
+    });
+    const brandsArr = Array.from(brandMap.values()).sort((a, b) => {
+      if (a.is_client_brand !== b.is_client_brand) return a.is_client_brand ? -1 : 1;
+      return a.brand_name.localeCompare(b.brand_name);
+    });
+
+    const dateMap = new Map<string, Record<string, any>>();
+    rows.forEach(r => {
+      if (!dateMap.has(r.date)) {
+        dateMap.set(r.date, { date: r.date, label: format(new Date(r.date), 'MMM d') });
+      }
+      const obj = dateMap.get(r.date)!;
+      obj[r.brand_name] = r[metric];
+    });
+    const dataArr = Array.from(dateMap.values()).sort((a, b) => a.date.localeCompare(b.date));
+    return { brands: brandsArr, data: dataArr };
+  }, [rows, metric]);
 
   const isPct = metric === 'visibility' || metric === 'share_of_voice';
-  const yFmt = (v: number) => isPct ? `${Math.round(v * 100)}%` : metric === 'avg_position' ? v.toFixed(1) : Math.round(v).toString();
+  const yFmt = (v: number) =>
+    isPct ? `${Math.round(v * 100)}%` : metric === 'avg_position' ? v.toFixed(1) : Math.round(v).toString();
+
+  const brandColor = (b: { is_client_brand: boolean }, idx: number) => {
+    if (b.is_client_brand) return 'hsl(var(--chart-navy))';
+    const compIdx = brands.filter((x, i) => i < idx && !x.is_client_brand).length;
+    return COMPETITOR_PALETTE[compIdx % COMPETITOR_PALETTE.length];
+  };
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload || !payload.length) return null;
+    const sorted = [...payload].sort((a: any, b: any) => {
+      const aBrand = brands.find(x => x.brand_name === a.dataKey);
+      const bBrand = brands.find(x => x.brand_name === b.dataKey);
+      if (aBrand?.is_client_brand) return -1;
+      if (bBrand?.is_client_brand) return 1;
+      return 0;
+    });
+    return (
+      <div style={{ background: 'hsl(var(--chart-navy))', color: 'white', fontSize: 11, padding: '8px 10px', borderRadius: 4 }}>
+        <div style={{ fontWeight: 600, marginBottom: 4 }}>{label}</div>
+        {sorted.map((p: any) => {
+          const b = brands.find(x => x.brand_name === p.dataKey);
+          return (
+            <div key={p.dataKey} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontWeight: b?.is_client_brand ? 700 : 400 }}>
+              <span style={{ color: p.color }}>● {p.dataKey}</span>
+              <span style={{ fontFamily: 'DM Mono, monospace' }}>{p.value == null ? '—' : yFmt(Number(p.value))}</span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 
   return (
     <div className="bg-card border border-border p-5">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground">Trend Over Time</h3>
+        <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground">Competitive Trend Over Time</h3>
         <div className="flex gap-0 border border-border">
           {TREND_METRICS.map(m => (
             <button
@@ -415,7 +482,7 @@ const TrendChart = ({ rows, loading }: { rows: TrendRow[]; loading: boolean }) =
       ) : data.length === 0 ? (
         <p className="text-sm text-muted-foreground text-center py-12">No trend data for this period.</p>
       ) : (
-        <ResponsiveContainer width="100%" height={260}>
+        <ResponsiveContainer width="100%" height={300}>
           <LineChart data={data} margin={{ top: 0, right: 10, left: -10, bottom: 0 }}>
             <CartesianGrid strokeDasharray="2 4" stroke="hsl(var(--chart-grid))" vertical={false} />
             <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'hsl(0 0% 45%)' }} axisLine={false} tickLine={false} />
@@ -425,11 +492,29 @@ const TrendChart = ({ rows, loading }: { rows: TrendRow[]; loading: boolean }) =
               tickFormatter={yFmt}
               reversed={metric === 'avg_position'}
             />
-            <Tooltip
-              contentStyle={{ backgroundColor: 'hsl(var(--chart-navy))', border: 'none', borderRadius: 4, color: 'white', fontSize: 11 }}
-              formatter={(v: any) => yFmt(Number(v))}
+            <Tooltip content={<CustomTooltip />} />
+            <Legend
+              wrapperStyle={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', paddingTop: 8 }}
+              iconSize={8}
+              formatter={(value: string) => {
+                const b = brands.find(x => x.brand_name === value);
+                return (
+                  <span style={{ color: 'hsl(0 0% 25%)', fontWeight: b?.is_client_brand ? 700 : 400 }}>{value}</span>
+                );
+              }}
             />
-            <Line type="monotone" dataKey="value" stroke="hsl(var(--chart-navy))" strokeWidth={2.25} dot={false} />
+            {brands.map((b, idx) => (
+              <Line
+                key={b.brand_id}
+                type="monotone"
+                dataKey={b.brand_name}
+                stroke={brandColor(b, idx)}
+                strokeWidth={b.is_client_brand ? 2.5 : 1.5}
+                strokeDasharray={b.is_client_brand ? undefined : '4 2'}
+                dot={false}
+                connectNulls
+              />
+            ))}
           </LineChart>
         </ResponsiveContainer>
       )}
@@ -1537,7 +1622,7 @@ const AIVisibilityTab = () => {
 
   // State
   const [kpis, setKpis] = useState<KpiRow[]>([]);
-  const [trend, setTrend] = useState<TrendRow[]>([]);
+  const [trend, setTrend] = useState<CompetitiveTrendRow[]>([]);
   const [matrix, setMatrix] = useState<MatrixRow[]>([]);
   const [summary, setSummary] = useState<BrandSummaryRow[]>([]);
   const [domains, setDomains] = useState<DomainRow[]>([]);
@@ -1582,7 +1667,7 @@ const AIVisibilityTab = () => {
 
     run<PlatformScoreRow>('platformScores', 'peec_platform_scores', baseArgs, setPlatformScores);
     run<KpiRow>('kpis', 'peec_client_kpis', withPlatform, setKpis);
-    run<TrendRow>('trend', 'peec_trend', withPlatform, setTrend);
+    run<CompetitiveTrendRow>('trend', 'peec_competitive_trend', withPlatform, setTrend);
     run<MatrixRow>('matrix', 'peec_model_matrix', baseArgs, setMatrix);
     run<BrandSummaryRow>('summary', 'peec_brand_summary', withPlatform, setSummary);
     run<PlatformCompetitiveRow>('platformCompetitive', 'peec_platform_competitive', baseArgs, setPlatformCompetitive);
