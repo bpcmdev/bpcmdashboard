@@ -1,17 +1,22 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
-  LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid,
+  LineChart, Line, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid, Cell,
 } from 'recharts';
 import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
+import { useAdmin } from '@/hooks/useAdmin';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { LinkPreviewTrigger } from './LinkPreviewDrawer';
+import PaginationControls from './PaginationControls';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
-// Re-exported for GeoAISovTab and other consumers
+// Re-exported for any remaining consumers
 export const ViewToggle = ({
   active, onToggle, options,
 }: { active: string; onToggle: (v: string) => void; options?: string[] }) => {
@@ -38,7 +43,7 @@ export const ViewToggle = ({
 type PeriodKey = 'day' | 'week' | 'month' | 'custom';
 type Platform =
   | 'all' | 'chatgpt' | 'perplexity' | 'google_ai' | 'google_ai_mode'
-  | 'gemini' | 'claude' | 'copilot';
+  | 'gemini' | 'claude' | 'copilot' | 'rufus';
 
 interface KpiRow {
   metric: 'visibility' | 'sentiment' | 'position' | 'share_of_voice';
@@ -89,16 +94,72 @@ interface UrlRow {
 interface QueryRow { query_text: string; freq: number }
 interface ProductRow { product: string; freq: number }
 
+interface PlatformScoreRow {
+  platform: string;
+  visibility: number | null;
+  sentiment: number | null;
+  avg_position: number | null;
+  share_of_voice: number | null;
+  mention_count: number | null;
+}
+interface PlatformCompetitiveRow {
+  platform: string;
+  brand_id: string;
+  brand_name: string;
+  is_client_brand: boolean;
+  share_of_voice: number | null;
+  visibility: number | null;
+  mention_count: number | null;
+}
+interface GapDomainRow {
+  domain: string;
+  classification: string | null;
+  citation_count: number;
+  retrieval_count: number;
+  competitor_brands: string[] | null;
+}
+interface GapUrlRow {
+  url: string;
+  domain: string;
+  title: string | null;
+  classification: string | null;
+  citation_count: number;
+  retrieval_count: number;
+  competitor_brands: string[] | null;
+}
+interface ChatBrand { id?: string; name: string; position?: number | null }
+interface ChatSource { url?: string; domain?: string }
+interface ChatRow {
+  chat_id: string;
+  date: string;
+  platform: string;
+  prompt_text: string;
+  response_text: string;
+  client_mentioned: boolean;
+  client_position: number | null;
+  brands_mentioned: ChatBrand[] | null;
+  sources: ChatSource[] | null;
+  queries: any;
+  total_count: number;
+}
+
 // ---------- Helpers ----------
+const PLATFORM_LABEL_MAP: Record<string, string> = {
+  chatgpt: 'ChatGPT',
+  perplexity: 'Perplexity',
+  google_ai: 'Google AI',
+  google_ai_mode: 'Google AI Mode',
+  gemini: 'Gemini',
+  claude: 'Claude',
+  copilot: 'Copilot',
+  rufus: 'Rufus',
+};
+const platformLabel = (p: string) => PLATFORM_LABEL_MAP[p] || p;
+const ALL_KNOWN_PLATFORMS = Object.keys(PLATFORM_LABEL_MAP);
+
 const PLATFORMS: { value: Platform; label: string }[] = [
   { value: 'all', label: 'All Platforms' },
-  { value: 'chatgpt', label: 'ChatGPT' },
-  { value: 'perplexity', label: 'Perplexity' },
-  { value: 'google_ai', label: 'Google AI' },
-  { value: 'google_ai_mode', label: 'Google AI Mode' },
-  { value: 'gemini', label: 'Gemini' },
-  { value: 'claude', label: 'Claude' },
-  { value: 'copilot', label: 'Copilot' },
+  ...(ALL_KNOWN_PLATFORMS.map(p => ({ value: p as Platform, label: PLATFORM_LABEL_MAP[p] }))),
 ];
 
 const isoDate = (d: Date) => d.toISOString().slice(0, 10);
@@ -129,7 +190,7 @@ const fmtNum = (v: number | null | undefined) =>
 
 function deltaPill(curr: number | null, prev: number | null, opts: {
   fmt: (n: number) => string;
-  invert?: boolean; // lower is better
+  invert?: boolean;
 }) {
   if (curr == null || prev == null) {
     return <span className="text-[10px] text-muted-foreground">—</span>;
@@ -229,6 +290,50 @@ const PeriodControls = ({
     </div>
   </div>
 );
+
+// ---------- Platform Score Cards ----------
+const PlatformScoreCards = ({ rows, loading }: { rows: PlatformScoreRow[]; loading: boolean }) => {
+  if (loading) {
+    return (
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+        {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-32 w-full" />)}
+      </div>
+    );
+  }
+  const byPlatform = new Map(rows.map(r => [r.platform, r]));
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+      {ALL_KNOWN_PLATFORMS.map(key => {
+        const r = byPlatform.get(key);
+        if (!r) {
+          return (
+            <div key={key} className="bg-card border border-border p-3 opacity-50">
+              <p className="text-[10px] font-bold tracking-[0.1em] uppercase">{platformLabel(key)}</p>
+              <p className="text-xs text-muted-foreground mt-6">No data</p>
+            </div>
+          );
+        }
+        const score = Math.round((r.visibility ?? 0) * 100);
+        let badge: { label: string; cls: string };
+        if (score >= 40) badge = { label: 'STRONG', cls: 'bg-foreground text-background' };
+        else if (score >= 20) badge = { label: 'MODERATE', cls: 'bg-corp-news' };
+        else badge = { label: 'NEEDS WORK', cls: 'border border-destructive text-destructive' };
+        return (
+          <div key={key} className="bg-card border border-border p-3">
+            <p className="text-[10px] font-bold tracking-[0.1em] uppercase">{platformLabel(key)}</p>
+            <p style={{ fontFamily: 'DM Mono, monospace' }} className="text-3xl font-bold mt-2 mb-1 text-foreground">{score}</p>
+            <span className={cn('inline-block text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 mb-1.5', badge.cls)}>
+              {badge.label}
+            </span>
+            <p className="text-[9px] text-muted-foreground leading-tight">
+              SoV {fmtPct(r.share_of_voice)} · Sent {fmtInt(r.sentiment)} · Pos {fmtPos(r.avg_position)}
+            </p>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
 
 // ---------- KPI Cards ----------
 const KpiCards = ({ rows, loading }: { rows: KpiRow[]; loading: boolean }) => {
@@ -363,7 +468,7 @@ const ModelBrandMatrix = ({ rows, loading }: { rows: MatrixRow[]; loading: boole
               <tr className="text-left text-muted-foreground">
                 <th className="py-2 pr-3 font-semibold uppercase tracking-[0.08em] text-[10px]">Brand</th>
                 {platforms.map(p => (
-                  <th key={p} className="py-2 px-2 font-semibold uppercase tracking-[0.08em] text-[10px] text-center">{p}</th>
+                  <th key={p} className="py-2 px-2 font-semibold uppercase tracking-[0.08em] text-[10px] text-center">{platformLabel(p)}</th>
                 ))}
               </tr>
             </thead>
@@ -378,7 +483,7 @@ const ModelBrandMatrix = ({ rows, loading }: { rows: MatrixRow[]; loading: boole
                     const color = intensity > 0.5 ? 'white' : 'hsl(0 0% 15%)';
                     return (
                       <td key={p} className="p-1 text-center">
-                        <div style={{ background: bg, color }} className="py-1.5 px-2 text-[11px] font-medium" title={`${b.brand_name} · ${p}: ${fmtPct(v)}`}>
+                        <div style={{ background: bg, color }} className="py-1.5 px-2 text-[11px] font-medium" title={`${b.brand_name} · ${platformLabel(p)}: ${fmtPct(v)}`}>
                           {v == null ? '—' : fmtPct(v, 0)}
                         </div>
                       </td>
@@ -476,123 +581,629 @@ const CompetitiveTable = ({ rows, loading }: { rows: BrandSummaryRow[]; loading:
   );
 };
 
-// ---------- Top Domains ----------
-const TopDomainsTable = ({ rows, loading }: { rows: DomainRow[]; loading: boolean }) => (
-  <div className="bg-card border border-border p-5">
-    <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">Top Domains</h3>
-    {loading ? <Skeleton className="h-48 w-full" /> :
-      rows.length === 0 ? <p className="text-sm text-muted-foreground text-center py-8">No domain data for this period.</p> : (
-      <div className="overflow-x-auto">
-        <table className="w-full text-[12px]">
-          <thead>
-            <tr className="text-muted-foreground border-b border-border">
-              <th className="text-left py-2 px-2 font-semibold uppercase tracking-[0.08em] text-[10px]">Domain</th>
-              <th className="text-left py-2 px-2 font-semibold uppercase tracking-[0.08em] text-[10px]">Class</th>
-              <th className="text-right py-2 px-2 font-semibold uppercase tracking-[0.08em] text-[10px]">Citations</th>
-              <th className="text-right py-2 px-2 font-semibold uppercase tracking-[0.08em] text-[10px]">Retrievals</th>
-              <th className="text-right py-2 px-2 font-semibold uppercase tracking-[0.08em] text-[10px]">Citation Rate</th>
-              <th className="text-right py-2 px-2 font-semibold uppercase tracking-[0.08em] text-[10px]">Retrieved %</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(r => (
-              <tr key={r.domain} className="border-b border-border/60">
-                <td className="py-2 px-2 text-foreground">{r.domain}</td>
-                <td className="py-2 px-2"><ClassificationTag value={r.classification} /></td>
-                <td className="py-2 px-2 text-right">{fmtNum(r.citation_count)}</td>
-                <td className="py-2 px-2 text-right">{fmtNum(r.retrieval_count)}</td>
-                <td className="py-2 px-2 text-right">{fmtPct(r.citation_rate)}</td>
-                <td className="py-2 px-2 text-right">{fmtPct(r.retrieved_percentage)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    )}
-  </div>
-);
+// ---------- Per-Platform Competitive SOV ----------
+const PerPlatformCompetitiveSov = ({ rows, loading }: { rows: PlatformCompetitiveRow[]; loading: boolean }) => {
+  const byPlatform = useMemo(() => {
+    const map = new Map<string, PlatformCompetitiveRow[]>();
+    rows.forEach(r => {
+      const arr = map.get(r.platform) ?? [];
+      arr.push(r);
+      map.set(r.platform, arr);
+    });
+    return map;
+  }, [rows]);
 
-// ---------- Top URLs ----------
-const TopUrlsTable = ({ rows, loading }: { rows: UrlRow[]; loading: boolean }) => (
-  <div className="bg-card border border-border p-5">
-    <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">Top Source URLs</h3>
-    {loading ? <Skeleton className="h-48 w-full" /> :
-      rows.length === 0 ? <p className="text-sm text-muted-foreground text-center py-8">No source URL data for this period.</p> : (
-      <div className="overflow-x-auto">
-        <table className="w-full text-[12px]">
-          <thead>
-            <tr className="text-muted-foreground border-b border-border">
-              <th className="text-left py-2 px-2 font-semibold uppercase tracking-[0.08em] text-[10px]">Title / URL</th>
-              <th className="text-left py-2 px-2 font-semibold uppercase tracking-[0.08em] text-[10px]">Domain</th>
-              <th className="text-left py-2 px-2 font-semibold uppercase tracking-[0.08em] text-[10px]">Class</th>
-              <th className="text-right py-2 px-2 font-semibold uppercase tracking-[0.08em] text-[10px]">Citations</th>
-              <th className="text-right py-2 px-2 font-semibold uppercase tracking-[0.08em] text-[10px]">Retrievals</th>
-              <th className="text-right py-2 px-2 font-semibold uppercase tracking-[0.08em] text-[10px]">Citation Rate</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(r => (
-              <tr key={r.url} className="border-b border-border/60">
-                <td className="py-2 px-2 max-w-[400px]">
-                  <a href={r.url} target="_blank" rel="noopener noreferrer" className="text-foreground hover:underline block truncate">
-                    {r.title || r.url}
-                  </a>
-                </td>
-                <td className="py-2 px-2 text-muted-foreground">{r.domain}</td>
-                <td className="py-2 px-2"><ClassificationTag value={r.classification} /></td>
-                <td className="py-2 px-2 text-right">{fmtNum(r.citation_count)}</td>
-                <td className="py-2 px-2 text-right">{fmtNum(r.retrieval_count)}</td>
-                <td className="py-2 px-2 text-right">{fmtPct(r.citation_rate)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    )}
-  </div>
-);
+  const platforms = Array.from(byPlatform.keys()).sort();
 
-// ---------- Search Queries ----------
-const SearchQueriesTable = ({ rows, loading }: { rows: QueryRow[]; loading: boolean }) => (
-  <div className="bg-card border border-border p-5">
-    <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">AI Search Queries</h3>
-    {loading ? <Skeleton className="h-48 w-full" /> :
-      rows.length === 0 ? <p className="text-sm text-muted-foreground text-center py-8">No search query data for this period.</p> : (
-      <div className="divide-y divide-border">
-        {rows.map((q, i) => (
-          <div key={`${q.query_text}-${i}`} className="flex items-center gap-4 py-2.5">
-            <span className="text-[11px] font-bold w-6 text-right text-muted-foreground">{i + 1}</span>
-            <span className="text-[13px] flex-1">"{q.query_text}"</span>
-            <span className="text-[11px] text-muted-foreground">{q.freq.toLocaleString()}</span>
+  return (
+    <div className="space-y-3">
+      <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground">Per-Platform Share of Voice</h3>
+      {loading ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-56 w-full" />)}
+        </div>
+      ) : platforms.length === 0 ? (
+        <div className="bg-card border border-border p-5">
+          <p className="text-sm text-muted-foreground text-center py-6">No per-platform SOV for this period.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {platforms.map(p => {
+            const top = (byPlatform.get(p) ?? [])
+              .filter(r => r.share_of_voice != null)
+              .sort((a, b) => (b.share_of_voice ?? 0) - (a.share_of_voice ?? 0))
+              .slice(0, 8)
+              .map(r => ({
+                brand: r.brand_name,
+                value: Number(((r.share_of_voice ?? 0) * 100).toFixed(1)),
+                isClient: r.is_client_brand,
+              }));
+            return (
+              <div key={p} className="bg-card border border-border p-5">
+                <h4 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-3">{platformLabel(p)}</h4>
+                {top.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-6">No data.</p>
+                ) : (
+                  <ResponsiveContainer width="100%" height={Math.max(200, top.length * 28)}>
+                    <BarChart data={top} layout="vertical" margin={{ left: 100, right: 24 }}>
+                      <XAxis type="number" tick={{ fontSize: 10, fill: 'hsl(0 0% 45%)' }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} />
+                      <YAxis type="category" dataKey="brand" tick={{ fontSize: 10, fill: 'hsl(0 0% 30%)' }} axisLine={false} tickLine={false} width={95} />
+                      <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--chart-navy))', border: 'none', borderRadius: 2, color: 'white', fontSize: 11 }} formatter={(v: any) => `${v}%`} />
+                      <Bar dataKey="value" barSize={14} radius={[0, 1, 1, 0]}>
+                        {top.map((d, i) => (
+                          <Cell key={i} fill={d.isClient ? 'hsl(var(--chart-navy))' : 'hsl(0 0% 60%)'} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ---------- Gap Analysis: Source Opportunities ----------
+const GAP_PAGE = 20;
+const SourceOpportunities = ({
+  clientId, p_start, p_end,
+}: { clientId: string; p_start: string; p_end: string }) => {
+  const [mode, setMode] = useState<'domain' | 'url'>('domain');
+  const [domainRows, setDomainRows] = useState<GapDomainRow[]>([]);
+  const [urlRows, setUrlRows] = useState<GapUrlRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setPage(1);
+    const run = async () => {
+      const base = { p_client_id: clientId, p_start, p_end, p_limit: 200 };
+      const [d, u] = await Promise.all([
+        supabase.rpc('peec_gap_domains', base),
+        supabase.rpc('peec_gap_urls', base),
+      ]);
+      if (cancelled) return;
+      setDomainRows((d.data ?? []) as GapDomainRow[]);
+      setUrlRows((u.data ?? []) as GapUrlRow[]);
+      setLoading(false);
+    };
+    run();
+    return () => { cancelled = true; };
+  }, [clientId, p_start, p_end]);
+
+  useEffect(() => { setPage(1); }, [mode]);
+
+  const sortedDomains = useMemo(
+    () => [...domainRows].sort((a, b) => b.citation_count - a.citation_count),
+    [domainRows]
+  );
+  const sortedUrls = useMemo(
+    () => [...urlRows].sort((a, b) => b.citation_count - a.citation_count),
+    [urlRows]
+  );
+  const rows = mode === 'domain' ? sortedDomains : sortedUrls;
+  const totalPages = Math.max(1, Math.ceil(rows.length / GAP_PAGE));
+  const safePage = Math.min(page, totalPages);
+  const paged = rows.slice((safePage - 1) * GAP_PAGE, safePage * GAP_PAGE);
+
+  return (
+    <div className="bg-card border border-border p-5 space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <p className="text-[11px] text-muted-foreground">
+          High-authority sources citing your competitors but not you — prioritize outreach here.
+        </p>
+        <div className="flex border border-border">
+          {(['domain', 'url'] as const).map(m => (
+            <button key={m} onClick={() => setMode(m)}
+              className={cn('px-3 py-1 text-[10px] font-semibold tracking-[0.05em] uppercase',
+                mode === m ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground')}>
+              By {m === 'domain' ? 'Domain' : 'URL'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {loading ? (
+        <Skeleton className="h-48 w-full" />
+      ) : rows.length === 0 ? (
+        <p className="text-sm text-muted-foreground text-center py-8">No gap sources for this period.</p>
+      ) : (
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full text-[12px]">
+              <thead>
+                <tr className="text-muted-foreground border-b border-border">
+                  <th className="text-left py-2 px-2 font-semibold uppercase tracking-[0.08em] text-[10px]">Source</th>
+                  <th className="text-left py-2 px-2 font-semibold uppercase tracking-[0.08em] text-[10px]">Classification</th>
+                  <th className="text-right py-2 px-2 font-semibold uppercase tracking-[0.08em] text-[10px]">Citations</th>
+                  <th className="text-left py-2 px-2 font-semibold uppercase tracking-[0.08em] text-[10px]">Competitors Cited Here</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paged.map((r, i) => {
+                  const isUrl = mode === 'url';
+                  const u = r as GapUrlRow;
+                  const d = r as GapDomainRow;
+                  const competitors = r.competitor_brands ?? [];
+                  return (
+                    <tr key={isUrl ? `${u.url}-${i}` : `${d.domain}-${i}`} className="border-b border-border/60 align-top">
+                      <td className="py-2 px-2 max-w-[360px]">
+                        {isUrl ? (
+                          <a href={u.url} target="_blank" rel="noopener noreferrer" className="text-foreground hover:underline block truncate">
+                            {u.title || u.url}
+                          </a>
+                        ) : (
+                          <span className="text-foreground">{d.domain}</span>
+                        )}
+                        {isUrl && <div className="text-[10px] text-muted-foreground truncate">{u.domain}</div>}
+                      </td>
+                      <td className="py-2 px-2"><ClassificationTag value={r.classification} /></td>
+                      <td className="py-2 px-2 text-right">{fmtNum(r.citation_count)}</td>
+                      <td className="py-2 px-2">
+                        <div className="flex flex-wrap gap-1">
+                          {competitors.length === 0 ? (
+                            <span className="text-[10px] text-muted-foreground">—</span>
+                          ) : competitors.map((b, idx) => (
+                            <span key={idx} className="text-[9px] font-medium px-1.5 py-0.5 bg-muted text-muted-foreground border border-border">
+                              {b}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-        ))}
-      </div>
-    )}
-  </div>
-);
+          <PaginationControls currentPage={safePage} totalPages={totalPages} onPageChange={setPage} />
+        </>
+      )}
+    </div>
+  );
+};
 
-// ---------- Shopping ----------
-const ShoppingTable = ({ rows, loading }: { rows: ProductRow[]; loading: boolean }) => (
-  <div className="bg-card border border-border p-5">
-    <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">Shopping / Products</h3>
-    {loading ? <Skeleton className="h-48 w-full" /> :
-      rows.length === 0 ? <p className="text-sm text-muted-foreground text-center py-8">No shopping data for this period.</p> : (
-      <div className="divide-y divide-border">
-        {rows.map((p, i) => (
-          <div key={`${p.product}-${i}`} className="flex items-center gap-4 py-2.5">
-            <span className="text-[11px] font-bold w-6 text-right text-muted-foreground">{i + 1}</span>
-            <span className="text-[13px] flex-1">{p.product}</span>
-            <span className="text-[11px] text-muted-foreground">{p.freq.toLocaleString()}</span>
-          </div>
-        ))}
+// ---------- Gap Analysis: Competitive Gap (from per-platform SOV) ----------
+const CompetitiveGap = ({ rows, clientName }: { rows: PlatformCompetitiveRow[]; clientName: string | null }) => {
+  const platforms = useMemo(() => {
+    const byPlatform = new Map<string, PlatformCompetitiveRow[]>();
+    rows.forEach(r => {
+      const arr = byPlatform.get(r.platform) ?? [];
+      arr.push(r);
+      byPlatform.set(r.platform, arr);
+    });
+    return Array.from(byPlatform.entries()).map(([platform, list]) => {
+      const sorted = [...list].sort((a, b) => (b.share_of_voice ?? 0) - (a.share_of_voice ?? 0));
+      const client = sorted.find(r => r.is_client_brand) || null;
+      const topComp = sorted.find(r => !r.is_client_brand) || null;
+      return { platform, client, topComp };
+    });
+  }, [rows]);
+
+  if (platforms.length === 0) {
+    return (
+      <div className="bg-card border border-border p-5">
+        <p className="text-sm text-muted-foreground text-center py-6">No competitive data for this period.</p>
       </div>
-    )}
-  </div>
-);
+    );
+  }
+
+  return (
+    <div className="bg-card border border-border p-5 space-y-5">
+      <h4 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground">
+        {clientName ?? 'Client'} vs Top Competitor — by Platform
+      </h4>
+      {platforms.map(({ platform, client, topComp }) => {
+        const clientPct = (client?.share_of_voice ?? 0) * 100;
+        const compPct = (topComp?.share_of_voice ?? 0) * 100;
+        const gap = clientPct - compPct;
+        const ahead = gap >= 0;
+        const maxPct = Math.max(clientPct, compPct, 1);
+        return (
+          <div key={platform} className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold">{platformLabel(platform)}</span>
+              <span className={cn('text-[11px] font-bold', ahead ? 'text-positive' : 'text-destructive')}>
+                {ahead ? '+' : ''}{gap.toFixed(1)}pts {ahead ? 'ahead' : 'behind'}
+              </span>
+            </div>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] w-32 truncate font-medium">{client?.brand_name ?? clientName ?? 'Client'}</span>
+                <div className="flex-1 h-5 bg-secondary">
+                  <div className="h-full" style={{ width: `${(clientPct / maxPct) * 100}%`, background: 'hsl(var(--chart-navy))' }} />
+                </div>
+                <span className="text-[11px] font-bold w-14 text-right">{clientPct.toFixed(1)}%</span>
+              </div>
+              {topComp && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] w-32 truncate text-muted-foreground">{topComp.brand_name}</span>
+                  <div className="flex-1 h-5 bg-secondary">
+                    <div className="h-full bg-foreground/30" style={{ width: `${(compPct / maxPct) * 100}%` }} />
+                  </div>
+                  <span className="text-[11px] w-14 text-right text-muted-foreground">{compPct.toFixed(1)}%</span>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+const GapAnalysisSection = ({
+  clientId, p_start, p_end, competitiveRows, clientName,
+}: {
+  clientId: string; p_start: string; p_end: string;
+  competitiveRows: PlatformCompetitiveRow[]; clientName: string | null;
+}) => {
+  const [view, setView] = useState('SOURCE OPPORTUNITIES');
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground">Gap Analysis</h3>
+        <ViewToggle active={view} onToggle={setView} options={['SOURCE OPPORTUNITIES', 'COMPETITIVE GAP']} />
+      </div>
+      {view === 'SOURCE OPPORTUNITIES'
+        ? <SourceOpportunities clientId={clientId} p_start={p_start} p_end={p_end} />
+        : <CompetitiveGap rows={competitiveRows} clientName={clientName} />}
+    </div>
+  );
+};
+
+// ---------- AI Conversation Intelligence ----------
+const CHAT_PAGE = 10;
+const ConversationIntelligence = ({
+  clientId, p_start, p_end, p_platform, clientName,
+}: {
+  clientId: string; p_start: string; p_end: string; p_platform: string | null; clientName: string | null;
+}) => {
+  const [mode, setMode] = useState<'recent' | 'mentioned'>('recent');
+  const [page, setPage] = useState(1);
+  const [chats, setChats] = useState<ChatRow[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<ChatRow | null>(null);
+
+  useEffect(() => { setPage(1); }, [mode, clientId, p_start, p_end, p_platform]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    const run = async () => {
+      const { data, error } = await supabase.rpc('peec_chats_page', {
+        p_client_id: clientId,
+        p_start, p_end,
+        p_only_mentioned: mode === 'mentioned',
+        p_platform,
+        p_limit: CHAT_PAGE,
+        p_offset: (page - 1) * CHAT_PAGE,
+      });
+      if (cancelled) return;
+      if (error) {
+        console.error('peec_chats_page failed:', error);
+        setChats([]); setTotal(0);
+      } else {
+        const rows = (data ?? []) as ChatRow[];
+        setChats(rows);
+        setTotal(rows[0]?.total_count ?? 0);
+      }
+      setLoading(false);
+    };
+    run();
+    return () => { cancelled = true; };
+  }, [clientId, p_start, p_end, p_platform, mode, page]);
+
+  const totalPages = Math.max(1, Math.ceil(total / CHAT_PAGE));
+  const mentionedLabel = clientName ? `${clientName.toUpperCase()} MENTIONED` : 'CLIENT MENTIONED';
+
+  return (
+    <div className="bg-card border border-border p-5 space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground">AI Conversation Intelligence</h3>
+        <div className="flex border border-border">
+          {(['recent', 'mentioned'] as const).map(m => (
+            <button key={m} onClick={() => setMode(m)}
+              className={cn('px-3 py-1 text-[10px] font-semibold tracking-[0.05em] uppercase',
+                mode === m ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground')}>
+              {m === 'recent' ? 'RECENT CHATS' : mentionedLabel}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28 w-full" />)}
+        </div>
+      ) : chats.length === 0 ? (
+        <p className="text-sm text-muted-foreground text-center py-8">No conversations for this period.</p>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {chats.map(chat => {
+              const brands = Array.isArray(chat.brands_mentioned) ? chat.brands_mentioned : [];
+              return (
+                <button key={chat.chat_id} onClick={() => setSelected(chat)}
+                  className="bg-secondary/30 border border-border p-4 text-left hover:bg-secondary/60 transition-colors space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 bg-foreground text-background">
+                      {platformLabel(chat.platform)}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground ml-auto">
+                      {chat.date ? format(new Date(chat.date), 'MMM d, yyyy') : ''}
+                    </span>
+                  </div>
+                  <p className="text-xs font-semibold text-foreground line-clamp-1">{chat.prompt_text}</p>
+                  <p className="text-[11px] text-muted-foreground line-clamp-3">{chat.response_text}</p>
+                  {chat.client_mentioned && (
+                    <span className="inline-block text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[hsl(var(--chart-gold))] text-foreground">
+                      Mentioned · Position #{chat.client_position ?? '—'}
+                    </span>
+                  )}
+                  {brands.length > 0 && (
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {brands.slice(0, 3).map((b, i) => (
+                        <span key={i} className="text-[9px] font-medium px-1.5 py-0.5 bg-muted text-muted-foreground border border-border">
+                          {b.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex items-center justify-center gap-3 pt-3 border-t border-border">
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1}
+              className="px-3 py-1.5 text-[10px] font-semibold tracking-[0.05em] uppercase border border-border disabled:opacity-30 hover:bg-muted">
+              Previous
+            </button>
+            <span className="text-[11px] text-muted-foreground">Page {page} of {totalPages}</span>
+            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages}
+              className="px-3 py-1.5 text-[10px] font-semibold tracking-[0.05em] uppercase border border-border disabled:opacity-30 hover:bg-muted">
+              Next
+            </button>
+          </div>
+        </>
+      )}
+
+      <Sheet open={!!selected} onOpenChange={(o) => { if (!o) setSelected(null); }}>
+        <SheetContent side="right" className="w-full sm:max-w-lg p-0">
+          {selected && (() => {
+            const brands = Array.isArray(selected.brands_mentioned) ? selected.brands_mentioned : [];
+            const sources = Array.isArray(selected.sources) ? selected.sources : [];
+            return (
+              <ScrollArea className="h-full">
+                <div className="p-6 space-y-5">
+                  <SheetHeader className="p-0">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 bg-foreground text-background">
+                        {platformLabel(selected.platform)}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {selected.date ? format(new Date(selected.date), 'MMM d, yyyy') : ''}
+                      </span>
+                    </div>
+                    <SheetTitle className="text-sm font-bold text-foreground leading-snug">{selected.prompt_text}</SheetTitle>
+                  </SheetHeader>
+
+                  <div>
+                    <h4 className="text-[10px] font-bold tracking-[0.1em] uppercase text-muted-foreground mb-2">Response</h4>
+                    <p className="text-xs text-foreground leading-relaxed whitespace-pre-wrap">{selected.response_text}</p>
+                  </div>
+
+                  {brands.length > 0 && (
+                    <div>
+                      <h4 className="text-[10px] font-bold tracking-[0.1em] uppercase text-muted-foreground mb-2">Brands Mentioned</h4>
+                      <div className="space-y-1.5">
+                        {brands.map((b, i) => (
+                          <div key={i} className="flex items-center justify-between bg-secondary/30 px-3 py-1.5 border border-border">
+                            <span className="text-xs font-medium">{b.name}</span>
+                            {b.position != null && <span className="text-[10px] text-muted-foreground">Position #{b.position}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {sources.length > 0 && (
+                    <div>
+                      <h4 className="text-[10px] font-bold tracking-[0.1em] uppercase text-muted-foreground mb-2">Sources</h4>
+                      <div className="space-y-1.5">
+                        {sources.map((s, i) => {
+                          const url = s.url || '';
+                          const domain = s.domain || (() => { try { return new URL(url).hostname; } catch { return url; } })();
+                          return (
+                            <LinkPreviewTrigger key={i} url={url}
+                              meta={[{ label: 'Domain', value: domain }]}
+                              className="flex w-full items-center justify-between bg-secondary/30 px-3 py-1.5 border border-border hover:bg-secondary/60 transition-colors text-left">
+                              <span className="text-xs font-medium text-foreground truncate">{domain}</span>
+                              <span className="text-[10px] text-muted-foreground shrink-0 ml-2">↗</span>
+                            </LinkPreviewTrigger>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            );
+          })()}
+        </SheetContent>
+      </Sheet>
+    </div>
+  );
+};
+
+// ---------- Top Domains (paginated) ----------
+const DOMAINS_PAGE = 20;
+const TopDomainsTable = ({ rows, loading }: { rows: DomainRow[]; loading: boolean }) => {
+  const [page, setPage] = useState(1);
+  useEffect(() => { setPage(1); }, [rows]);
+  const totalPages = Math.max(1, Math.ceil(rows.length / DOMAINS_PAGE));
+  const safePage = Math.min(page, totalPages);
+  const paged = rows.slice((safePage - 1) * DOMAINS_PAGE, safePage * DOMAINS_PAGE);
+  return (
+    <div className="bg-card border border-border p-5">
+      <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">Top Domains</h3>
+      {loading ? <Skeleton className="h-48 w-full" /> :
+        rows.length === 0 ? <p className="text-sm text-muted-foreground text-center py-8">No domain data for this period.</p> : (
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full text-[12px]">
+              <thead>
+                <tr className="text-muted-foreground border-b border-border">
+                  <th className="text-left py-2 px-2 font-semibold uppercase tracking-[0.08em] text-[10px]">Domain</th>
+                  <th className="text-left py-2 px-2 font-semibold uppercase tracking-[0.08em] text-[10px]">Class</th>
+                  <th className="text-right py-2 px-2 font-semibold uppercase tracking-[0.08em] text-[10px]">Citations</th>
+                  <th className="text-right py-2 px-2 font-semibold uppercase tracking-[0.08em] text-[10px]">Retrievals</th>
+                  <th className="text-right py-2 px-2 font-semibold uppercase tracking-[0.08em] text-[10px]">Citation Rate</th>
+                  <th className="text-right py-2 px-2 font-semibold uppercase tracking-[0.08em] text-[10px]">Retrieved %</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paged.map(r => (
+                  <tr key={r.domain} className="border-b border-border/60">
+                    <td className="py-2 px-2 text-foreground">{r.domain}</td>
+                    <td className="py-2 px-2"><ClassificationTag value={r.classification} /></td>
+                    <td className="py-2 px-2 text-right">{fmtNum(r.citation_count)}</td>
+                    <td className="py-2 px-2 text-right">{fmtNum(r.retrieval_count)}</td>
+                    <td className="py-2 px-2 text-right">{fmtPct(r.citation_rate)}</td>
+                    <td className="py-2 px-2 text-right">{fmtPct(r.retrieved_percentage)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <PaginationControls currentPage={safePage} totalPages={totalPages} onPageChange={setPage} />
+        </>
+      )}
+    </div>
+  );
+};
+
+// ---------- Top URLs (paginated) ----------
+const URLS_PAGE = 20;
+const TopUrlsTable = ({ rows, loading }: { rows: UrlRow[]; loading: boolean }) => {
+  const [page, setPage] = useState(1);
+  useEffect(() => { setPage(1); }, [rows]);
+  const totalPages = Math.max(1, Math.ceil(rows.length / URLS_PAGE));
+  const safePage = Math.min(page, totalPages);
+  const paged = rows.slice((safePage - 1) * URLS_PAGE, safePage * URLS_PAGE);
+  return (
+    <div className="bg-card border border-border p-5">
+      <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">Top Source URLs</h3>
+      {loading ? <Skeleton className="h-48 w-full" /> :
+        rows.length === 0 ? <p className="text-sm text-muted-foreground text-center py-8">No source URL data for this period.</p> : (
+        <>
+          <div className="overflow-x-auto">
+            <table className="w-full text-[12px]">
+              <thead>
+                <tr className="text-muted-foreground border-b border-border">
+                  <th className="text-left py-2 px-2 font-semibold uppercase tracking-[0.08em] text-[10px]">Title / URL</th>
+                  <th className="text-left py-2 px-2 font-semibold uppercase tracking-[0.08em] text-[10px]">Domain</th>
+                  <th className="text-left py-2 px-2 font-semibold uppercase tracking-[0.08em] text-[10px]">Class</th>
+                  <th className="text-right py-2 px-2 font-semibold uppercase tracking-[0.08em] text-[10px]">Citations</th>
+                  <th className="text-right py-2 px-2 font-semibold uppercase tracking-[0.08em] text-[10px]">Retrievals</th>
+                  <th className="text-right py-2 px-2 font-semibold uppercase tracking-[0.08em] text-[10px]">Citation Rate</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paged.map(r => (
+                  <tr key={r.url} className="border-b border-border/60">
+                    <td className="py-2 px-2 max-w-[400px]">
+                      <a href={r.url} target="_blank" rel="noopener noreferrer" className="text-foreground hover:underline block truncate">
+                        {r.title || r.url}
+                      </a>
+                    </td>
+                    <td className="py-2 px-2 text-muted-foreground">{r.domain}</td>
+                    <td className="py-2 px-2"><ClassificationTag value={r.classification} /></td>
+                    <td className="py-2 px-2 text-right">{fmtNum(r.citation_count)}</td>
+                    <td className="py-2 px-2 text-right">{fmtNum(r.retrieval_count)}</td>
+                    <td className="py-2 px-2 text-right">{fmtPct(r.citation_rate)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <PaginationControls currentPage={safePage} totalPages={totalPages} onPageChange={setPage} />
+        </>
+      )}
+    </div>
+  );
+};
+
+// ---------- Search Queries (paginated) ----------
+const QUERIES_PAGE = 25;
+const SearchQueriesTable = ({ rows, loading }: { rows: QueryRow[]; loading: boolean }) => {
+  const [page, setPage] = useState(1);
+  useEffect(() => { setPage(1); }, [rows]);
+  const totalPages = Math.max(1, Math.ceil(rows.length / QUERIES_PAGE));
+  const safePage = Math.min(page, totalPages);
+  const paged = rows.slice((safePage - 1) * QUERIES_PAGE, safePage * QUERIES_PAGE);
+  return (
+    <div className="bg-card border border-border p-5">
+      <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">AI Search Queries</h3>
+      {loading ? <Skeleton className="h-48 w-full" /> :
+        rows.length === 0 ? <p className="text-sm text-muted-foreground text-center py-8">No search query data for this period.</p> : (
+        <>
+          <div className="divide-y divide-border">
+            {paged.map((q, i) => (
+              <div key={`${q.query_text}-${i}`} className="flex items-center gap-4 py-2.5">
+                <span className="text-[11px] font-bold w-6 text-right text-muted-foreground">{(safePage - 1) * QUERIES_PAGE + i + 1}</span>
+                <span className="text-[13px] flex-1">"{q.query_text}"</span>
+                <span className="text-[11px] text-muted-foreground">{q.freq.toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+          <PaginationControls currentPage={safePage} totalPages={totalPages} onPageChange={setPage} />
+        </>
+      )}
+    </div>
+  );
+};
+
+// ---------- Shopping (paginated) ----------
+const PRODUCTS_PAGE = 25;
+const ShoppingTable = ({ rows, loading }: { rows: ProductRow[]; loading: boolean }) => {
+  const [page, setPage] = useState(1);
+  useEffect(() => { setPage(1); }, [rows]);
+  const totalPages = Math.max(1, Math.ceil(rows.length / PRODUCTS_PAGE));
+  const safePage = Math.min(page, totalPages);
+  const paged = rows.slice((safePage - 1) * PRODUCTS_PAGE, safePage * PRODUCTS_PAGE);
+  return (
+    <div className="bg-card border border-border p-5">
+      <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">Shopping / Products</h3>
+      {loading ? <Skeleton className="h-48 w-full" /> :
+        rows.length === 0 ? <p className="text-sm text-muted-foreground text-center py-8">No shopping data for this period.</p> : (
+        <>
+          <div className="divide-y divide-border">
+            {paged.map((p, i) => (
+              <div key={`${p.product}-${i}`} className="flex items-center gap-4 py-2.5">
+                <span className="text-[11px] font-bold w-6 text-right text-muted-foreground">{(safePage - 1) * PRODUCTS_PAGE + i + 1}</span>
+                <span className="text-[13px] flex-1">{p.product}</span>
+                <span className="text-[11px] text-muted-foreground">{p.freq.toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+          <PaginationControls currentPage={safePage} totalPages={totalPages} onPageChange={setPage} />
+        </>
+      )}
+    </div>
+  );
+};
 
 // ---------- Main ----------
 const AIVisibilityTab = () => {
   const { activeClientId, refreshKey } = useWeek();
+  const { clientName } = useAdmin();
   const [period, setPeriod] = useState<PeriodKey>('week');
   const [custom, setCustom] = useState<{ from?: Date; to?: Date }>({});
   const [platform, setPlatform] = useState<Platform>('all');
@@ -609,10 +1220,13 @@ const AIVisibilityTab = () => {
   const [urls, setUrls] = useState<UrlRow[]>([]);
   const [queries, setQueries] = useState<QueryRow[]>([]);
   const [products, setProducts] = useState<ProductRow[]>([]);
+  const [platformScores, setPlatformScores] = useState<PlatformScoreRow[]>([]);
+  const [platformCompetitive, setPlatformCompetitive] = useState<PlatformCompetitiveRow[]>([]);
 
   const [loading, setLoading] = useState({
     kpis: true, trend: true, matrix: true, summary: true,
     domains: true, urls: true, queries: true, products: true,
+    platformScores: true, platformCompetitive: true,
   });
 
   useEffect(() => {
@@ -642,14 +1256,16 @@ const AIVisibilityTab = () => {
       set(fn, false);
     };
 
+    run<PlatformScoreRow>('platformScores', 'peec_platform_scores', baseArgs, setPlatformScores);
     run<KpiRow>('kpis', 'peec_client_kpis', withPlatform, setKpis);
     run<TrendRow>('trend', 'peec_trend', withPlatform, setTrend);
     run<MatrixRow>('matrix', 'peec_model_matrix', baseArgs, setMatrix);
     run<BrandSummaryRow>('summary', 'peec_brand_summary', withPlatform, setSummary);
-    run<DomainRow>('domains', 'peec_top_domains', { ...baseArgs, p_limit: 20 }, setDomains);
-    run<UrlRow>('urls', 'peec_top_urls', { ...baseArgs, p_limit: 20 }, setUrls);
-    run<QueryRow>('queries', 'peec_top_search_queries', { ...baseArgs, p_limit: 50 }, setQueries);
-    run<ProductRow>('products', 'peec_shopping_products', { ...baseArgs, p_limit: 50 }, setProducts);
+    run<PlatformCompetitiveRow>('platformCompetitive', 'peec_platform_competitive', baseArgs, setPlatformCompetitive);
+    run<DomainRow>('domains', 'peec_top_domains', { ...baseArgs, p_limit: 200 }, setDomains);
+    run<UrlRow>('urls', 'peec_top_urls', { ...baseArgs, p_limit: 200 }, setUrls);
+    run<QueryRow>('queries', 'peec_top_search_queries', { ...baseArgs, p_limit: 300 }, setQueries);
+    run<ProductRow>('products', 'peec_shopping_products', { ...baseArgs, p_limit: 200 }, setProducts);
 
     return () => { cancelled = true; };
   }, [activeClientId, p_start, p_end, p_platform, refreshKey]);
@@ -665,10 +1281,19 @@ const AIVisibilityTab = () => {
         custom={custom} setCustom={setCustom}
         platform={platform} setPlatform={setPlatform}
       />
+      <PlatformScoreCards rows={platformScores} loading={loading.platformScores} />
       <KpiCards rows={kpis} loading={loading.kpis} />
       <TrendChart rows={trend} loading={loading.trend} />
       <ModelBrandMatrix rows={matrix} loading={loading.matrix} />
       <CompetitiveTable rows={summary} loading={loading.summary} />
+      <PerPlatformCompetitiveSov rows={platformCompetitive} loading={loading.platformCompetitive} />
+      <GapAnalysisSection
+        clientId={activeClientId}
+        p_start={p_start}
+        p_end={p_end}
+        competitiveRows={platformCompetitive}
+        clientName={clientName}
+      />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <TopDomainsTable rows={domains} loading={loading.domains} />
         <TopUrlsTable rows={urls} loading={loading.urls} />
@@ -677,6 +1302,13 @@ const AIVisibilityTab = () => {
         <SearchQueriesTable rows={queries} loading={loading.queries} />
         <ShoppingTable rows={products} loading={loading.products} />
       </div>
+      <ConversationIntelligence
+        clientId={activeClientId}
+        p_start={p_start}
+        p_end={p_end}
+        p_platform={p_platform}
+        clientName={clientName}
+      />
     </div>
   );
 };
