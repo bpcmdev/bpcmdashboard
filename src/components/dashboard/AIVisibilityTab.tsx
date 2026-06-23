@@ -1667,7 +1667,7 @@ const AIVisibilityTab = () => {
 
     run<PlatformScoreRow>('platformScores', 'peec_platform_scores', baseArgs, setPlatformScores);
     run<KpiRow>('kpis', 'peec_client_kpis', withPlatform, setKpis);
-    run<TrendRow>('trend', 'peec_trend', withPlatform, setTrend);
+    run<CompetitiveTrendRow>('trend', 'peec_competitive_trend', withPlatform, setTrend);
     run<MatrixRow>('matrix', 'peec_model_matrix', baseArgs, setMatrix);
     run<BrandSummaryRow>('summary', 'peec_brand_summary', withPlatform, setSummary);
     run<PlatformCompetitiveRow>('platformCompetitive', 'peec_platform_competitive', baseArgs, setPlatformCompetitive);
