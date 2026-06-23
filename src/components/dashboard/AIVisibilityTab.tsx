@@ -1498,6 +1498,14 @@ const AIVisibilityTab = () => {
       />
       <PlatformScoreCards rows={platformScores} loading={loading.platformScores} />
       <KpiCards rows={kpis} loading={loading.kpis} />
+      {isAdmin && (
+        <GeoRecommendationsSection
+          clientId={activeClientId}
+          p_start={p_start}
+          p_end={p_end}
+          periodType={period}
+        />
+      )}
       <TrendChart rows={trend} loading={loading.trend} />
       <ModelBrandMatrix rows={matrix} loading={loading.matrix} />
       <CompetitiveTable rows={summary} loading={loading.summary} />
