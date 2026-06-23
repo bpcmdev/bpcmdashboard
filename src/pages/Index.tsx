@@ -13,7 +13,7 @@ import PipelineMomentsTab from '@/components/dashboard/PipelineMomentsTab';
 import InfluencerSocialTab from '@/components/dashboard/InfluencerSocialTab';
 import CorporateCommsTab from '@/components/dashboard/CorporateCommsTab';
 import AIVisibilityTab from '@/components/dashboard/AIVisibilityTab';
-import GeoAISovTab from '@/components/dashboard/GeoAISovTab';
+
 import PartnershipsTab from '@/components/dashboard/PartnershipsTab';
 import TikTokShopTab from '@/components/dashboard/TikTokShopTab';
 import ResourceManagementTab from '@/components/dashboard/ResourceManagementTab';
@@ -34,7 +34,6 @@ const TAB_MAP: Record<string, React.ComponentType> = {
   'INFLUENCER & SOCIAL': InfluencerSocialTab,
   'CORPORATE COMMS': CorporateCommsTab,
   'AI VISIBILITY': AIVisibilityTab,
-  'GEO / AI SOV': GeoAISovTab,
   'PARTNERSHIPS': PartnershipsTab,
   'WHOLESALE / RETAIL': WholesaleRetailTab,
   'TIKTOK SHOP': TikTokShopTab,
@@ -84,7 +83,6 @@ function DashboardContent() {
         'INFLUENCER & SOCIAL': 'influencer_social',
         'CORPORATE COMMS': 'corporate_comms',
         'AI VISIBILITY': 'ai_visibility',
-        'GEO / AI SOV': 'geo_ai_sov',
         'PARTNERSHIPS': 'partnerships',
         'WHOLESALE / RETAIL': 'wholesale_retail',
         'TIKTOK SHOP': 'tiktok_shop',

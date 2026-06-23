@@ -15,7 +15,6 @@ export const ALL_TABS: TabDef[] = [
   { id: 'influencer_social',   label: 'INFLUENCER & SOCIAL' },
   { id: 'corporate_comms',     label: 'CORPORATE COMMS' },
   { id: 'ai_visibility',       label: 'AI VISIBILITY' },
-  { id: 'geo_ai_sov',          label: 'GEO / AI SOV' },
   { id: 'partnerships',        label: 'PARTNERSHIPS' },
   { id: 'wholesale_retail',    label: 'WHOLESALE / RETAIL' },
   { id: 'tiktok_shop',         label: 'TIKTOK SHOP' },
