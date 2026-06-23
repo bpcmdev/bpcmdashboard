@@ -15,7 +15,7 @@ import EarnedMediaTab from '@/components/dashboard/EarnedMediaTab';
 import InfluencerSocialTab from '@/components/dashboard/InfluencerSocialTab';
 import CorporateCommsTab from '@/components/dashboard/CorporateCommsTab';
 import AIVisibilityTab from '@/components/dashboard/AIVisibilityTab';
-import GeoAISovTab from '@/components/dashboard/GeoAISovTab';
+
 import PartnershipsTab from '@/components/dashboard/PartnershipsTab';
 import WholesaleRetailTab from '@/components/dashboard/WholesaleRetailTab';
 import TikTokShopTab from '@/components/dashboard/TikTokShopTab';
