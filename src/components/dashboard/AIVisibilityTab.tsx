@@ -51,12 +51,15 @@ interface KpiRow {
   current_value: number | null;
   previous_value: number | null;
 }
-interface TrendRow {
+interface CompetitiveTrendRow {
   date: string;
+  brand_id: string;
+  brand_name: string;
+  is_client_brand: boolean;
   visibility: number | null;
+  share_of_voice: number | null;
   sentiment: number | null;
   avg_position: number | null;
-  share_of_voice: number | null;
 }
 interface MatrixRow {
   platform: string;
