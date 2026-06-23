@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { Search } from 'lucide-react';
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid, Cell,
 } from 'recharts';
