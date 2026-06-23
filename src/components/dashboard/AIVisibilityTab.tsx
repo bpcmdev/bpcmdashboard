@@ -1622,7 +1622,7 @@ const AIVisibilityTab = () => {
 
   // State
   const [kpis, setKpis] = useState<KpiRow[]>([]);
-  const [trend, setTrend] = useState<TrendRow[]>([]);
+  const [trend, setTrend] = useState<CompetitiveTrendRow[]>([]);
   const [matrix, setMatrix] = useState<MatrixRow[]>([]);
   const [summary, setSummary] = useState<BrandSummaryRow[]>([]);
   const [domains, setDomains] = useState<DomainRow[]>([]);
