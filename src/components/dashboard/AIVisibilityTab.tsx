@@ -11,6 +11,29 @@ import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
+// Re-exported for GeoAISovTab and other consumers
+export const ViewToggle = ({
+  active, onToggle, options,
+}: { active: string; onToggle: (v: string) => void; options?: string[] }) => {
+  const opts = options ?? ['BY PLATFORM', 'HEATMAP', 'GAP ANALYSIS', 'TOP QUERIES + SOV'];
+  return (
+    <div className="flex gap-0 border border-border w-fit">
+      {opts.map((v) => (
+        <button
+          key={v}
+          onClick={() => onToggle(v)}
+          className={cn(
+            'px-3 py-1.5 text-[10px] font-semibold tracking-[0.1em] uppercase transition-colors',
+            active === v ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'
+          )}
+        >
+          {v}
+        </button>
+      ))}
+    </div>
+  );
+};
+
 // ---------- Types ----------
 type PeriodKey = 'day' | 'week' | 'month' | 'custom';
 type Platform =
