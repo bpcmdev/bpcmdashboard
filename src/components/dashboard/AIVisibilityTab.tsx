@@ -1195,10 +1195,22 @@ const TopUrlsTable = ({ rows, loading }: { rows: UrlRow[]; loading: boolean }) =
 const QUERIES_PAGE = 25;
 const SearchQueriesTable = ({ rows, loading }: { rows: QueryRow[]; loading: boolean }) => {
   const [page, setPage] = useState(1);
+  const [selectedQuery, setSelectedQuery] = useState<QueryRow | null>(null);
+  const [copied, setCopied] = useState(false);
   useEffect(() => { setPage(1); }, [rows]);
   const totalPages = Math.max(1, Math.ceil(rows.length / QUERIES_PAGE));
   const safePage = Math.min(page, totalPages);
   const paged = rows.slice((safePage - 1) * QUERIES_PAGE, safePage * QUERIES_PAGE);
+
+  const handleCopy = async () => {
+    if (!selectedQuery) return;
+    try {
+      await navigator.clipboard.writeText(selectedQuery.query_text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {}
+  };
+
   return (
     <div className="bg-card border border-border p-5">
       <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">AI Search Queries</h3>
@@ -1207,16 +1219,62 @@ const SearchQueriesTable = ({ rows, loading }: { rows: QueryRow[]; loading: bool
         <>
           <div className="divide-y divide-border">
             {paged.map((q, i) => (
-              <div key={`${q.query_text}-${i}`} className="flex items-center gap-4 py-2.5">
-                <span className="text-[11px] font-bold w-6 text-right text-muted-foreground">{(safePage - 1) * QUERIES_PAGE + i + 1}</span>
+              <button
+                key={`${q.query_text}-${i}`}
+                type="button"
+                onClick={() => setSelectedQuery(q)}
+                className="w-full flex items-center gap-4 py-2.5 text-left cursor-pointer hover:bg-muted/40 transition-colors px-2 -mx-2"
+              >
+                <span className="text-[11px] font-bold w-6 text-right text-muted-foreground font-mono">{(safePage - 1) * QUERIES_PAGE + i + 1}</span>
                 <span className="text-[13px] flex-1">"{q.query_text}"</span>
-                <span className="text-[11px] text-muted-foreground">{q.freq.toLocaleString()}</span>
-              </div>
+                <span className="text-[11px] text-muted-foreground font-mono">{q.freq.toLocaleString()}</span>
+              </button>
             ))}
           </div>
           <PaginationControls currentPage={safePage} totalPages={totalPages} onPageChange={setPage} />
         </>
       )}
+
+      <Sheet open={!!selectedQuery} onOpenChange={(o) => { if (!o) { setSelectedQuery(null); setCopied(false); } }}>
+        <SheetContent side="right" className="w-full sm:max-w-md p-0">
+          {selectedQuery && (
+            <ScrollArea className="h-full">
+              <div className="p-6 space-y-6">
+                <SheetHeader className="p-0 space-y-2 text-left">
+                  <SheetTitle
+                    className="text-xl text-foreground leading-snug"
+                    style={{ fontFamily: "'Playfair Display', serif" }}
+                  >
+                    "{selectedQuery.query_text}"
+                  </SheetTitle>
+                  <p className="text-xs text-muted-foreground font-mono">
+                    {selectedQuery.freq.toLocaleString()} times in this period
+                  </p>
+                </SheetHeader>
+
+                <div className="space-y-2">
+                  <h4 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground">
+                    AI Engines That Ran This Query
+                  </h4>
+                  <p className="text-xs text-muted-foreground italic">
+                    Filter by platform above to see per-engine breakdown.
+                  </p>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={handleCopy}
+                    className="w-full px-4 py-2.5 text-xs font-bold tracking-wider uppercase bg-[hsl(var(--chart-navy))] text-white hover:opacity-90 transition-opacity"
+                  >
+                    {copied ? 'Copied!' : 'Copy Query'}
+                  </button>
+                </div>
+              </div>
+            </ScrollArea>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };
