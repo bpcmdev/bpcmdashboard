@@ -13,7 +13,7 @@ import PipelineMomentsTab from '@/components/dashboard/PipelineMomentsTab';
 import InfluencerSocialTab from '@/components/dashboard/InfluencerSocialTab';
 import CorporateCommsTab from '@/components/dashboard/CorporateCommsTab';
 import AIVisibilityTab from '@/components/dashboard/AIVisibilityTab';
-import GeoAISovTab from '@/components/dashboard/GeoAISovTab';
+
 import PartnershipsTab from '@/components/dashboard/PartnershipsTab';
 import TikTokShopTab from '@/components/dashboard/TikTokShopTab';
 import ResourceManagementTab from '@/components/dashboard/ResourceManagementTab';
