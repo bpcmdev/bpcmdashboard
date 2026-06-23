@@ -31,7 +31,7 @@ const SECTIONS: { id: string; label: string; Component: React.ComponentType }[] 
   { id: 'influencer_social', label: 'Influencer & Social', Component: InfluencerSocialTab },
   { id: 'corporate_comms', label: 'Corporate Comms', Component: CorporateCommsTab },
   { id: 'ai_visibility', label: 'AI Visibility', Component: AIVisibilityTab },
-  { id: 'geo_ai_sov', label: 'GEO / AI SOV', Component: GeoAISovTab },
+  
   { id: 'partnerships', label: 'Partnerships', Component: PartnershipsTab },
   { id: 'wholesale_retail', label: 'Wholesale / Retail', Component: WholesaleRetailTab },
   { id: 'tiktok_shop', label: 'TikTok Shop', Component: TikTokShopTab },
