@@ -188,12 +188,10 @@ const DashboardHeader = () => {
           <button onClick={refreshData} className="header-chip">
             Refresh
           </button>
-          {isAdmin && (
-            <button onClick={() => setExplainOpen(true)} className="header-chip">
-              <Sparkles className="w-3 h-3 opacity-80" />
-              Explain This Month
-            </button>
-          )}
+          <button onClick={() => setExplainOpen(true)} className="header-chip">
+            <Sparkles className="w-3 h-3 opacity-80" />
+            Explain This Month
+          </button>
           {isAdmin && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -284,15 +282,13 @@ const DashboardHeader = () => {
             >
               Export PDF
             </button>
-            {isAdmin && (
-              <button
-                onClick={() => { setExplainOpen(true); setMobileMenuOpen(false); }}
-                className="flex items-center gap-1.5 text-xs font-medium tracking-wider uppercase px-3 py-1.5 border border-white/20 hover:bg-white/10 transition-colors"
-              >
-                <Sparkles className="w-3 h-3 opacity-80" />
-                Explain This Month
-              </button>
-            )}
+            <button
+              onClick={() => { setExplainOpen(true); setMobileMenuOpen(false); }}
+              className="flex items-center gap-1.5 text-xs font-medium tracking-wider uppercase px-3 py-1.5 border border-white/20 hover:bg-white/10 transition-colors"
+            >
+              <Sparkles className="w-3 h-3 opacity-80" />
+              Explain This Month
+            </button>
             {isAdmin && (
               <button
                 onClick={() => { setAdminOpen(true); setMobileMenuOpen(false); }}
