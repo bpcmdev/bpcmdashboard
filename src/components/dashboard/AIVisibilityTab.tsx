@@ -128,7 +128,7 @@ interface GapUrlRow {
   competitor_brands: string[] | null;
 }
 interface ChatBrand { id?: string; name: string; position?: number | null }
-interface ChatSource { url?: string; domain?: string }
+interface ChatSource { url?: string; domain?: string; citationCount?: number | null; citationPosition?: number | null }
 interface ChatRow {
   chat_id: string;
   date: string;
