@@ -1200,10 +1200,225 @@ const ShoppingTable = ({ rows, loading }: { rows: ProductRow[]; loading: boolean
   );
 };
 
+// ---------- AI GEO Recommendations (admin-only) ----------
+interface GeoRecommendation {
+  title: string;
+  action: string;
+  rationale: string;
+  priority: 'high' | 'medium' | 'low';
+  targets: string[];
+  platforms: string[];
+}
+interface GeoSuggestions {
+  headline: string;
+  summary: string;
+  recommendations: GeoRecommendation[];
+  watch_items: string[];
+}
+
+function timeAgo(iso: string | null): string {
+  if (!iso) return '';
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs} hr ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return `${days}d ago`;
+  const months = Math.floor(days / 30);
+  return `${months}mo ago`;
+}
+
+const PRIORITY_STYLES: Record<GeoRecommendation['priority'], string> = {
+  high: 'bg-destructive/15 text-destructive',
+  medium: 'bg-corp-news',
+  low: 'bg-muted text-muted-foreground',
+};
+
+const GeoRecommendationsSection = ({
+  clientId, p_start, p_end, periodType,
+}: { clientId: string; p_start: string; p_end: string; periodType: PeriodKey }) => {
+  const [suggestions, setSuggestions] = useState<GeoSuggestions | null>(null);
+  const [generatedAt, setGeneratedAt] = useState<string | null>(null);
+  const [modelUsed, setModelUsed] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setErrorMsg(null);
+    const run = async () => {
+      const { data, error } = await supabase
+        .from('peec_geo_suggestions' as any)
+        .select('suggestions, model_used, generated_at')
+        .eq('client_id', clientId)
+        .eq('period_type', periodType)
+        .eq('period_start', p_start)
+        .eq('period_end', p_end)
+        .maybeSingle();
+      if (cancelled) return;
+      if (error) {
+        console.error('peec_geo_suggestions cache read failed:', error);
+        setSuggestions(null);
+        setGeneratedAt(null);
+        setModelUsed(null);
+      } else if (data) {
+        const d = data as any;
+        setSuggestions((d.suggestions ?? null) as GeoSuggestions | null);
+        setGeneratedAt(d.generated_at ?? null);
+        setModelUsed(d.model_used ?? null);
+      } else {
+        setSuggestions(null);
+        setGeneratedAt(null);
+        setModelUsed(null);
+      }
+      setLoading(false);
+    };
+    run();
+    return () => { cancelled = true; };
+  }, [clientId, p_start, p_end, periodType]);
+
+  const handleGenerate = async () => {
+    setGenerating(true);
+    setErrorMsg(null);
+    const { data, error } = await supabase.functions.invoke('peec-geo-suggestions', {
+      body: { client_id: clientId, p_start, p_end, period_type: periodType, force: true },
+    });
+    setGenerating(false);
+    if (error || (data && (data as any).error)) {
+      setErrorMsg((data as any)?.error || error?.message || 'Failed to generate recommendations.');
+      return;
+    }
+    const d = data as any;
+    if (d?.suggestions) {
+      setSuggestions(d.suggestions as GeoSuggestions);
+      setGeneratedAt(d.generated_at ?? new Date().toISOString());
+      setModelUsed(d.model_used ?? modelUsed);
+    }
+  };
+
+  const hasData = !!suggestions;
+
+  return (
+    <div className="bg-card border border-border p-5 space-y-4">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
+          <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground">AI GEO Recommendations</h3>
+          <span className="text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[hsl(var(--chart-gold))] text-foreground">✦ Beta</span>
+          {generatedAt && (
+            <span className="text-[10px] text-muted-foreground">
+              Generated {timeAgo(generatedAt)}{modelUsed ? ` · ${modelUsed}` : ''}
+            </span>
+          )}
+        </div>
+        <button
+          onClick={handleGenerate}
+          disabled={generating || loading}
+          className={cn(
+            'px-3 py-1.5 text-[10px] font-semibold tracking-[0.1em] uppercase transition-colors',
+            'border border-[hsl(225,70%,35%)] text-[hsl(225,70%,35%)] hover:bg-[hsl(225,70%,35%)] hover:text-white',
+            'disabled:opacity-50 disabled:cursor-not-allowed'
+          )}
+        >
+          {generating ? 'Analyzing…' : hasData ? 'Regenerate' : 'Generate Recommendations'}
+        </button>
+      </div>
+
+      {generating ? (
+        <div className="flex items-center gap-3 py-10 justify-center">
+          <span className="inline-block w-3 h-3 border-2 border-[hsl(225,70%,35%)] border-t-transparent rounded-full animate-spin" />
+          <span className="text-sm text-muted-foreground">Analyzing AI search data…</span>
+        </div>
+      ) : loading ? (
+        <Skeleton className="h-32 w-full" />
+      ) : errorMsg ? (
+        <p className="text-sm text-destructive text-center py-4">{errorMsg}</p>
+      ) : !hasData ? (
+        <div className="py-10 text-center">
+          <p className="text-sm text-muted-foreground">No recommendations generated yet for this period.</p>
+        </div>
+      ) : (
+        <div className="space-y-5">
+          <div>
+            <h4 className="font-display text-2xl font-bold text-foreground leading-snug">{suggestions!.headline}</h4>
+            {suggestions!.summary && (
+              <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{suggestions!.summary}</p>
+            )}
+          </div>
+
+          {suggestions!.recommendations?.length > 0 && (
+            <div className="space-y-3">
+              {suggestions!.recommendations.map((rec, i) => (
+                <div key={i} className="flex gap-3 border border-border p-4 bg-background">
+                  <div className="shrink-0">
+                    <span className={cn(
+                      'inline-block text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5',
+                      PRIORITY_STYLES[rec.priority] || PRIORITY_STYLES.low
+                    )}>
+                      {rec.priority}
+                    </span>
+                  </div>
+                  <div className="flex-1 space-y-1.5 min-w-0">
+                    <p className="text-sm font-bold text-foreground">{rec.title}</p>
+                    {rec.action && <p className="text-[13px] text-foreground/90">{rec.action}</p>}
+                    {rec.rationale && <p className="text-[11px] text-muted-foreground leading-relaxed">{rec.rationale}</p>}
+                    {(rec.targets?.length ?? 0) > 0 && (
+                      <div className="flex flex-wrap gap-1 pt-1">
+                        {rec.targets.map((t, j) => {
+                          const isUrl = /^https?:\/\//i.test(t);
+                          let label = t;
+                          if (isUrl) {
+                            try { label = new URL(t).hostname; } catch { /* keep raw */ }
+                          }
+                          const cls = 'text-[9px] font-medium px-1.5 py-0.5 bg-muted text-muted-foreground border border-border';
+                          return isUrl ? (
+                            <a key={j} href={t} target="_blank" rel="noopener noreferrer" className={cn(cls, 'hover:bg-muted-foreground/10')}>
+                              {label}
+                            </a>
+                          ) : (
+                            <span key={j} className={cls}>{label}</span>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {(rec.platforms?.length ?? 0) > 0 && (
+                      <div className="flex flex-wrap gap-1 pt-1">
+                        {rec.platforms.map((p, j) => (
+                          <span key={j} className="text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 bg-foreground text-background">
+                            {platformLabel(p)}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {suggestions!.watch_items?.length > 0 && (
+            <div className="pt-2 border-t border-border">
+              <h5 className="text-[10px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-2">Watch</h5>
+              <ul className="list-disc pl-5 space-y-1">
+                {suggestions!.watch_items.map((w, i) => (
+                  <li key={i} className="text-[12px] text-muted-foreground leading-relaxed">{w}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ---------- Main ----------
 const AIVisibilityTab = () => {
   const { activeClientId, refreshKey } = useWeek();
-  const { clientName } = useAdmin();
+  const { clientName, isAdmin } = useAdmin();
   const [period, setPeriod] = useState<PeriodKey>('week');
   const [custom, setCustom] = useState<{ from?: Date; to?: Date }>({});
   const [platform, setPlatform] = useState<Platform>('all');
@@ -1283,6 +1498,14 @@ const AIVisibilityTab = () => {
       />
       <PlatformScoreCards rows={platformScores} loading={loading.platformScores} />
       <KpiCards rows={kpis} loading={loading.kpis} />
+      {isAdmin && (
+        <GeoRecommendationsSection
+          clientId={activeClientId}
+          p_start={p_start}
+          p_end={p_end}
+          periodType={period}
+        />
+      )}
       <TrendChart rows={trend} loading={loading.trend} />
       <ModelBrandMatrix rows={matrix} loading={loading.matrix} />
       <CompetitiveTable rows={summary} loading={loading.summary} />
