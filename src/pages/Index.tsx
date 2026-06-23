@@ -83,7 +83,6 @@ function DashboardContent() {
         'INFLUENCER & SOCIAL': 'influencer_social',
         'CORPORATE COMMS': 'corporate_comms',
         'AI VISIBILITY': 'ai_visibility',
-        'GEO / AI SOV': 'geo_ai_sov',
         'PARTNERSHIPS': 'partnerships',
         'WHOLESALE / RETAIL': 'wholesale_retail',
         'TIKTOK SHOP': 'tiktok_shop',
