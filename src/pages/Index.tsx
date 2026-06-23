@@ -34,7 +34,6 @@ const TAB_MAP: Record<string, React.ComponentType> = {
   'INFLUENCER & SOCIAL': InfluencerSocialTab,
   'CORPORATE COMMS': CorporateCommsTab,
   'AI VISIBILITY': AIVisibilityTab,
-  'GEO / AI SOV': GeoAISovTab,
   'PARTNERSHIPS': PartnershipsTab,
   'WHOLESALE / RETAIL': WholesaleRetailTab,
   'TIKTOK SHOP': TikTokShopTab,
