@@ -1309,26 +1309,26 @@ const ChatDetailModal = ({ selected, chats, onClose, onSelect }: ChatDetailModal
                               <div
                                 key={i}
                                 className={cn(
-                                  'flex items-center justify-between gap-2 px-2.5 py-2 border',
+                                  'flex items-center justify-between gap-2 px-3 py-2 border rounded-lg transition-colors',
                                   isClient
                                     ? 'bg-[hsl(var(--chart-gold))]/15 border-[hsl(var(--chart-gold))]'
-                                    : 'bg-white border-border'
+                                    : 'bg-white border-slate-200 hover:bg-slate-50 hover:border-slate-300'
                                 )}
                               >
                                 <div className="flex items-center gap-2 min-w-0">
                                   <span className={cn('w-2 h-2 rounded-full shrink-0', sentimentDotClass(b.sentiment))} />
-                                  <span className={cn('text-xs truncate', isClient ? 'font-bold' : 'font-medium')}>
+                                  <span className={cn('text-xs truncate', isClient ? 'font-bold text-slate-900' : 'font-medium text-slate-700')}>
                                     {b.name}
                                   </span>
                                 </div>
-                                <span
-                                  className="text-[10px] text-muted-foreground shrink-0"
-                                  style={{ fontFamily: 'DM Mono, monospace' }}
-                                >
-                                  {b.sentiment != null
-                                    ? b.sentiment.toFixed(2)
-                                    : b.position != null ? `#${b.position}` : ''}
-                                </span>
+                                {b.position != null && (
+                                  <span
+                                    className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 shrink-0 tabular-nums"
+                                    style={{ fontFamily: 'DM Mono, monospace' }}
+                                  >
+                                    #{b.position}
+                                  </span>
+                                )}
                               </div>
                             );
                           })}
