@@ -1352,19 +1352,19 @@ const ChatDetailModal = ({ selected, chats, onClose, onSelect }: ChatDetailModal
                                 key={i}
                                 url={url}
                                 meta={[{ label: 'Domain', value: domain }]}
-                                className="flex w-full items-center justify-between gap-2 bg-white px-2.5 py-2 border border-border hover:bg-secondary/60 transition-colors text-left"
+                                className="flex w-full items-center justify-between gap-2 bg-white px-3 py-2 border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-colors text-left"
                               >
-                                <span className="text-xs font-medium text-foreground truncate">{domain}</span>
+                                <span className="text-xs font-medium text-slate-700 truncate">{domain}</span>
                                 <span className="flex items-center gap-2 shrink-0">
                                   {cc > 0 && (
                                     <span
-                                      className="text-[10px] text-muted-foreground"
+                                      className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 tabular-nums"
                                       style={{ fontFamily: 'DM Mono, monospace' }}
                                     >
                                       {cc}
                                     </span>
                                   )}
-                                  <span className="text-[10px] text-muted-foreground">↗</span>
+                                  <ExternalLink className="w-3 h-3 text-slate-400" />
                                 </span>
                               </LinkPreviewTrigger>
                             );
