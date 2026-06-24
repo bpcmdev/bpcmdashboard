@@ -1817,7 +1817,12 @@ const GeoRecommendationsSection = ({
 // ---------- Main ----------
 const AIVisibilityTab = () => {
   const { activeClientId, refreshKey } = useWeek();
-  const { clientName, isAdmin } = useAdmin();
+  const { clientName: ownClientName, isAdmin, allClients } = useAdmin();
+  const activeClientName = useMemo(() => {
+    const match = allClients.find(c => c.id === activeClientId);
+    return match?.name ?? ownClientName;
+  }, [allClients, activeClientId, ownClientName]);
+  const clientName = activeClientName;
   const [period, setPeriod] = useState<PeriodKey>('week');
   const [custom, setCustom] = useState<{ from?: Date; to?: Date }>({});
   const [platform, setPlatform] = useState<Platform>('all');
