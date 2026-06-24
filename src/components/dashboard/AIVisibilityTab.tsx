@@ -14,7 +14,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { LinkPreviewTrigger } from './LinkPreviewDrawer';
 import PaginationControls from './PaginationControls';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 // Re-exported for any remaining consumers
@@ -416,7 +416,7 @@ const TrendChart = ({ rows, loading }: { rows: CompetitiveTrendRow[]; loading: b
     const dateMap = new Map<string, Record<string, any>>();
     rows.forEach(r => {
       if (!dateMap.has(r.date)) {
-        dateMap.set(r.date, { date: r.date, label: format(new Date(r.date), 'MMM d') });
+        dateMap.set(r.date, { date: r.date, label: format(parseISO(r.date), 'MMM d') });
       }
       const obj = dateMap.get(r.date)!;
       obj[r.brand_name] = r[metric];
