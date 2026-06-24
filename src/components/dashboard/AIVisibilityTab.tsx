@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Search, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, X, ExternalLink } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
@@ -162,6 +162,20 @@ const PLATFORM_LABEL_MAP: Record<string, string> = {
 };
 const platformLabel = (p: string) => PLATFORM_LABEL_MAP[p] || p;
 const ALL_KNOWN_PLATFORMS = Object.keys(PLATFORM_LABEL_MAP);
+
+// Engine pill colors (Peec-style) — used in chat list pills + detail header
+const PLATFORM_PILL: Record<string, string> = {
+  chatgpt: 'bg-[#10a37f] text-white',
+  perplexity: 'bg-[#20808d] text-white',
+  gemini: 'bg-[#1a73e8] text-white',
+  claude: 'bg-[#c96442] text-white',
+  google_ai: 'bg-[#4f46e5] text-white',
+  google_ai_mode: 'bg-[#6366f1] text-white',
+  copilot: 'bg-[#0ea5e9] text-white',
+  grok: 'bg-slate-800 text-white',
+  rufus: 'bg-[#d97706] text-white',
+};
+const platformPillCls = (p: string) => PLATFORM_PILL[p] || 'bg-slate-700 text-white';
 
 const PLATFORMS: { value: Platform; label: string }[] = [
   { value: 'all', label: 'All Platforms' },
@@ -345,8 +359,8 @@ const PlatformScoreCards = ({ rows, loading }: { rows: PlatformScoreRow[]; loadi
 const KpiCards = ({ rows, loading }: { rows: KpiRow[]; loading: boolean }) => {
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28 w-full" />)}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28 w-full rounded-xl" />)}
       </div>
     );
   }
@@ -358,18 +372,31 @@ const KpiCards = ({ rows, loading }: { rows: KpiRow[]; loading: boolean }) => {
     { key: 'sentiment', label: 'Sentiment', fmt: (v) => fmtInt(v), deltaFmt: (d) => Math.round(d).toString() },
   ];
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
       {cards.map(c => {
         const r = byMetric.get(c.key);
         const curr = r?.current_value ?? null;
         const prev = r?.previous_value ?? null;
         return (
-          <div key={c.key} className="bg-card border border-border p-4">
-            <p style={{ fontFamily: 'DM Mono, monospace' }} className="text-[10px] font-semibold tracking-[0.15em] uppercase text-[hsl(225,70%,35%)]">{c.label}</p>
-            <p className="font-display text-3xl font-bold mt-2 mb-1">{c.fmt(curr)}</p>
+          <div
+            key={c.key}
+            className="group bg-white border border-slate-200 rounded-xl px-5 py-5 transition-all hover:shadow-md hover:border-slate-300"
+          >
+            <p
+              style={{ fontFamily: 'DM Mono, monospace' }}
+              className="text-[10px] font-semibold tracking-[0.15em] uppercase text-slate-500"
+            >
+              {c.label}
+            </p>
+            <p
+              style={{ fontFamily: 'DM Mono, monospace' }}
+              className="text-3xl font-bold mt-3 mb-2 text-slate-900 tabular-nums"
+            >
+              {c.fmt(curr)}
+            </p>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] text-muted-foreground">vs prev</span>
               {deltaPill(curr, prev, { fmt: c.deltaFmt, invert: c.invert })}
+              <span className="text-[10px] text-slate-400 uppercase tracking-wider">vs prev</span>
             </div>
           </div>
         );
@@ -991,71 +1018,116 @@ const ConversationIntelligence = ({
   const totalPages = Math.max(1, Math.ceil(total / CHAT_PAGE));
   const mentionedLabel = clientName ? `${clientName.toUpperCase()} MENTIONED` : 'CLIENT MENTIONED';
 
+  // Group current page's chats by prompt_text so each row shows all engines that ran the query.
+  const grouped = useMemo(() => {
+    const map = new Map<string, ChatRow[]>();
+    for (const c of chats) {
+      const key = c.prompt_text || c.chat_id;
+      const arr = map.get(key) ?? [];
+      arr.push(c);
+      map.set(key, arr);
+    }
+    return Array.from(map.values());
+  }, [chats]);
+
   return (
-    <div className="bg-card border border-border p-5 space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground">AI Conversation Intelligence</h3>
-        <div className="flex border border-border">
+    <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-5">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-baseline gap-3">
+          <h3 className="text-base font-semibold text-slate-900" style={{ fontFamily: 'Playfair Display, serif' }}>
+            AI Conversation Intelligence
+          </h3>
+          <span className="text-xs text-slate-500 tabular-nums" style={{ fontFamily: 'DM Mono, monospace' }}>
+            {total} {total === 1 ? 'result' : 'results'}
+          </span>
+        </div>
+        <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5">
           {(['recent', 'mentioned'] as const).map(m => (
             <button key={m} onClick={() => setMode(m)}
-              className={cn('px-3 py-1 text-[10px] font-semibold tracking-[0.05em] uppercase',
-                mode === m ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground')}>
-              {m === 'recent' ? 'RECENT CHATS' : mentionedLabel}
+              className={cn(
+                'px-3 py-1.5 text-[10px] font-semibold tracking-[0.05em] uppercase rounded-md transition-colors',
+                mode === m ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              )}>
+              {m === 'recent' ? 'RECENT' : mentionedLabel}
             </button>
           ))}
         </div>
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28 w-full" />)}
+        <div className="space-y-2">
+          {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}
         </div>
-      ) : chats.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-8">No conversations for this period.</p>
+      ) : grouped.length === 0 ? (
+        <p className="text-sm text-slate-500 text-center py-10">No conversations for this period.</p>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {chats.map(chat => {
-              const brands = Array.isArray(chat.brands_mentioned) ? chat.brands_mentioned : [];
+          <div className="flex flex-col gap-2">
+            {grouped.map(group => {
+              const first = group[0];
+              const platforms = Array.from(new Set(group.map(c => c.platform)));
+              const mentionedItem = group.find(c => c.client_mentioned);
+              const isMentioned = !!mentionedItem;
+              const position = mentionedItem?.client_position;
               return (
-                <button key={chat.chat_id} onClick={() => setSelected(chat)}
-                  className="bg-secondary/30 border border-border p-4 text-left hover:bg-secondary/60 transition-colors space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 bg-foreground text-background">
-                      {platformLabel(chat.platform)}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground ml-auto">
-                      {chat.date ? format(new Date(chat.date), 'MMM d, yyyy') : ''}
-                    </span>
-                  </div>
-                  <p className="text-xs font-semibold text-foreground line-clamp-1">{chat.prompt_text}</p>
-                  <p className="text-[11px] text-muted-foreground line-clamp-3">{chat.response_text}</p>
-                  {chat.client_mentioned && (
-                    <span className="inline-block text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[hsl(var(--chart-gold))] text-foreground">
-                      Mentioned · Position #{chat.client_position ?? '—'}
-                    </span>
-                  )}
-                  {brands.length > 0 && (
-                    <div className="flex flex-wrap gap-1 pt-1">
-                      {brands.slice(0, 3).map((b, i) => (
-                        <span key={i} className="text-[9px] font-medium px-1.5 py-0.5 bg-muted text-muted-foreground border border-border">
-                          {b.name}
+                <button
+                  key={first.chat_id}
+                  onClick={() => setSelected(mentionedItem ?? first)}
+                  className="group w-full text-left bg-white border border-slate-200 rounded-lg px-4 py-3.5 hover:border-slate-300 hover:bg-slate-50/60 hover:shadow-sm transition-all flex items-center gap-4"
+                >
+                  {/* LEFT: prompt + pills */}
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <p className="text-sm font-medium text-slate-800 truncate">
+                      {first.prompt_text}
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {platforms.map(p => (
+                        <span
+                          key={p}
+                          className={cn(
+                            'inline-flex items-center text-[10px] font-semibold tracking-wide px-2 py-0.5 rounded-full',
+                            platformPillCls(p)
+                          )}
+                        >
+                          {platformLabel(p)}
                         </span>
                       ))}
                     </div>
-                  )}
+                  </div>
+
+                  {/* RIGHT: mentioned + count */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    {isMentioned ? (
+                      <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        {position != null ? `#${position}` : 'Mentioned'}
+                      </span>
+                    ) : (
+                      <span className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-500">
+                        Not mentioned
+                      </span>
+                    )}
+                    <span
+                      className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2 py-1 rounded-md tabular-nums"
+                      style={{ fontFamily: 'DM Mono, monospace' }}
+                    >
+                      ×{group.length}
+                    </span>
+                  </div>
                 </button>
               );
             })}
           </div>
-          <div className="flex items-center justify-center gap-3 pt-3 border-t border-border">
+          <div className="flex items-center justify-center gap-3 pt-4 border-t border-slate-200">
             <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1}
-              className="px-3 py-1.5 text-[10px] font-semibold tracking-[0.05em] uppercase border border-border disabled:opacity-30 hover:bg-muted">
+              className="px-3 py-1.5 text-[10px] font-semibold tracking-[0.05em] uppercase border border-slate-200 rounded-md disabled:opacity-30 hover:bg-slate-50 transition-colors">
               Previous
             </button>
-            <span className="text-[11px] text-muted-foreground">Page {page} of {totalPages}</span>
+            <span className="text-[11px] text-slate-500 tabular-nums" style={{ fontFamily: 'DM Mono, monospace' }}>
+              Page {page} of {totalPages}
+            </span>
             <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages}
-              className="px-3 py-1.5 text-[10px] font-semibold tracking-[0.05em] uppercase border border-border disabled:opacity-30 hover:bg-muted">
+              className="px-3 py-1.5 text-[10px] font-semibold tracking-[0.05em] uppercase border border-slate-200 rounded-md disabled:opacity-30 hover:bg-slate-50 transition-colors">
               Next
             </button>
           </div>
@@ -1129,30 +1201,36 @@ const ChatDetailModal = ({ selected, chats, onClose, onSelect }: ChatDetailModal
               {/* LEFT — Main chat */}
               <div className="flex-1 flex flex-col border-r border-border min-w-0">
                 {/* Header */}
-                <div className="flex items-center gap-3 px-6 py-4 border-b border-border shrink-0">
-                  <span className="text-[10px] font-bold tracking-[0.1em] uppercase px-2 py-1 bg-[hsl(225,70%,35%)] text-white">
+                <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-200 shrink-0 bg-white">
+                  <span
+                    className={cn(
+                      'inline-flex items-center gap-1.5 text-[11px] font-semibold tracking-wide px-3 py-1 rounded-full',
+                      platformPillCls(selected.platform)
+                    )}
+                  >
                     {platformLabel(selected.platform)}
+                    <span className="opacity-90">🇺🇸 US</span>
                   </span>
-                  <span className="text-xs text-muted-foreground">🇺🇸 US</span>
-                  <span className="text-xs text-muted-foreground ml-auto" style={{ fontFamily: 'DM Mono, monospace' }}>
+                  <span
+                    className="text-xs text-slate-500 ml-auto tabular-nums"
+                    style={{ fontFamily: 'DM Mono, monospace' }}
+                  >
                     {selected.date ? format(parseISO(selected.date), 'MMM d, yyyy') : ''}
                   </span>
                 </div>
 
                 {/* Scrollable conversation */}
-                <ScrollArea className="flex-1">
+                <ScrollArea className="flex-1 bg-slate-50/40">
                   <div className="px-6 md:px-10 py-8 max-w-3xl mx-auto space-y-6">
                     {/* User prompt bubble */}
-                    <div>
-                      <div className="text-[10px] font-bold tracking-[0.1em] uppercase text-muted-foreground mb-2">
-                        View prompt
-                      </div>
-                      <div className="flex justify-end">
-                        <div className="bg-[hsl(225,70%,35%)] text-white px-4 py-2.5 rounded-2xl rounded-tr-sm max-w-[85%] text-sm leading-relaxed">
-                          {selected.prompt_text}
-                        </div>
+                    <div className="flex justify-end">
+                      <div className="bg-[hsl(225,70%,35%)] text-white px-5 py-3 rounded-2xl rounded-tr-md max-w-[85%] text-sm leading-relaxed shadow-sm">
+                        {selected.prompt_text}
                       </div>
                     </div>
+
+                    <div className="border-t border-slate-200" />
+
 
                     {/* AI response */}
                     <div className="bg-white">
@@ -1231,26 +1309,26 @@ const ChatDetailModal = ({ selected, chats, onClose, onSelect }: ChatDetailModal
                               <div
                                 key={i}
                                 className={cn(
-                                  'flex items-center justify-between gap-2 px-2.5 py-2 border',
+                                  'flex items-center justify-between gap-2 px-3 py-2 border rounded-lg transition-colors',
                                   isClient
                                     ? 'bg-[hsl(var(--chart-gold))]/15 border-[hsl(var(--chart-gold))]'
-                                    : 'bg-white border-border'
+                                    : 'bg-white border-slate-200 hover:bg-slate-50 hover:border-slate-300'
                                 )}
                               >
                                 <div className="flex items-center gap-2 min-w-0">
                                   <span className={cn('w-2 h-2 rounded-full shrink-0', sentimentDotClass(b.sentiment))} />
-                                  <span className={cn('text-xs truncate', isClient ? 'font-bold' : 'font-medium')}>
+                                  <span className={cn('text-xs truncate', isClient ? 'font-bold text-slate-900' : 'font-medium text-slate-700')}>
                                     {b.name}
                                   </span>
                                 </div>
-                                <span
-                                  className="text-[10px] text-muted-foreground shrink-0"
-                                  style={{ fontFamily: 'DM Mono, monospace' }}
-                                >
-                                  {b.sentiment != null
-                                    ? b.sentiment.toFixed(2)
-                                    : b.position != null ? `#${b.position}` : ''}
-                                </span>
+                                {b.position != null && (
+                                  <span
+                                    className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 shrink-0 tabular-nums"
+                                    style={{ fontFamily: 'DM Mono, monospace' }}
+                                  >
+                                    #{b.position}
+                                  </span>
+                                )}
                               </div>
                             );
                           })}
@@ -1274,19 +1352,19 @@ const ChatDetailModal = ({ selected, chats, onClose, onSelect }: ChatDetailModal
                                 key={i}
                                 url={url}
                                 meta={[{ label: 'Domain', value: domain }]}
-                                className="flex w-full items-center justify-between gap-2 bg-white px-2.5 py-2 border border-border hover:bg-secondary/60 transition-colors text-left"
+                                className="flex w-full items-center justify-between gap-2 bg-white px-3 py-2 border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-colors text-left"
                               >
-                                <span className="text-xs font-medium text-foreground truncate">{domain}</span>
+                                <span className="text-xs font-medium text-slate-700 truncate">{domain}</span>
                                 <span className="flex items-center gap-2 shrink-0">
                                   {cc > 0 && (
                                     <span
-                                      className="text-[10px] text-muted-foreground"
+                                      className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 tabular-nums"
                                       style={{ fontFamily: 'DM Mono, monospace' }}
                                     >
                                       {cc}
                                     </span>
                                   )}
-                                  <span className="text-[10px] text-muted-foreground">↗</span>
+                                  <ExternalLink className="w-3 h-3 text-slate-400" />
                                 </span>
                               </LinkPreviewTrigger>
                             );
