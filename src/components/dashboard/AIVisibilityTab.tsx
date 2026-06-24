@@ -163,6 +163,20 @@ const PLATFORM_LABEL_MAP: Record<string, string> = {
 const platformLabel = (p: string) => PLATFORM_LABEL_MAP[p] || p;
 const ALL_KNOWN_PLATFORMS = Object.keys(PLATFORM_LABEL_MAP);
 
+// Engine pill colors (Peec-style) — used in chat list pills + detail header
+const PLATFORM_PILL: Record<string, string> = {
+  chatgpt: 'bg-[#10a37f] text-white',
+  perplexity: 'bg-[#20808d] text-white',
+  gemini: 'bg-[#1a73e8] text-white',
+  claude: 'bg-[#c96442] text-white',
+  google_ai: 'bg-[#4f46e5] text-white',
+  google_ai_mode: 'bg-[#6366f1] text-white',
+  copilot: 'bg-[#0ea5e9] text-white',
+  grok: 'bg-slate-800 text-white',
+  rufus: 'bg-[#d97706] text-white',
+};
+const platformPillCls = (p: string) => PLATFORM_PILL[p] || 'bg-slate-700 text-white';
+
 const PLATFORMS: { value: Platform; label: string }[] = [
   { value: 'all', label: 'All Platforms' },
   ...(ALL_KNOWN_PLATFORMS.map(p => ({ value: p as Platform, label: PLATFORM_LABEL_MAP[p] }))),
