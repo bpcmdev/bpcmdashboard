@@ -1201,30 +1201,36 @@ const ChatDetailModal = ({ selected, chats, onClose, onSelect }: ChatDetailModal
               {/* LEFT — Main chat */}
               <div className="flex-1 flex flex-col border-r border-border min-w-0">
                 {/* Header */}
-                <div className="flex items-center gap-3 px-6 py-4 border-b border-border shrink-0">
-                  <span className="text-[10px] font-bold tracking-[0.1em] uppercase px-2 py-1 bg-[hsl(225,70%,35%)] text-white">
+                <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-200 shrink-0 bg-white">
+                  <span
+                    className={cn(
+                      'inline-flex items-center gap-1.5 text-[11px] font-semibold tracking-wide px-3 py-1 rounded-full',
+                      platformPillCls(selected.platform)
+                    )}
+                  >
                     {platformLabel(selected.platform)}
+                    <span className="opacity-90">🇺🇸 US</span>
                   </span>
-                  <span className="text-xs text-muted-foreground">🇺🇸 US</span>
-                  <span className="text-xs text-muted-foreground ml-auto" style={{ fontFamily: 'DM Mono, monospace' }}>
+                  <span
+                    className="text-xs text-slate-500 ml-auto tabular-nums"
+                    style={{ fontFamily: 'DM Mono, monospace' }}
+                  >
                     {selected.date ? format(parseISO(selected.date), 'MMM d, yyyy') : ''}
                   </span>
                 </div>
 
                 {/* Scrollable conversation */}
-                <ScrollArea className="flex-1">
+                <ScrollArea className="flex-1 bg-slate-50/40">
                   <div className="px-6 md:px-10 py-8 max-w-3xl mx-auto space-y-6">
                     {/* User prompt bubble */}
-                    <div>
-                      <div className="text-[10px] font-bold tracking-[0.1em] uppercase text-muted-foreground mb-2">
-                        View prompt
-                      </div>
-                      <div className="flex justify-end">
-                        <div className="bg-[hsl(225,70%,35%)] text-white px-4 py-2.5 rounded-2xl rounded-tr-sm max-w-[85%] text-sm leading-relaxed">
-                          {selected.prompt_text}
-                        </div>
+                    <div className="flex justify-end">
+                      <div className="bg-[hsl(225,70%,35%)] text-white px-5 py-3 rounded-2xl rounded-tr-md max-w-[85%] text-sm leading-relaxed shadow-sm">
+                        {selected.prompt_text}
                       </div>
                     </div>
+
+                    <div className="border-t border-slate-200" />
+
 
                     {/* AI response */}
                     <div className="bg-white">
