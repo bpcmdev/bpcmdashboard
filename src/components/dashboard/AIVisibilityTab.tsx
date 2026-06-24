@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Search } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid, Cell, Legend,
 } from 'recharts';
@@ -131,7 +133,7 @@ interface GapUrlRow {
   retrieval_count: number;
   competitor_brands: string[] | null;
 }
-interface ChatBrand { id?: string; name: string; position?: number | null }
+interface ChatBrand { id?: string; name: string; position?: number | null; sentiment?: number | null }
 interface ChatSource { url?: string; domain?: string; citationCount?: number | null; citationPosition?: number | null }
 interface ChatRow {
   chat_id: string;
@@ -1060,121 +1062,246 @@ const ConversationIntelligence = ({
         </>
       )}
 
-      <Sheet open={!!selected} onOpenChange={(o) => { if (!o) setSelected(null); }}>
-        <SheetContent side="right" className="w-full sm:max-w-lg p-0">
-          {selected && (() => {
-            const brands = Array.isArray(selected.brands_mentioned) ? selected.brands_mentioned : [];
-            const rawSources = Array.isArray(selected.sources) ? selected.sources : [];
-            const sources = [...rawSources].sort((a, b) => {
-              const av = a.citationPosition ?? Number.MAX_SAFE_INTEGER;
-              const bv = b.citationPosition ?? Number.MAX_SAFE_INTEGER;
-              return av - bv;
-            });
-            const rawQueries = Array.isArray(selected.queries) ? selected.queries : [];
-            const queries: string[] = rawQueries
-              .map((q: any) => (typeof q === 'string' ? q : (q && typeof q.text === 'string' ? q.text : '')))
-              .filter((s: string) => s.trim().length > 0);
-            return (
-              <ScrollArea className="h-full">
-                <div className="p-6 space-y-5">
-                  <SheetHeader className="p-0">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 bg-foreground text-background">
-                        {platformLabel(selected.platform)}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground">
-                        {selected.date ? format(new Date(selected.date), 'MMM d, yyyy') : ''}
-                      </span>
-                    </div>
-                    <SheetTitle className="text-sm font-bold text-foreground leading-snug">{selected.prompt_text}</SheetTitle>
-                  </SheetHeader>
-
-                  <div>
-                    <h4 className="text-[10px] font-bold tracking-[0.1em] uppercase text-muted-foreground mb-2">Response</h4>
-                    {selected.client_mentioned && (
-                      <span className="inline-block text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[hsl(var(--chart-gold))] text-foreground mb-2">
-                        Brand Mentioned · Position #{selected.client_position ?? '—'}
-                      </span>
-                    )}
-                    <p className="text-xs text-foreground leading-relaxed whitespace-pre-wrap">{selected.response_text}</p>
-                  </div>
-
-                  {brands.length > 0 && (
-                    <div>
-                      <h4 className="text-[10px] font-bold tracking-[0.1em] uppercase text-muted-foreground mb-2">Brands Mentioned</h4>
-                      <div className="space-y-1.5">
-                        {brands.map((b, i) => {
-                          const isClient = selected.client_mentioned
-                            && b.position != null
-                            && b.position === selected.client_position;
-                          return (
-                            <div key={i} className={cn(
-                              'flex items-center justify-between px-3 py-1.5 border',
-                              isClient
-                                ? 'bg-[hsl(var(--chart-gold))]/15 border-[hsl(var(--chart-gold))]'
-                                : 'bg-secondary/30 border-border'
-                            )}>
-                              <span className={cn('text-xs', isClient ? 'font-bold' : 'font-medium')}>{b.name}</span>
-                              {b.position != null && (
-                                <span style={{ fontFamily: 'DM Mono, monospace' }} className="text-[10px] text-muted-foreground">
-                                  Position #{b.position}
-                                </span>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {queries.length > 0 && (
-                    <div>
-                      <h4 className="text-[10px] font-bold tracking-[0.1em] uppercase text-muted-foreground mb-2">Fanout Queries</h4>
-                      <div className="space-y-1">
-                        {queries.map((q, i) => (
-                          <div key={i} className="flex items-start gap-2 text-[11px] text-muted-foreground leading-relaxed">
-                            <Search className="w-3 h-3 mt-0.5 shrink-0 opacity-60" />
-                            <span>{q}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {sources.length > 0 && (
-                    <div>
-                      <h4 className="text-[10px] font-bold tracking-[0.1em] uppercase text-muted-foreground mb-2">Sources</h4>
-                      <div className="space-y-1.5">
-                        {sources.map((s, i) => {
-                          const url = s.url || '';
-                          const domain = s.domain || (() => { try { return new URL(url).hostname; } catch { return url; } })();
-                          const cc = s.citationCount ?? 0;
-                          return (
-                            <LinkPreviewTrigger key={i} url={url}
-                              meta={[{ label: 'Domain', value: domain }]}
-                              className="flex w-full items-center justify-between bg-secondary/30 px-3 py-1.5 border border-border hover:bg-secondary/60 transition-colors text-left">
-                              <span className="text-xs font-medium text-foreground truncate">{domain}</span>
-                              <span className="flex items-center gap-2 shrink-0 ml-2">
-                                {cc > 0 && (
-                                  <span style={{ fontFamily: 'DM Mono, monospace' }} className="text-[10px] text-muted-foreground">
-                                    {cc} citation{cc === 1 ? '' : 's'}
-                                  </span>
-                                )}
-                                <span className="text-[10px] text-muted-foreground">↗</span>
-                              </span>
-                            </LinkPreviewTrigger>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </ScrollArea>
-            );
-          })()}
-        </SheetContent>
-      </Sheet>
+      <ChatDetailModal
+        selected={selected}
+        chats={chats}
+        onClose={() => setSelected(null)}
+        onSelect={(c) => setSelected(c)}
+      />
     </div>
+  );
+};
+
+// ---------- Peec-style Chat Detail Modal ----------
+const sentimentDotClass = (s?: number | null) => {
+  if (s == null) return 'bg-muted-foreground/40';
+  if (s > 0.05) return 'bg-emerald-500';
+  if (s < -0.05) return 'bg-red-500';
+  return 'bg-muted-foreground/50';
+};
+
+const highlightClientName = (text: string, clientName?: string) => {
+  if (!clientName || !text) return text;
+  const parts = text.split(new RegExp(`(${clientName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
+  return parts.map((p, i) =>
+    p.toLowerCase() === clientName.toLowerCase()
+      ? <mark key={i} className="bg-[hsl(var(--chart-gold))]/30 text-foreground font-semibold px-0.5 rounded-sm">{p}</mark>
+      : <span key={i}>{p}</span>
+  );
+};
+
+interface ChatDetailModalProps {
+  selected: ChatRow | null;
+  chats: ChatRow[];
+  onClose: () => void;
+  onSelect: (c: ChatRow) => void;
+}
+
+const ChatDetailModal = ({ selected, chats, onClose, onSelect }: ChatDetailModalProps) => {
+  const siblings = useMemo(() => {
+    if (!selected) return [];
+    return chats.filter(c => c.prompt_text === selected.prompt_text);
+  }, [selected, chats]);
+  const currentIdx = selected ? siblings.findIndex(c => c.chat_id === selected.chat_id) : -1;
+  const prev = currentIdx > 0 ? siblings[currentIdx - 1] : null;
+  const next = currentIdx >= 0 && currentIdx < siblings.length - 1 ? siblings[currentIdx + 1] : null;
+
+  return (
+    <Sheet open={!!selected} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <SheetContent
+        side="right"
+        className="w-screen sm:max-w-[1200px] p-0 bg-white"
+      >
+        {selected && (() => {
+          const brands = Array.isArray(selected.brands_mentioned) ? selected.brands_mentioned : [];
+          const rawSources = Array.isArray(selected.sources) ? selected.sources : [];
+          const sources = [...rawSources].sort((a, b) => {
+            const av = a.citationPosition ?? Number.MAX_SAFE_INTEGER;
+            const bv = b.citationPosition ?? Number.MAX_SAFE_INTEGER;
+            return av - bv;
+          });
+          const clientBrand = selected.client_mentioned
+            ? brands.find(b => b.position != null && b.position === selected.client_position)?.name
+            : undefined;
+
+          return (
+            <div className="flex h-full w-full">
+              {/* LEFT — Main chat */}
+              <div className="flex-1 flex flex-col border-r border-border min-w-0">
+                {/* Header */}
+                <div className="flex items-center gap-3 px-6 py-4 border-b border-border shrink-0">
+                  <span className="text-[10px] font-bold tracking-[0.1em] uppercase px-2 py-1 bg-[hsl(225,70%,35%)] text-white">
+                    {platformLabel(selected.platform)}
+                  </span>
+                  <span className="text-xs text-muted-foreground">🇺🇸 US</span>
+                  <span className="text-xs text-muted-foreground ml-auto" style={{ fontFamily: 'DM Mono, monospace' }}>
+                    {selected.date ? format(parseISO(selected.date), 'MMM d, yyyy') : ''}
+                  </span>
+                </div>
+
+                {/* Scrollable conversation */}
+                <ScrollArea className="flex-1">
+                  <div className="px-6 md:px-10 py-8 max-w-3xl mx-auto space-y-6">
+                    {/* User prompt bubble */}
+                    <div>
+                      <div className="text-[10px] font-bold tracking-[0.1em] uppercase text-muted-foreground mb-2">
+                        View prompt
+                      </div>
+                      <div className="flex justify-end">
+                        <div className="bg-[hsl(225,70%,35%)] text-white px-4 py-2.5 rounded-2xl rounded-tr-sm max-w-[85%] text-sm leading-relaxed">
+                          {selected.prompt_text}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* AI response */}
+                    <div className="bg-white">
+                      <div
+                        className="prose prose-sm max-w-none text-foreground
+                          prose-headings:font-bold prose-headings:text-foreground prose-headings:mt-4 prose-headings:mb-2
+                          prose-h1:text-lg prose-h2:text-base prose-h3:text-sm
+                          prose-p:leading-relaxed prose-p:my-2
+                          prose-li:my-0.5
+                          prose-strong:text-foreground prose-strong:font-semibold
+                          prose-a:text-[hsl(225,70%,35%)] prose-a:no-underline hover:prose-a:underline"
+                        style={{ fontFamily: 'DM Sans, sans-serif' }}
+                      >
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            p: ({ children }) => <p>{typeof children === 'string' ? highlightClientName(children, clientBrand) : children}</p>,
+                            li: ({ children }) => <li>{typeof children === 'string' ? highlightClientName(children, clientBrand) : children}</li>,
+                          }}
+                        >
+                          {selected.response_text || ''}
+                        </ReactMarkdown>
+                      </div>
+                    </div>
+                  </div>
+                </ScrollArea>
+
+                {/* Prev/Next */}
+                {siblings.length > 1 && (
+                  <div className="flex items-center justify-between px-6 py-3 border-t border-border shrink-0 bg-secondary/20">
+                    <button
+                      onClick={() => prev && onSelect(prev)}
+                      disabled={!prev}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-semibold tracking-[0.05em] uppercase border border-border hover:bg-muted disabled:opacity-30"
+                    >
+                      <ChevronLeft className="w-3 h-3" /> Previous
+                    </button>
+                    <span className="text-[11px] text-muted-foreground" style={{ fontFamily: 'DM Mono, monospace' }}>
+                      {currentIdx + 1} / {siblings.length}
+                    </span>
+                    <button
+                      onClick={() => next && onSelect(next)}
+                      disabled={!next}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-semibold tracking-[0.05em] uppercase border border-border hover:bg-muted disabled:opacity-30"
+                    >
+                      Next <ChevronRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* RIGHT — Details sidebar */}
+              <div className="w-full sm:w-[340px] shrink-0 bg-secondary/10 flex flex-col">
+                <div className="px-5 py-4 border-b border-border shrink-0">
+                  <h3
+                    className="text-base font-bold text-foreground"
+                    style={{ fontFamily: 'Playfair Display, serif' }}
+                  >
+                    Details
+                  </h3>
+                </div>
+                <ScrollArea className="flex-1">
+                  <div className="p-5 space-y-6">
+                    {/* Brands */}
+                    <div>
+                      <h4 className="text-[10px] font-bold tracking-[0.1em] uppercase text-muted-foreground mb-2.5">
+                        Brands
+                      </h4>
+                      {brands.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">No brands detected.</p>
+                      ) : (
+                        <div className="space-y-1">
+                          {brands.map((b, i) => {
+                            const isClient = clientBrand && b.name === clientBrand;
+                            return (
+                              <div
+                                key={i}
+                                className={cn(
+                                  'flex items-center justify-between gap-2 px-2.5 py-2 border',
+                                  isClient
+                                    ? 'bg-[hsl(var(--chart-gold))]/15 border-[hsl(var(--chart-gold))]'
+                                    : 'bg-white border-border'
+                                )}
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span className={cn('w-2 h-2 rounded-full shrink-0', sentimentDotClass(b.sentiment))} />
+                                  <span className={cn('text-xs truncate', isClient ? 'font-bold' : 'font-medium')}>
+                                    {b.name}
+                                  </span>
+                                </div>
+                                <span
+                                  className="text-[10px] text-muted-foreground shrink-0"
+                                  style={{ fontFamily: 'DM Mono, monospace' }}
+                                >
+                                  {b.sentiment != null
+                                    ? b.sentiment.toFixed(2)
+                                    : b.position != null ? `#${b.position}` : ''}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Sources */}
+                    {sources.length > 0 && (
+                      <div>
+                        <h4 className="text-[10px] font-bold tracking-[0.1em] uppercase text-muted-foreground mb-2.5">
+                          Sources
+                        </h4>
+                        <div className="space-y-1">
+                          {sources.map((s, i) => {
+                            const url = s.url || '';
+                            const domain = s.domain || (() => { try { return new URL(url).hostname; } catch { return url; } })();
+                            const cc = s.citationCount ?? 0;
+                            return (
+                              <LinkPreviewTrigger
+                                key={i}
+                                url={url}
+                                meta={[{ label: 'Domain', value: domain }]}
+                                className="flex w-full items-center justify-between gap-2 bg-white px-2.5 py-2 border border-border hover:bg-secondary/60 transition-colors text-left"
+                              >
+                                <span className="text-xs font-medium text-foreground truncate">{domain}</span>
+                                <span className="flex items-center gap-2 shrink-0">
+                                  {cc > 0 && (
+                                    <span
+                                      className="text-[10px] text-muted-foreground"
+                                      style={{ fontFamily: 'DM Mono, monospace' }}
+                                    >
+                                      {cc}
+                                    </span>
+                                  )}
+                                  <span className="text-[10px] text-muted-foreground">↗</span>
+                                </span>
+                              </LinkPreviewTrigger>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
+            </div>
+          );
+        })()}
+      </SheetContent>
+    </Sheet>
   );
 };
 
