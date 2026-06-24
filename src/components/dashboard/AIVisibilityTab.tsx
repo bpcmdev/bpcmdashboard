@@ -1018,71 +1018,116 @@ const ConversationIntelligence = ({
   const totalPages = Math.max(1, Math.ceil(total / CHAT_PAGE));
   const mentionedLabel = clientName ? `${clientName.toUpperCase()} MENTIONED` : 'CLIENT MENTIONED';
 
+  // Group current page's chats by prompt_text so each row shows all engines that ran the query.
+  const grouped = useMemo(() => {
+    const map = new Map<string, ChatRow[]>();
+    for (const c of chats) {
+      const key = c.prompt_text || c.chat_id;
+      const arr = map.get(key) ?? [];
+      arr.push(c);
+      map.set(key, arr);
+    }
+    return Array.from(map.values());
+  }, [chats]);
+
   return (
-    <div className="bg-card border border-border p-5 space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground">AI Conversation Intelligence</h3>
-        <div className="flex border border-border">
+    <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-5">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-baseline gap-3">
+          <h3 className="text-base font-semibold text-slate-900" style={{ fontFamily: 'Playfair Display, serif' }}>
+            AI Conversation Intelligence
+          </h3>
+          <span className="text-xs text-slate-500 tabular-nums" style={{ fontFamily: 'DM Mono, monospace' }}>
+            {total} {total === 1 ? 'result' : 'results'}
+          </span>
+        </div>
+        <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5">
           {(['recent', 'mentioned'] as const).map(m => (
             <button key={m} onClick={() => setMode(m)}
-              className={cn('px-3 py-1 text-[10px] font-semibold tracking-[0.05em] uppercase',
-                mode === m ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground')}>
-              {m === 'recent' ? 'RECENT CHATS' : mentionedLabel}
+              className={cn(
+                'px-3 py-1.5 text-[10px] font-semibold tracking-[0.05em] uppercase rounded-md transition-colors',
+                mode === m ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              )}>
+              {m === 'recent' ? 'RECENT' : mentionedLabel}
             </button>
           ))}
         </div>
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28 w-full" />)}
+        <div className="space-y-2">
+          {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}
         </div>
-      ) : chats.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-8">No conversations for this period.</p>
+      ) : grouped.length === 0 ? (
+        <p className="text-sm text-slate-500 text-center py-10">No conversations for this period.</p>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {chats.map(chat => {
-              const brands = Array.isArray(chat.brands_mentioned) ? chat.brands_mentioned : [];
+          <div className="flex flex-col gap-2">
+            {grouped.map(group => {
+              const first = group[0];
+              const platforms = Array.from(new Set(group.map(c => c.platform)));
+              const mentionedItem = group.find(c => c.client_mentioned);
+              const isMentioned = !!mentionedItem;
+              const position = mentionedItem?.client_position;
               return (
-                <button key={chat.chat_id} onClick={() => setSelected(chat)}
-                  className="bg-secondary/30 border border-border p-4 text-left hover:bg-secondary/60 transition-colors space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 bg-foreground text-background">
-                      {platformLabel(chat.platform)}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground ml-auto">
-                      {chat.date ? format(new Date(chat.date), 'MMM d, yyyy') : ''}
-                    </span>
-                  </div>
-                  <p className="text-xs font-semibold text-foreground line-clamp-1">{chat.prompt_text}</p>
-                  <p className="text-[11px] text-muted-foreground line-clamp-3">{chat.response_text}</p>
-                  {chat.client_mentioned && (
-                    <span className="inline-block text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[hsl(var(--chart-gold))] text-foreground">
-                      Mentioned · Position #{chat.client_position ?? '—'}
-                    </span>
-                  )}
-                  {brands.length > 0 && (
-                    <div className="flex flex-wrap gap-1 pt-1">
-                      {brands.slice(0, 3).map((b, i) => (
-                        <span key={i} className="text-[9px] font-medium px-1.5 py-0.5 bg-muted text-muted-foreground border border-border">
-                          {b.name}
+                <button
+                  key={first.chat_id}
+                  onClick={() => setSelected(mentionedItem ?? first)}
+                  className="group w-full text-left bg-white border border-slate-200 rounded-lg px-4 py-3.5 hover:border-slate-300 hover:bg-slate-50/60 hover:shadow-sm transition-all flex items-center gap-4"
+                >
+                  {/* LEFT: prompt + pills */}
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <p className="text-sm font-medium text-slate-800 truncate">
+                      {first.prompt_text}
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {platforms.map(p => (
+                        <span
+                          key={p}
+                          className={cn(
+                            'inline-flex items-center text-[10px] font-semibold tracking-wide px-2 py-0.5 rounded-full',
+                            platformPillCls(p)
+                          )}
+                        >
+                          {platformLabel(p)}
                         </span>
                       ))}
                     </div>
-                  )}
+                  </div>
+
+                  {/* RIGHT: mentioned + count */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    {isMentioned ? (
+                      <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        {position != null ? `#${position}` : 'Mentioned'}
+                      </span>
+                    ) : (
+                      <span className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-500">
+                        Not mentioned
+                      </span>
+                    )}
+                    <span
+                      className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2 py-1 rounded-md tabular-nums"
+                      style={{ fontFamily: 'DM Mono, monospace' }}
+                    >
+                      ×{group.length}
+                    </span>
+                  </div>
                 </button>
               );
             })}
           </div>
-          <div className="flex items-center justify-center gap-3 pt-3 border-t border-border">
+          <div className="flex items-center justify-center gap-3 pt-4 border-t border-slate-200">
             <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1}
-              className="px-3 py-1.5 text-[10px] font-semibold tracking-[0.05em] uppercase border border-border disabled:opacity-30 hover:bg-muted">
+              className="px-3 py-1.5 text-[10px] font-semibold tracking-[0.05em] uppercase border border-slate-200 rounded-md disabled:opacity-30 hover:bg-slate-50 transition-colors">
               Previous
             </button>
-            <span className="text-[11px] text-muted-foreground">Page {page} of {totalPages}</span>
+            <span className="text-[11px] text-slate-500 tabular-nums" style={{ fontFamily: 'DM Mono, monospace' }}>
+              Page {page} of {totalPages}
+            </span>
             <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages}
-              className="px-3 py-1.5 text-[10px] font-semibold tracking-[0.05em] uppercase border border-border disabled:opacity-30 hover:bg-muted">
+              className="px-3 py-1.5 text-[10px] font-semibold tracking-[0.05em] uppercase border border-slate-200 rounded-md disabled:opacity-30 hover:bg-slate-50 transition-colors">
               Next
             </button>
           </div>
