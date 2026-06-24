@@ -359,8 +359,8 @@ const PlatformScoreCards = ({ rows, loading }: { rows: PlatformScoreRow[]; loadi
 const KpiCards = ({ rows, loading }: { rows: KpiRow[]; loading: boolean }) => {
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28 w-full" />)}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28 w-full rounded-xl" />)}
       </div>
     );
   }
@@ -372,18 +372,31 @@ const KpiCards = ({ rows, loading }: { rows: KpiRow[]; loading: boolean }) => {
     { key: 'sentiment', label: 'Sentiment', fmt: (v) => fmtInt(v), deltaFmt: (d) => Math.round(d).toString() },
   ];
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
       {cards.map(c => {
         const r = byMetric.get(c.key);
         const curr = r?.current_value ?? null;
         const prev = r?.previous_value ?? null;
         return (
-          <div key={c.key} className="bg-card border border-border p-4">
-            <p style={{ fontFamily: 'DM Mono, monospace' }} className="text-[10px] font-semibold tracking-[0.15em] uppercase text-[hsl(225,70%,35%)]">{c.label}</p>
-            <p className="font-display text-3xl font-bold mt-2 mb-1">{c.fmt(curr)}</p>
+          <div
+            key={c.key}
+            className="group bg-white border border-slate-200 rounded-xl px-5 py-5 transition-all hover:shadow-md hover:border-slate-300"
+          >
+            <p
+              style={{ fontFamily: 'DM Mono, monospace' }}
+              className="text-[10px] font-semibold tracking-[0.15em] uppercase text-slate-500"
+            >
+              {c.label}
+            </p>
+            <p
+              style={{ fontFamily: 'DM Mono, monospace' }}
+              className="text-3xl font-bold mt-3 mb-2 text-slate-900 tabular-nums"
+            >
+              {c.fmt(curr)}
+            </p>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] text-muted-foreground">vs prev</span>
               {deltaPill(curr, prev, { fmt: c.deltaFmt, invert: c.invert })}
+              <span className="text-[10px] text-slate-400 uppercase tracking-wider">vs prev</span>
             </div>
           </div>
         );
