@@ -133,7 +133,7 @@ interface GapUrlRow {
   retrieval_count: number;
   competitor_brands: string[] | null;
 }
-interface ChatBrand { id?: string; name: string; position?: number | null }
+interface ChatBrand { id?: string; name: string; position?: number | null; sentiment?: number | null }
 interface ChatSource { url?: string; domain?: string; citationCount?: number | null; citationPosition?: number | null }
 interface ChatRow {
   chat_id: string;
