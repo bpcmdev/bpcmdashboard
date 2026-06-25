@@ -263,7 +263,7 @@ const KpiDrawer = ({ open, onOpenChange, metric, label, targetTab }: KpiDrawerPr
                 {loading ? (
                   <div className="h-12 bg-black/[0.04] animate-pulse rounded-sm" />
                 ) : !yoy ? (
-                  <p className="text-xs text-muted-foreground">No data for the same week last year.</p>
+                  <p className="text-xs text-muted-foreground">Not enough history for a year-over-year comparison yet.</p>
                 ) : (
                   <div className="grid grid-cols-3 gap-3 items-baseline">
                     <div>
