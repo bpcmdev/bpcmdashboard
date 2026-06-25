@@ -47,9 +47,23 @@ const FORMATTERS: Record<KpiMetricKey, (n: number) => string> = {
   influencer_roi: (n) => `${n.toFixed(1)}x`,
 };
 
-function fmtWeekLabel(weekStart: string): string {
-  const d = new Date(weekStart + 'T00:00:00');
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+function isValidDate(d: Date | null | undefined): d is Date {
+  return !!d && !isNaN(d.getTime());
+}
+
+function safeDate(value: string | null | undefined): Date | null {
+  if (!value) return null;
+  const d = new Date(value.includes('T') ? value : value + 'T00:00:00');
+  return isValidDate(d) ? d : null;
+}
+
+function fmtWeekLabel(weekStart: string | null | undefined): string {
+  const d = safeDate(weekStart);
+  return d ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
+}
+
+function toIsoDate(d: Date | null): string | null {
+  return isValidDate(d) ? d.toISOString().split('T')[0] : null;
 }
 
 const KpiDrawer = ({ open, onOpenChange, metric, label, targetTab }: KpiDrawerProps) => {
