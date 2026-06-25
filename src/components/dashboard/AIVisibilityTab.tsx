@@ -1482,7 +1482,7 @@ const TopUrlsTable = ({ rows, loading }: { rows: UrlRow[]; loading: boolean }) =
 };
 
 // ---------- Search Queries (paginated) ----------
-const QUERIES_PAGE = 25;
+const QUERIES_PAGE = 15;
 const SearchQueriesTable = ({ rows, loading }: { rows: QueryRow[]; loading: boolean }) => {
   const [page, setPage] = useState(1);
   const [selectedQuery, setSelectedQuery] = useState<QueryRow | null>(null);
@@ -1570,7 +1570,7 @@ const SearchQueriesTable = ({ rows, loading }: { rows: QueryRow[]; loading: bool
 };
 
 // ---------- Shopping (paginated) ----------
-const PRODUCTS_PAGE = 25;
+const PRODUCTS_PAGE = 15;
 const ShoppingTable = ({ rows, loading }: { rows: ProductRow[]; loading: boolean }) => {
   const [page, setPage] = useState(1);
   useEffect(() => { setPage(1); }, [rows]);
