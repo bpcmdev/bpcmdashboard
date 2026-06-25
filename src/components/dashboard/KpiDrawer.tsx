@@ -47,9 +47,23 @@ const FORMATTERS: Record<KpiMetricKey, (n: number) => string> = {
   influencer_roi: (n) => `${n.toFixed(1)}x`,
 };
 
-function fmtWeekLabel(weekStart: string): string {
-  const d = new Date(weekStart + 'T00:00:00');
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+function isValidDate(d: Date | null | undefined): d is Date {
+  return !!d && !isNaN(d.getTime());
+}
+
+function safeDate(value: string | null | undefined): Date | null {
+  if (!value) return null;
+  const d = new Date(value.includes('T') ? value : value + 'T00:00:00');
+  return isValidDate(d) ? d : null;
+}
+
+function fmtWeekLabel(weekStart: string | null | undefined): string {
+  const d = safeDate(weekStart);
+  return d ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—';
+}
+
+function toIsoDate(d: Date | null): string | null {
+  return isValidDate(d) ? d.toISOString().split('T')[0] : null;
 }
 
 const KpiDrawer = ({ open, onOpenChange, metric, label, targetTab }: KpiDrawerProps) => {
@@ -71,98 +85,103 @@ const KpiDrawer = ({ open, onOpenChange, metric, label, targetTab }: KpiDrawerPr
       setTopItems([]);
       setYoy(null);
 
-      // 12-week trend (always trailing from latest available, or from selected week if set).
-      let histQuery = supabase
-        .from('weekly_snapshots')
-        .select(`week_start, ${metric}`)
-        .eq('client_id', activeClientId)
-        .order('week_start', { ascending: false })
-        .limit(12);
-      const { data: hist } = await histQuery;
-      if (cancelled) return;
-      const trendRows = ((hist ?? []) as any[])
-        .slice()
-        .reverse()
-        .map((r) => ({
-          week_start: r.week_start,
-          value: Number(r[metric]) || 0,
-          label: fmtWeekLabel(r.week_start),
-        }));
-      setTrend(trendRows);
-
-      // YoY: same week, prior year (only when a specific week is selected)
-      if (!isAllTime && selectedWeek) {
-        const cur = new Date(selectedWeek + 'T00:00:00');
-        const prior = new Date(cur);
-        prior.setDate(prior.getDate() - 364); // align to week
-        const priorIso = prior.toISOString().split('T')[0];
-        // Match within ±3 days to tolerate week boundary drift.
-        const lower = new Date(prior); lower.setDate(lower.getDate() - 3);
-        const upper = new Date(prior); upper.setDate(upper.getDate() + 3);
-        const { data: yoyRows } = await supabase
+      try {
+        // 12-week trend (always trailing from latest available, or from selected week if set).
+        let histQuery = supabase
           .from('weekly_snapshots')
           .select(`week_start, ${metric}`)
           .eq('client_id', activeClientId)
-          .gte('week_start', lower.toISOString().split('T')[0])
-          .lte('week_start', upper.toISOString().split('T')[0])
-          .limit(1);
+          .order('week_start', { ascending: false })
+          .limit(12);
+        const { data: hist } = await histQuery;
         if (cancelled) return;
-        const curRow = trendRows.find((r) => r.week_start === selectedWeek);
-        if (curRow && yoyRows && yoyRows.length > 0) {
-          setYoy({ current: curRow.value, prior: Number((yoyRows[0] as any)[metric]) || 0 });
+        const trendRows = ((hist ?? []) as any[])
+          .filter((r) => isValidDate(safeDate(r?.week_start)))
+          .slice()
+          .reverse()
+          .map((r) => ({
+            week_start: r.week_start,
+            value: Number(r[metric]) || 0,
+            label: fmtWeekLabel(r.week_start),
+          }));
+        setTrend(trendRows);
+
+        // YoY: same week, prior year (only when a specific week is selected)
+        const curDate = !isAllTime && selectedWeek ? safeDate(selectedWeek) : null;
+        if (curDate) {
+          const prior = new Date(curDate);
+          prior.setDate(prior.getDate() - 364);
+          const lower = new Date(prior); lower.setDate(lower.getDate() - 3);
+          const upper = new Date(prior); upper.setDate(upper.getDate() + 3);
+          const lowerIso = toIsoDate(lower);
+          const upperIso = toIsoDate(upper);
+          if (lowerIso && upperIso) {
+            const { data: yoyRows } = await supabase
+              .from('weekly_snapshots')
+              .select(`week_start, ${metric}`)
+              .eq('client_id', activeClientId)
+              .gte('week_start', lowerIso)
+              .lte('week_start', upperIso)
+              .limit(1);
+            if (cancelled) return;
+            const curRow = trendRows.find((r) => r.week_start === selectedWeek);
+            if (curRow && yoyRows && yoyRows.length > 0) {
+              setYoy({ current: curRow.value, prior: Number((yoyRows[0] as any)[metric]) || 0 });
+            }
+          }
         }
+
+        // Top contributors per metric kind
+        const dateFrom = !isAllTime ? effectiveFrom : null;
+        const dateTo = !isAllTime ? effectiveTo : null;
+
+        if (metric === 'placement_count' || metric === 'emv_usd') {
+          let placeQ = supabase
+            .from('placements')
+            .select('id, headline, outlet_name, outlet_umv, url, published_at')
+            .eq('client_id', activeClientId)
+            .order(metric === 'emv_usd' ? 'ad_value' : 'outlet_umv', { ascending: false })
+            .limit(5);
+          if (dateFrom && dateTo) placeQ = placeQ.gte('published_at', dateFrom).lte('published_at', dateTo);
+          const { data: placements } = await placeQ;
+          if (cancelled) return;
+          const items: TopItem[] = ((placements ?? []) as any[]).map((p) => ({
+            id: p.id,
+            primary: p.headline ?? '—',
+            secondary: p.outlet_name ?? undefined,
+            metric: p.outlet_umv ? `${formatCount(p.outlet_umv)} reach` : '—',
+            url: p.url || undefined,
+          }));
+          setTopItems(items);
+          setTopLabel('Top Press Placements');
+        } else if (metric === 'social_reach' || metric === 'influencer_roi') {
+          let q = supabase
+            .from('lefty_posts')
+            .select('id, author_name, campaign_name, reach, emv, post_link, network')
+            .eq('client_id', activeClientId)
+            .order(metric === 'social_reach' ? 'reach' : 'emv', { ascending: false })
+            .limit(5);
+          if (dateFrom && dateTo) q = q.gte('posted_at', dateFrom).lte('posted_at', `${dateTo}T23:59:59.999Z`);
+          const { data: posts } = await q;
+          if (cancelled) return;
+          const items: TopItem[] = ((posts ?? []) as any[]).map((p) => ({
+            id: p.id,
+            primary: p.author_name ?? 'Creator',
+            secondary: p.campaign_name ?? p.network ?? undefined,
+            metric: metric === 'social_reach' ? formatCount(p.reach ?? 0) : formatMoney(p.emv ?? 0),
+            url: p.post_link || undefined,
+          }));
+          setTopItems(items);
+          setTopLabel(metric === 'social_reach' ? 'Top Posts by Reach' : 'Top Posts by EMV');
+        } else {
+          setTopItems([]);
+          setTopLabel(metric === 'sentiment_score' ? 'Recent Sentiment Drivers' : 'Recent Mentions');
+        }
+      } catch (err) {
+        console.error('[KpiDrawer] failed to load detail data', err);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-
-      // Top contributors per metric kind
-      const dateFrom = !isAllTime ? effectiveFrom : null;
-      const dateTo = !isAllTime ? effectiveTo : null;
-
-      if (metric === 'placement_count' || metric === 'emv_usd') {
-        // Top press placements + top posts
-        let placeQ = supabase
-          .from('placements')
-          .select('id, headline, outlet_name, outlet_umv, url, published_at')
-          .eq('client_id', activeClientId)
-          .order(metric === 'emv_usd' ? 'ad_value' : 'outlet_umv', { ascending: false })
-          .limit(5);
-        if (dateFrom && dateTo) placeQ = placeQ.gte('published_at', dateFrom).lte('published_at', dateTo);
-        const { data: placements } = await placeQ;
-        if (cancelled) return;
-        const items: TopItem[] = ((placements ?? []) as any[]).map((p) => ({
-          id: p.id,
-          primary: p.headline ?? '—',
-          secondary: p.outlet_name ?? undefined,
-          metric: p.outlet_umv ? `${formatCount(p.outlet_umv)} reach` : '—',
-          url: p.url || undefined,
-        }));
-        setTopItems(items);
-        setTopLabel('Top Press Placements');
-      } else if (metric === 'social_reach' || metric === 'influencer_roi') {
-        let q = supabase
-          .from('lefty_posts')
-          .select('id, author_name, campaign_name, reach, emv, post_link, network')
-          .eq('client_id', activeClientId)
-          .order(metric === 'social_reach' ? 'reach' : 'emv', { ascending: false })
-          .limit(5);
-        if (dateFrom && dateTo) q = q.gte('posted_at', dateFrom).lte('posted_at', `${dateTo}T23:59:59.999Z`);
-        const { data: posts } = await q;
-        if (cancelled) return;
-        const items: TopItem[] = ((posts ?? []) as any[]).map((p) => ({
-          id: p.id,
-          primary: p.author_name ?? 'Creator',
-          secondary: p.campaign_name ?? p.network ?? undefined,
-          metric: metric === 'social_reach' ? formatCount(p.reach ?? 0) : formatMoney(p.emv ?? 0),
-          url: p.post_link || undefined,
-        }));
-        setTopItems(items);
-        setTopLabel(metric === 'social_reach' ? 'Top Posts by Reach' : 'Top Posts by EMV');
-      } else {
-        // Sentiment / SOV — no direct contributors; leave empty.
-        setTopItems([]);
-        setTopLabel(metric === 'sentiment_score' ? 'Recent Sentiment Drivers' : 'Recent Mentions');
-      }
-
-      setLoading(false);
     })();
     return () => { cancelled = true; };
   }, [open, metric, activeClientId, selectedWeek, effectiveFrom, effectiveTo, isAllTime]);
@@ -244,7 +263,7 @@ const KpiDrawer = ({ open, onOpenChange, metric, label, targetTab }: KpiDrawerPr
                 {loading ? (
                   <div className="h-12 bg-black/[0.04] animate-pulse rounded-sm" />
                 ) : !yoy ? (
-                  <p className="text-xs text-muted-foreground">No data for the same week last year.</p>
+                  <p className="text-xs text-muted-foreground">Not enough history for a year-over-year comparison yet.</p>
                 ) : (
                   <div className="grid grid-cols-3 gap-3 items-baseline">
                     <div>
