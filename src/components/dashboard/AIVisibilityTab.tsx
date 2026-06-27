@@ -2296,6 +2296,30 @@ const fmtPriceRange = (pr: ShoppingProductRow['price_range']): string | null => 
   return range.min === range.max ? fmt(range.min) : `${fmt(range.min)}–${fmt(range.max)}`;
 };
 
+const positionTier = (p: number | null | undefined): string => {
+  if (p == null) return '—';
+  if (p <= 3) return 'Top 3';
+  if (p <= 5) return 'Top 5';
+  if (p <= 10) return 'Featured';
+  return 'Present';
+};
+
+const positionTierDetail = (p: number | null | undefined): string => {
+  if (p == null) return '—';
+  const n = Number(p).toFixed(1);
+  if (p <= 3) return `Top 3 · #${n}`;
+  if (p <= 5) return `Top 5 · #${n}`;
+  if (p <= 10) return `Featured · #${n}`;
+  return `Present · #${n}`;
+};
+
+const rankTier = (idx: number, expanded: boolean): { label: string; tone: 'top' | 'high' | 'growing' | 'active' } => {
+  if (idx === 0) return { label: 'Most Visible', tone: 'top' };
+  if (idx <= 2) return { label: 'High Visibility', tone: 'high' };
+  if (idx <= 7) return { label: 'Growing Presence', tone: 'growing' };
+  return { label: 'Active', tone: 'active' };
+};
+
 const AiShoppingVisibilitySection = ({ clientId, accent }: { clientId: string | null; accent: string }) => {
   const [rows, setRows] = useState<ShoppingProductRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -2363,15 +2387,29 @@ const AiShoppingVisibilitySection = ({ clientId, accent }: { clientId: string | 
           const pct = Math.round((p.visibility ?? 0) * 100);
           const isTop = idx === 0;
           const initial = (p.name?.trim()?.[0] ?? '?').toUpperCase();
+          const tier = rankTier(idx, expanded);
+          const tierClass =
+            tier.tone === 'top'
+              ? 'text-foreground border-transparent'
+              : 'text-muted-foreground border-border bg-muted/40';
+          const tierStyle =
+            tier.tone === 'top'
+              ? { backgroundColor: `${accent}1A`, color: accent }
+              : undefined;
           return (
             <li key={p.product_id}>
               <button
                 type="button"
                 onClick={() => setSelected(p)}
-                className={`w-full grid grid-cols-[28px_44px_1fr_auto] gap-4 items-center px-6 py-3 text-left hover:bg-muted/40 transition-colors ${isTop ? 'bg-muted/30' : ''}`}
+                className={`w-full grid grid-cols-[120px_44px_1fr_auto] gap-4 items-center px-6 py-3 text-left hover:bg-muted/40 transition-colors ${isTop ? 'bg-muted/30' : ''}`}
               >
-                <div className={`font-mono text-sm tabular-nums ${isTop ? 'text-foreground font-semibold' : 'text-muted-foreground'}`}>
-                  {idx + 1}
+                <div>
+                  <span
+                    className={`inline-block px-2 py-0.5 rounded-sm border text-[10px] font-mono font-semibold uppercase tracking-[0.12em] ${tierClass}`}
+                    style={tierStyle}
+                  >
+                    {tier.label}
+                  </span>
                 </div>
                 {p.image_url ? (
                   <img src={p.image_url} alt="" className="h-10 w-10 rounded object-cover bg-muted" loading="lazy" />
@@ -2397,7 +2435,7 @@ const AiShoppingVisibilitySection = ({ clientId, accent }: { clientId: string | 
                   </div>
                 </div>
                 <div className="flex items-center gap-4 text-[11px] font-mono uppercase tracking-wider text-muted-foreground whitespace-nowrap">
-                  <span>Avg {p.avg_position != null ? `#${Number(p.avg_position).toFixed(1)}` : '—'}</span>
+                  <span>{positionTier(p.avg_position)}</span>
                   <span>{(p.mention_count ?? 0).toLocaleString()} mentions</span>
                 </div>
               </button>
@@ -2443,21 +2481,35 @@ const AiShoppingVisibilitySection = ({ clientId, accent }: { clientId: string | 
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-px bg-border border border-border">
-                  {[
-                    { label: 'Visibility', value: `${vis}%` },
-                    { label: 'Share of Voice', value: `${sov}%` },
-                    { label: 'Avg Position', value: selected.avg_position != null ? `#${Number(selected.avg_position).toFixed(1)}` : '—' },
-                    { label: 'Mentions', value: (selected.mention_count ?? 0).toLocaleString() },
-                    { label: 'Wins', value: (selected.win_count ?? 0).toLocaleString() },
-                    ...(price ? [{ label: 'Price range', value: price }] : []),
-                  ].map((s) => (
-                    <div key={s.label} className="bg-card p-3">
-                      <div className="text-[10px] font-bold tracking-[0.15em] uppercase text-muted-foreground">{s.label}</div>
-                      <div className="text-base font-semibold text-foreground mt-1 tabular-nums">{s.value}</div>
+                {(() => {
+                  const wins = selected.win_count ?? 0;
+                  const mentions = selected.mention_count ?? 0;
+                  const avg = selected.avg_position;
+                  const winsValue = wins === 0
+                    ? 'Emerging'
+                    : wins <= 2
+                      ? `Rising · ${wins} time${wins === 1 ? '' : 's'}`
+                      : `Leading · ${wins} time${wins === 1 ? '' : 's'}`;
+                  const winsNote = wins === 0 ? 'Not yet ranked #1 — building presence' : null;
+                  return (
+                    <div className="grid grid-cols-2 gap-px bg-border border border-border">
+                      {[
+                        { label: 'Visibility', value: `${vis}%` },
+                        { label: 'Share of Voice', value: `${sov}%` },
+                        { label: 'Avg Position', value: positionTierDetail(avg) },
+                        { label: 'Mentions', value: mentions.toLocaleString() },
+                        { label: 'AI Top Picks', value: winsValue, note: winsNote },
+                        ...(price ? [{ label: 'Price range', value: price, note: null }] : []),
+                      ].map((s) => (
+                        <div key={s.label} className="bg-card p-3">
+                          <div className="text-[10px] font-bold tracking-[0.15em] uppercase text-muted-foreground">{s.label}</div>
+                          <div className="text-base font-semibold text-foreground mt-1 tabular-nums">{s.value}</div>
+                          {s.note && <div className="text-[11px] text-muted-foreground mt-1 leading-snug">{s.note}</div>}
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  );
+                })()}
 
                 {selected.categories && selected.categories.length > 0 && (
                   <div>
@@ -2470,10 +2522,23 @@ const AiShoppingVisibilitySection = ({ clientId, accent }: { clientId: string | 
                   </div>
                 )}
 
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {selected.name} appeared in {(selected.mention_count ?? 0).toLocaleString()} AI shopping answers this period
-                  {selected.avg_position != null ? `, ranking on average at position ${Number(selected.avg_position).toFixed(1)}` : ''}.
-                </p>
+                {(() => {
+                  const wins = selected.win_count ?? 0;
+                  const mentions = selected.mention_count ?? 0;
+                  const avg = selected.avg_position;
+                  if (mentions === 0) return null;
+                  const s = mentions === 1 ? '' : 's';
+                  let sentence: string;
+                  if (wins > 0 && avg != null) {
+                    const winS = wins === 1 ? '' : 's';
+                    sentence = `${selected.name} was recommended by AI assistants ${mentions} time${s} this period, ranking in the top ${Math.ceil(avg)} on average — and placed #1 ${wins} time${winS}.`;
+                  } else if (avg != null && avg <= 3) {
+                    sentence = `${selected.name} appeared in ${mentions} AI shopping response${s} this period, consistently placed in the top 3 — a strong signal of growing AI presence.`;
+                  } else {
+                    sentence = `${selected.name} was featured in ${mentions} AI shopping response${s} this period, building its presence across AI recommendations.`;
+                  }
+                  return <p className="text-sm text-muted-foreground leading-relaxed">{sentence}</p>;
+                })()}
               </div>
             );
           })()}
