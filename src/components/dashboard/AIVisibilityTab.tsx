@@ -2268,6 +2268,225 @@ const BrandAttributesSection = ({ clientId, accent, clientName }: { clientId: st
 };
 
 
+// ---------- AI Shopping Visibility ----------
+interface ShoppingProductRow {
+  product_id: string;
+  name: string;
+  brand: string | null;
+  image_url: string | null;
+  visibility: number | null;
+  share_of_voice: number | null;
+  avg_position: number | null;
+  mention_count: number | null;
+  win_count: number | null;
+  price_range: Record<string, { min: number; max: number }> | null;
+  categories: string[] | null;
+  captured_date: string | null;
+}
+
+const fmtPriceRange = (pr: ShoppingProductRow['price_range']): string | null => {
+  if (!pr || typeof pr !== 'object') return null;
+  const entries = Object.entries(pr);
+  if (entries.length === 0) return null;
+  const usd = pr['USD'];
+  const [currency, range] = usd ? ['USD', usd] : entries[0];
+  if (!range || range.min == null || range.max == null) return null;
+  const sym = currency === 'USD' ? '$' : currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : '';
+  const fmt = (n: number) => `${sym}${Math.round(n).toLocaleString()}${sym ? '' : ' ' + currency}`;
+  return range.min === range.max ? fmt(range.min) : `${fmt(range.min)}–${fmt(range.max)}`;
+};
+
+const AiShoppingVisibilitySection = ({ clientId, accent }: { clientId: string | null; accent: string }) => {
+  const [rows, setRows] = useState<ShoppingProductRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(false);
+  const [selected, setSelected] = useState<ShoppingProductRow | null>(null);
+
+  useEffect(() => {
+    if (!clientId) { setLoading(false); return; }
+    let cancelled = false;
+    setLoading(true);
+    (async () => {
+      try {
+        const { data, error } = await supabase.rpc('peec_products_latest', { p_client_id: clientId, p_limit: 24 });
+        if (error) throw error;
+        const list: ShoppingProductRow[] = Array.isArray(data) ? data : [];
+        list.sort((a, b) => (b.visibility ?? 0) - (a.visibility ?? 0));
+        if (!cancelled) setRows(list);
+      } catch (e) {
+        console.error('[AiShoppingVisibility] load failed', e);
+        if (!cancelled) setRows([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [clientId]);
+
+  if (loading) {
+    return (
+      <section className="border border-border bg-card p-6">
+        <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">AI Shopping Visibility</h3>
+        <div className="space-y-2">
+          {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+        </div>
+      </section>
+    );
+  }
+
+  if (!rows.length) return null;
+
+  const captured = rows.find(r => r.captured_date)?.captured_date;
+  const capturedLabel = captured && !isNaN(new Date(captured).getTime())
+    ? new Date(captured).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : null;
+
+  const visible = expanded ? rows : rows.slice(0, 8);
+  const hasMore = rows.length > 8;
+
+  return (
+    <section className="border border-border bg-card">
+      <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-border">
+        <div>
+          <div className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground">AI Shopping Visibility</div>
+          <div className="text-sm text-foreground mt-1">Which of your products AI recommends most</div>
+        </div>
+        {capturedLabel && (
+          <div className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">
+            As of {capturedLabel}
+          </div>
+        )}
+      </div>
+
+      <ol className="divide-y divide-border">
+        {visible.map((p, idx) => {
+          const pct = Math.round((p.visibility ?? 0) * 100);
+          const isTop = idx === 0;
+          const initial = (p.name?.trim()?.[0] ?? '?').toUpperCase();
+          return (
+            <li key={p.product_id}>
+              <button
+                type="button"
+                onClick={() => setSelected(p)}
+                className={`w-full grid grid-cols-[28px_44px_1fr_auto] gap-4 items-center px-6 py-3 text-left hover:bg-muted/40 transition-colors ${isTop ? 'bg-muted/30' : ''}`}
+              >
+                <div className={`font-mono text-sm tabular-nums ${isTop ? 'text-foreground font-semibold' : 'text-muted-foreground'}`}>
+                  {idx + 1}
+                </div>
+                {p.image_url ? (
+                  <img src={p.image_url} alt="" className="h-10 w-10 rounded object-cover bg-muted" loading="lazy" />
+                ) : (
+                  <div className="h-10 w-10 rounded bg-muted flex items-center justify-center text-sm font-semibold text-muted-foreground">
+                    {initial}
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <div className={`truncate text-sm ${isTop ? 'font-semibold text-foreground' : 'font-medium text-foreground'}`}>
+                    {p.name}
+                  </div>
+                  <div className="mt-1.5 flex items-center gap-3">
+                    <div className="h-1.5 flex-1 max-w-[260px] rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{ width: `${pct}%`, backgroundColor: accent }}
+                      />
+                    </div>
+                    <div className="text-[11px] font-mono tabular-nums text-muted-foreground w-10 text-right">
+                      {pct}%
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 text-[11px] font-mono uppercase tracking-wider text-muted-foreground whitespace-nowrap">
+                  <span>Avg {p.avg_position != null ? `#${Number(p.avg_position).toFixed(1)}` : '—'}</span>
+                  <span>{(p.mention_count ?? 0).toLocaleString()} mentions</span>
+                </div>
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+
+      {hasMore && (
+        <div className="px-6 py-3 border-t border-border">
+          <button
+            type="button"
+            onClick={() => setExpanded(e => !e)}
+            className="inline-flex items-center gap-1 text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {expanded ? <>Show less <ChevronUp className="h-3 w-3" /></> : <>Show all {rows.length} products <ChevronDown className="h-3 w-3" /></>}
+          </button>
+        </div>
+      )}
+
+      <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
+        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+          {selected && (() => {
+            const vis = Math.round((selected.visibility ?? 0) * 100);
+            const sov = Math.round((selected.share_of_voice ?? 0) * 100);
+            const price = fmtPriceRange(selected.price_range);
+            const initial = (selected.name?.trim()?.[0] ?? '?').toUpperCase();
+            return (
+              <div className="space-y-6">
+                <SheetHeader>
+                  <div className="text-[10px] font-bold tracking-[0.15em] uppercase text-muted-foreground">AI Shopping</div>
+                  <SheetTitle className="text-xl leading-tight">{selected.name}</SheetTitle>
+                  {selected.brand && (
+                    <div className="text-sm text-muted-foreground">{selected.brand}</div>
+                  )}
+                </SheetHeader>
+
+                {selected.image_url ? (
+                  <img src={selected.image_url} alt="" className="w-full h-56 rounded object-cover bg-muted" />
+                ) : (
+                  <div className="w-full h-56 rounded bg-muted flex items-center justify-center text-5xl font-semibold text-muted-foreground">
+                    {initial}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-px bg-border border border-border">
+                  {[
+                    { label: 'Visibility', value: `${vis}%` },
+                    { label: 'Share of Voice', value: `${sov}%` },
+                    { label: 'Avg Position', value: selected.avg_position != null ? `#${Number(selected.avg_position).toFixed(1)}` : '—' },
+                    { label: 'Mentions', value: (selected.mention_count ?? 0).toLocaleString() },
+                    { label: 'Wins', value: (selected.win_count ?? 0).toLocaleString() },
+                    ...(price ? [{ label: 'Price range', value: price }] : []),
+                  ].map((s) => (
+                    <div key={s.label} className="bg-card p-3">
+                      <div className="text-[10px] font-bold tracking-[0.15em] uppercase text-muted-foreground">{s.label}</div>
+                      <div className="text-base font-semibold text-foreground mt-1 tabular-nums">{s.value}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {selected.categories && selected.categories.length > 0 && (
+                  <div>
+                    <div className="text-[10px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-2">Categories</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selected.categories.map((c) => (
+                        <span key={c} className="text-[11px] px-2 py-0.5 border border-border rounded-sm text-foreground">{c}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {selected.name} appeared in {(selected.mention_count ?? 0).toLocaleString()} AI shopping answers this period
+                  {selected.avg_position != null ? `, ranking on average at position ${Number(selected.avg_position).toFixed(1)}` : ''}.
+                </p>
+              </div>
+            );
+          })()}
+        </SheetContent>
+      </Sheet>
+    </section>
+  );
+};
+
+
+
+
+
 // ---------- Executive Summary ----------
 interface SummaryRow {
   headline: string | null;
