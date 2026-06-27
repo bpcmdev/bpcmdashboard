@@ -2599,6 +2599,13 @@ const AIVisibilityTab = () => {
       <ModelBrandMatrix rows={matrix} loading={loading.matrix} />
       <CompetitiveTable rows={summary} loading={loading.summary} />
       <PerPlatformCompetitiveSov rows={platformCompetitive} loading={loading.platformCompetitive} />
+      <PullQuotesSection
+        clientId={activeClientId}
+        p_start={p_start}
+        p_end={p_end}
+        clientName={clientName}
+      />
+
       <GapAnalysisSection
         clientId={activeClientId}
         p_start={p_start}
