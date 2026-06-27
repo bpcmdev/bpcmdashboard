@@ -2099,7 +2099,15 @@ const AIVisibilityTab = () => {
         custom={custom} setCustom={setCustom}
         platform={platform} setPlatform={setPlatform}
       />
-      <PlatformScoreCards rows={platformScores} loading={loading.platformScores} />
+      <PlatformScoreCards
+        rows={platformScores}
+        loading={loading.platformScores}
+        clientId={activeClientId}
+        pStart={p_start}
+        pEnd={p_end}
+        clientName={clientName}
+        onApplyPlatformFilter={(p) => setPlatform(p as Platform)}
+      />
       <KpiCards rows={kpis} loading={loading.kpis} />
       {isAdmin && (
         <GeoRecommendationsSection
