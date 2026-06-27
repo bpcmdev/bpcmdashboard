@@ -2162,6 +2162,327 @@ const BrandAttributesSection = ({ clientId, accent }: { clientId: string | null;
   );
 };
 
+// ---------- Executive Summary ----------
+interface SummaryRow {
+  headline: string | null;
+  narrative: string | null;
+  drivers: string[] | null;
+  watch_items: string[] | null;
+  period_start: string | null;
+  period_end: string | null;
+  created_at: string | null;
+}
+
+const safeDate = (v: string | null | undefined) => {
+  const d = v ? new Date(v) : null;
+  return d && !isNaN(d.getTime()) ? d : null;
+};
+const fmtMD = (v: string | null | undefined) => {
+  const d = safeDate(v);
+  return d ? format(d, 'MMM d') : '';
+};
+
+const ExecutiveSummarySection = ({
+  clientId, accent, isAdmin,
+}: { clientId: string; accent: string; isAdmin: boolean }) => {
+  const [row, setRow] = useState<SummaryRow | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [regenerating, setRegenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    (async () => {
+      try {
+        const { data, error: e } = await supabase.rpc('ai_visibility_summary_latest', {
+          p_client_id: clientId, p_period_type: 'week',
+        });
+        if (cancelled) return;
+        if (e) throw e;
+        const first = Array.isArray(data) && data.length > 0 ? (data[0] as SummaryRow) : null;
+        setRow(first);
+      } catch (err: any) {
+        if (!cancelled) { console.error('ai_visibility_summary_latest failed:', err); setRow(null); }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [clientId, tick]);
+
+  const regenerate = async () => {
+    setRegenerating(true);
+    setError(null);
+    try {
+      const { data, error: e } = await supabase.functions.invoke('ai-visibility-summary', {
+        body: { client_id: clientId, period_type: 'week', force: true },
+      });
+      if (e) throw e;
+      if (data && (data as any).empty) {
+        setRow(null);
+      } else {
+        setTick(t => t + 1);
+      }
+    } catch (err: any) {
+      console.error('ai-visibility-summary invoke failed:', err);
+      setError('Could not regenerate summary. Please try again.');
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
+  const periodLabel = row
+    ? [fmtMD(row.period_start), fmtMD(row.period_end)].filter(Boolean).join(' – ')
+    : '';
+
+  const generatedAt = row ? safeDate(row.created_at) : null;
+  const narrativeParas = (row?.narrative ?? '').split(/\n{2,}/).filter(Boolean);
+  const drivers = (row?.drivers ?? []).filter(Boolean);
+  const watch = (row?.watch_items ?? []).filter(Boolean);
+
+  return (
+    <section
+      className="bg-card border border-border rounded-sm relative overflow-hidden"
+      style={{ borderLeft: `3px solid ${accent}` }}
+    >
+      <div className="p-6 md:p-8">
+        <div className="flex items-start justify-between gap-4 mb-5">
+          <div className="flex items-center gap-3">
+            <span
+              className="text-[10px] font-bold tracking-[0.18em] uppercase text-muted-foreground"
+              style={{ color: accent }}
+            >
+              AI Visibility — Executive Summary
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            {periodLabel && (
+              <span className="text-[10px] font-mono tracking-[0.1em] uppercase text-muted-foreground">
+                {periodLabel}
+              </span>
+            )}
+            {isAdmin && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-[10px] tracking-[0.1em] uppercase"
+                disabled={regenerating}
+                onClick={regenerate}
+              >
+                {regenerating ? 'Regenerating…' : 'Regenerate'}
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {loading || regenerating ? (
+          <div className="space-y-3">
+            <Skeleton className="h-7 w-3/4" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-11/12" />
+            <Skeleton className="h-4 w-10/12" />
+            {regenerating && (
+              <p className="text-xs text-muted-foreground italic pt-2">
+                Generating the latest weekly summary… this takes 10–15 seconds.
+              </p>
+            )}
+          </div>
+        ) : !row ? (
+          <div className="py-10 text-center">
+            <p className="text-sm text-muted-foreground">
+              Your weekly AI visibility summary will appear here once generated.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {row.headline && (
+              <h2 className="font-display text-2xl md:text-3xl leading-tight tracking-tight text-foreground">
+                {row.headline}
+              </h2>
+            )}
+            {narrativeParas.length > 0 && (
+              <div className="space-y-3 max-w-3xl">
+                {narrativeParas.map((p, i) => (
+                  <p key={i} className="text-sm md:text-[15px] leading-relaxed text-foreground/85">
+                    {p}
+                  </p>
+                ))}
+              </div>
+            )}
+            {drivers.length > 0 && (
+              <div>
+                <h3 className="text-[10px] font-bold tracking-[0.18em] uppercase text-muted-foreground mb-2">
+                  Key Drivers
+                </h3>
+                <ul className="space-y-1.5">
+                  {drivers.map((d, i) => (
+                    <li key={i} className="flex gap-2 text-sm text-foreground/90">
+                      <span style={{ color: accent }} className="font-mono mt-0.5">•</span>
+                      <span>{d}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {watch.length > 0 && (
+              <div>
+                <h3 className="text-[10px] font-bold tracking-[0.18em] uppercase text-muted-foreground mb-2">
+                  Watch
+                </h3>
+                <ul className="space-y-1.5">
+                  {watch.map((w, i) => (
+                    <li key={i} className="flex gap-2 text-sm text-foreground/90">
+                      <span className="text-amber-600 font-mono mt-0.5">▲</span>
+                      <span>{w}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {generatedAt && (
+              <p className="text-[10px] tracking-[0.1em] uppercase text-muted-foreground pt-2 border-t border-border">
+                Generated {format(generatedAt, 'MMM d, yyyy · h:mm a')}
+              </p>
+            )}
+            {error && <p className="text-xs text-destructive">{error}</p>}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+};
+
+// ---------- What AI Is Saying About You (pull-quotes) ----------
+interface PullQuote { text: string; platform: string; date: string; sentiment: number | null }
+
+const extractMentionSentences = (text: string, brand: string): string[] => {
+  if (!text || !brand) return [];
+  const sentences = text.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(Boolean);
+  const lc = brand.toLowerCase();
+  return sentences.filter(s => s.toLowerCase().includes(lc));
+};
+
+const PullQuotesSection = ({
+  clientId, p_start, p_end, clientName,
+}: { clientId: string; p_start: string; p_end: string; clientName: string | null }) => {
+  const [quotes, setQuotes] = useState<PullQuote[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    (async () => {
+      try {
+        const { data, error } = await supabase.rpc('peec_chats_page', {
+          p_client_id: clientId,
+          p_start, p_end,
+          p_only_mentioned: true,
+          p_platform: 'all',
+          p_limit: 40,
+          p_offset: 0,
+        });
+        if (cancelled) return;
+        if (error) throw error;
+        const rows = (data ?? []) as ChatRow[];
+        const brand = clientName ?? '';
+        const collected: PullQuote[] = [];
+        const seen = new Set<string>();
+        for (const r of rows) {
+          const sents = extractMentionSentences(r.response_text ?? '', brand).slice(0, 2);
+          for (const s of sents) {
+            const key = s.replace(/\s+/g, ' ').toLowerCase().slice(0, 120);
+            if (seen.has(key)) continue;
+            seen.add(key);
+            const brandEntry = (r.brands_mentioned ?? []).find(
+              b => b.name && b.name.toLowerCase() === brand.toLowerCase(),
+            );
+            collected.push({
+              text: s,
+              platform: r.platform,
+              date: r.date,
+              sentiment: brandEntry?.sentiment ?? null,
+            });
+            if (collected.length >= 10) break;
+          }
+          if (collected.length >= 10) break;
+        }
+        setQuotes(collected);
+      } catch (err) {
+        console.error('pull-quotes fetch failed:', err);
+        if (!cancelled) setQuotes([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [clientId, p_start, p_end, clientName]);
+
+  const sentimentEdge = (s: number | null) => {
+    if (s == null) return 'border-l-transparent';
+    if (s > 0.15) return 'border-l-emerald-500';
+    if (s < -0.15) return 'border-l-red-500';
+    return 'border-l-slate-300';
+  };
+
+  return (
+    <section className="bg-card border border-border rounded-sm p-6">
+      <div className="mb-5">
+        <h3 className="font-display text-xl tracking-tight text-foreground">What AI Is Saying About You</h3>
+        <p className="text-[11px] font-mono tracking-[0.1em] uppercase text-muted-foreground mt-1">
+          Verbatim mentions from AI assistants
+        </p>
+      </div>
+
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-28 w-full" />
+          ))}
+        </div>
+      ) : quotes.length === 0 ? (
+        <div className="py-10 text-center text-sm text-muted-foreground">
+          No brand mentions to quote in this period yet.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {quotes.map((q, i) => {
+            const d = safeDate(q.date);
+            return (
+              <figure
+                key={i}
+                className={cn(
+                  'bg-background border border-border border-l-4 p-5 flex flex-col gap-4',
+                  sentimentEdge(q.sentiment),
+                )}
+              >
+                <blockquote className="font-display italic text-[15px] leading-relaxed text-foreground/90 relative">
+                  <span className="text-3xl leading-none text-muted-foreground mr-1 align-top">“</span>
+                  {q.text}
+                  <span className="text-2xl leading-none text-muted-foreground ml-0.5">”</span>
+                </blockquote>
+                <figcaption className="flex items-center justify-between mt-auto pt-2 border-t border-border">
+                  <span className={cn('px-2 py-0.5 text-[10px] font-bold tracking-[0.1em] uppercase', platformPillCls(q.platform))}>
+                    {platformLabel(q.platform)}
+                  </span>
+                  <span className="text-[10px] font-mono tracking-[0.1em] uppercase text-muted-foreground">
+                    {d ? format(d, 'MMM d, yyyy') : ''}
+                  </span>
+                </figcaption>
+              </figure>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+};
+
+
+
+
 
 // ---------- Main ----------
 const AIVisibilityTab = () => {
@@ -2249,6 +2570,11 @@ const AIVisibilityTab = () => {
         custom={custom} setCustom={setCustom}
         platform={platform} setPlatform={setPlatform}
       />
+      <ExecutiveSummarySection
+        clientId={activeClientId}
+        accent={clientColor || '#1B2B8A'}
+        isAdmin={isAdmin}
+      />
       <PlatformScoreCards
         rows={platformScores}
         loading={loading.platformScores}
@@ -2256,6 +2582,7 @@ const AIVisibilityTab = () => {
         pStart={p_start}
         pEnd={p_end}
         clientName={clientName}
+
         onApplyPlatformFilter={(p) => setPlatform(p as Platform)}
       />
       <BrandAttributesSection clientId={activeClientId} accent={clientColor || '#1B2B8A'} />
@@ -2272,6 +2599,13 @@ const AIVisibilityTab = () => {
       <ModelBrandMatrix rows={matrix} loading={loading.matrix} />
       <CompetitiveTable rows={summary} loading={loading.summary} />
       <PerPlatformCompetitiveSov rows={platformCompetitive} loading={loading.platformCompetitive} />
+      <PullQuotesSection
+        clientId={activeClientId}
+        p_start={p_start}
+        p_end={p_end}
+        clientName={clientName}
+      />
+
       <GapAnalysisSection
         clientId={activeClientId}
         p_start={p_start}
