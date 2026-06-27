@@ -2258,6 +2258,7 @@ const AIVisibilityTab = () => {
         clientName={clientName}
         onApplyPlatformFilter={(p) => setPlatform(p as Platform)}
       />
+      <BrandAttributesSection clientId={activeClientId} accent={clientColor || '#1B2B8A'} />
       <KpiCards rows={kpis} loading={loading.kpis} />
       {isAdmin && (
         <GeoRecommendationsSection
