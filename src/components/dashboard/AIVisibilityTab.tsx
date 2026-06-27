@@ -2208,6 +2208,7 @@ const ExecutiveSummarySection = ({
   const [regenerating, setRegenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
