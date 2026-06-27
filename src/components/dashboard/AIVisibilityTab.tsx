@@ -2460,8 +2460,6 @@ const AiShoppingVisibilitySection = ({ clientId, accent }: { clientId: string | 
         <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
           {selected && (() => {
             const vis = Math.round((selected.visibility ?? 0) * 100);
-            const sov = Math.round((selected.share_of_voice ?? 0) * 100);
-            const price = fmtPriceRange(selected.price_range);
             const initial = (selected.name?.trim()?.[0] ?? '?').toUpperCase();
             return (
               <div className="space-y-6">
@@ -2482,29 +2480,18 @@ const AiShoppingVisibilitySection = ({ clientId, accent }: { clientId: string | 
                 )}
 
                 {(() => {
-                  const wins = selected.win_count ?? 0;
                   const mentions = selected.mention_count ?? 0;
                   const avg = selected.avg_position;
-                  const winsValue = wins === 0
-                    ? 'Emerging'
-                    : wins <= 2
-                      ? `Rising · ${wins} time${wins === 1 ? '' : 's'}`
-                      : `Leading · ${wins} time${wins === 1 ? '' : 's'}`;
-                  const winsNote = wins === 0 ? 'Not yet ranked #1 — building presence' : null;
                   return (
-                    <div className="grid grid-cols-2 gap-px bg-border border border-border">
+                    <div className="grid grid-cols-3 gap-px bg-border border border-border">
                       {[
                         { label: 'Visibility', value: `${vis}%` },
-                        { label: 'Share of Voice', value: `${sov}%` },
                         { label: 'Avg Position', value: positionTierDetail(avg) },
                         { label: 'Mentions', value: mentions.toLocaleString() },
-                        { label: 'AI Top Picks', value: winsValue, note: winsNote },
-                        ...(price ? [{ label: 'Price range', value: price, note: null }] : []),
                       ].map((s) => (
                         <div key={s.label} className="bg-card p-3">
                           <div className="text-[10px] font-bold tracking-[0.15em] uppercase text-muted-foreground">{s.label}</div>
                           <div className="text-base font-semibold text-foreground mt-1 tabular-nums">{s.value}</div>
-                          {s.note && <div className="text-[11px] text-muted-foreground mt-1 leading-snug">{s.note}</div>}
                         </div>
                       ))}
                     </div>
