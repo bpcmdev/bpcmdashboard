@@ -2013,6 +2013,156 @@ const GeoRecommendationsSection = ({
   );
 };
 
+// ---------- How AI Describes You (brand attribute grid) ----------
+interface BrandAttrCompetitor { global_brand_id: string; name: string; domain?: string | null; mentions?: number | null }
+interface BrandAttrValue { value: string; mentions: number; mentions_delta?: number | null; competitor_mentions?: number[] | null }
+interface BrandAttrGroup { dimension_id: string; name: string; total_mentions: number; value_count: number; values: BrandAttrValue[] }
+interface BrandAttrRow {
+  captured_date?: string | null;
+  window_start?: string | null;
+  window_end?: string | null;
+  competitors: BrandAttrCompetitor[];
+  groups: BrandAttrGroup[];
+  total_groups: number;
+}
+
+const fmtDateSafe = (s?: string | null) => {
+  if (!s) return '';
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? '' : format(d, 'MMM d, yyyy');
+};
+
+const BrandAttributesSection = ({ clientId, accent }: { clientId: string | null; accent: string }) => {
+  const [row, setRow] = useState<BrandAttrRow | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!clientId) { setLoading(false); return; }
+    let cancelled = false;
+    setLoading(true);
+    (async () => {
+      try {
+        const { data, error } = await supabase.rpc('peec_brand_attributes_latest', { p_client_id: clientId });
+        if (error) throw error;
+        const r: BrandAttrRow | null = Array.isArray(data) ? (data[0] ?? null) : (data ?? null);
+        if (!cancelled) setRow(r);
+      } catch (e) {
+        console.error('[BrandAttributes] load failed', e);
+        if (!cancelled) setRow(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [clientId]);
+
+  const windowLabel = useMemo(() => {
+    if (!row) return '';
+    const a = fmtDateSafe(row.window_start);
+    const b = fmtDateSafe(row.window_end);
+    if (a && b) return `${a} – ${b}`;
+    return a || b || '';
+  }, [row]);
+
+  const isEmpty = !row || !row.groups || row.groups.length === 0 || row.total_groups === 0;
+
+  return (
+    <section className="border border-border bg-card">
+      <header className="px-6 pt-6 pb-4 flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <p className="font-mono-ui text-[10px] tracking-[0.22em] uppercase text-muted-foreground mb-1">
+            How AI Describes You
+          </p>
+          <h2 className="text-lg font-medium tracking-tight">
+            Attributes AI associates with your brand vs competitors
+          </h2>
+        </div>
+        {windowLabel && (
+          <p className="font-mono-ui text-[10px] tracking-[0.18em] uppercase text-muted-foreground pt-1">
+            {windowLabel}
+          </p>
+        )}
+      </header>
+
+      <div className="px-6 pb-6">
+        {loading ? (
+          <div className="space-y-4">
+            {[0,1,2].map(i => (
+              <div key={i} className="flex gap-4 items-start py-3 border-t border-border/60">
+                <Skeleton className="h-4 w-40" />
+                <div className="flex gap-2 flex-wrap flex-1">
+                  <Skeleton className="h-7 w-24" />
+                  <Skeleton className="h-7 w-20" />
+                  <Skeleton className="h-7 w-28" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : isEmpty ? (
+          <div className="py-10 text-center">
+            <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
+              AI hasn't formed strong product-attribute associations for this brand yet.
+              This builds as shopping-related prompts accumulate.
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-border/60">
+            {row!.groups.map(group => (
+              <div key={group.dimension_id} className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-4 md:gap-6 py-5">
+                <div>
+                  <p className="font-mono-ui text-[10px] tracking-[0.18em] uppercase text-muted-foreground">
+                    {group.name}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground/70 mt-1">
+                    {group.total_mentions} mention{group.total_mentions === 1 ? '' : 's'}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {group.values.map((v, idx) => {
+                    const overlaps = (v.competitor_mentions ?? [])
+                      .map((c, i) => ({ c, name: row!.competitors[i]?.name }))
+                      .filter(x => x.c > 0 && x.name);
+                    const overlapNames = overlaps.slice(0, 3).map(x => x.name);
+                    const overflow = overlaps.length - overlapNames.length;
+                    const delta = v.mentions_delta ?? 0;
+                    return (
+                      <div key={`${group.dimension_id}-${idx}`} className="flex flex-col gap-1">
+                        <div
+                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] font-medium"
+                          style={{ backgroundColor: `${accent}12`, color: accent, border: `1px solid ${accent}33` }}
+                        >
+                          <span>{v.value}</span>
+                          <span
+                            className="font-mono-ui text-[10px] px-1.5 py-0.5 rounded-full"
+                            style={{ backgroundColor: `${accent}22` }}
+                          >
+                            {v.mentions}
+                          </span>
+                          {delta !== 0 && (
+                            <span className={cn('text-[10px]', delta > 0 ? 'text-emerald-600' : 'text-rose-600')}>
+                              {delta > 0 ? '▲' : '▼'}{Math.abs(delta)}
+                            </span>
+                          )}
+                        </div>
+                        {overlapNames.length > 0 && (
+                          <p className="text-[10px] text-muted-foreground pl-1">
+                            also: {overlapNames.join(', ')}{overflow > 0 ? ` +${overflow}` : ''}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+};
+
+
 // ---------- Main ----------
 const AIVisibilityTab = () => {
   const { activeClientId, refreshKey } = useWeek();
