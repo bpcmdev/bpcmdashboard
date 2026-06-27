@@ -2324,14 +2324,17 @@ const ExecutiveSummarySection = ({
             )}
             {narrativeParas.length > 0 && (
               <div className="space-y-3 max-w-3xl">
-                {narrativeParas.map((p, i) => (
+                <p className="text-sm md:text-[15px] leading-relaxed text-foreground/85">
+                  {narrativeParas[0]}
+                </p>
+                {expanded && narrativeParas.slice(1).map((p, i) => (
                   <p key={i} className="text-sm md:text-[15px] leading-relaxed text-foreground/85">
                     {p}
                   </p>
                 ))}
               </div>
             )}
-            {drivers.length > 0 && (
+            {expanded && drivers.length > 0 && (
               <div>
                 <h3 className="text-[10px] font-bold tracking-[0.18em] uppercase text-muted-foreground mb-2">
                   Key Drivers
@@ -2346,7 +2349,7 @@ const ExecutiveSummarySection = ({
                 </ul>
               </div>
             )}
-            {watch.length > 0 && (
+            {expanded && watch.length > 0 && (
               <div>
                 <h3 className="text-[10px] font-bold tracking-[0.18em] uppercase text-muted-foreground mb-2">
                   Watch
@@ -2361,7 +2364,20 @@ const ExecutiveSummarySection = ({
                 </ul>
               </div>
             )}
-            {generatedAt && (
+            {(narrativeParas.length > 1 || drivers.length > 0 || watch.length > 0) && (
+              <button
+                type="button"
+                onClick={() => setExpanded(e => !e)}
+                className="inline-flex items-center gap-1.5 text-[11px] tracking-[0.12em] uppercase text-muted-foreground hover:text-foreground transition-colors font-mono-ui"
+              >
+                {expanded ? (
+                  <>Show less <ChevronUp className="h-3 w-3" /></>
+                ) : (
+                  <>Show more <ChevronDown className="h-3 w-3" /></>
+                )}
+              </button>
+            )}
+            {expanded && generatedAt && (
               <p className="text-[10px] tracking-[0.1em] uppercase text-muted-foreground pt-2 border-t border-border">
                 Generated {format(generatedAt, 'MMM d, yyyy · h:mm a')}
               </p>
