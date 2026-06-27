@@ -2166,7 +2166,7 @@ const BrandAttributesSection = ({ clientId, accent }: { clientId: string | null;
 // ---------- Main ----------
 const AIVisibilityTab = () => {
   const { activeClientId, refreshKey } = useWeek();
-  const { clientName: ownClientName, isAdmin, allClients } = useAdmin();
+  const { clientName: ownClientName, isAdmin, allClients, clientColor } = useAdmin();
   const activeClientName = useMemo(() => {
     const match = allClients.find(c => c.id === activeClientId);
     return match?.name ?? ownClientName;
