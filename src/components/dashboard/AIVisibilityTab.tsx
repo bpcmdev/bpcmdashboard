@@ -2032,7 +2032,7 @@ const fmtDateSafe = (s?: string | null) => {
   return isNaN(d.getTime()) ? '' : format(d, 'MMM d, yyyy');
 };
 
-const BrandAttributesSection = ({ clientId, accent }: { clientId: string | null; accent: string }) => {
+const BrandAttributesSection = ({ clientId, accent, clientName }: { clientId: string | null; accent: string; clientName: string }) => {
   const [row, setRow] = useState<BrandAttrRow | null>(null);
   const [loading, setLoading] = useState(true);
 
