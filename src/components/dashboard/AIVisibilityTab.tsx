@@ -2066,6 +2066,15 @@ const BrandAttributesSection = ({ clientId, accent }: { clientId: string | null;
 
   const isEmpty = !row || !row.groups || row.groups.length === 0 || row.total_groups === 0;
 
+  const [expanded, setExpanded] = useState(false);
+
+  // Hide the section entirely when there's no data — no header, no card, no empty state.
+  if (!loading && isEmpty) return null;
+
+  const groups = row?.groups ?? [];
+  const visibleGroups = expanded ? groups : groups.slice(0, 4);
+  const hasMore = groups.length > 4;
+
   return (
     <section className="border border-border bg-card">
       <header className="px-6 pt-6 pb-4 flex items-start justify-between gap-4 flex-wrap">
@@ -2098,69 +2107,78 @@ const BrandAttributesSection = ({ clientId, accent }: { clientId: string | null;
               </div>
             ))}
           </div>
-        ) : isEmpty ? (
-          <div className="py-10 text-center">
-            <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
-              AI hasn't formed strong product-attribute associations for this brand yet.
-              This builds as shopping-related prompts accumulate.
-            </p>
-          </div>
         ) : (
-          <div className="divide-y divide-border/60">
-            {row!.groups.map(group => (
-              <div key={group.dimension_id} className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-4 md:gap-6 py-5">
-                <div>
-                  <p className="font-mono-ui text-[10px] tracking-[0.18em] uppercase text-muted-foreground">
-                    {group.name}
-                  </p>
-                  <p className="text-[11px] text-muted-foreground/70 mt-1">
-                    {group.total_mentions} mention{group.total_mentions === 1 ? '' : 's'}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {group.values.map((v, idx) => {
-                    const overlaps = (v.competitor_mentions ?? [])
-                      .map((c, i) => ({ c, name: row!.competitors[i]?.name }))
-                      .filter(x => x.c > 0 && x.name);
-                    const overlapNames = overlaps.slice(0, 3).map(x => x.name);
-                    const overflow = overlaps.length - overlapNames.length;
-                    const delta = v.mentions_delta ?? 0;
-                    return (
-                      <div key={`${group.dimension_id}-${idx}`} className="flex flex-col gap-1">
-                        <div
-                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] font-medium"
-                          style={{ backgroundColor: `${accent}12`, color: accent, border: `1px solid ${accent}33` }}
-                        >
-                          <span>{v.value}</span>
-                          <span
-                            className="font-mono-ui text-[10px] px-1.5 py-0.5 rounded-full"
-                            style={{ backgroundColor: `${accent}22` }}
+          <>
+            <div className="divide-y divide-border/60">
+              {visibleGroups.map(group => (
+                <div key={group.dimension_id} className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-4 md:gap-6 py-5">
+                  <div>
+                    <p className="font-mono-ui text-[10px] tracking-[0.18em] uppercase text-muted-foreground">
+                      {group.name}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground/70 mt-1">
+                      {group.total_mentions} mention{group.total_mentions === 1 ? '' : 's'}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {group.values.map((v, idx) => {
+                      const overlaps = (v.competitor_mentions ?? [])
+                        .map((c, i) => ({ c, name: row!.competitors[i]?.name }))
+                        .filter(x => x.c > 0 && x.name);
+                      const overlapNames = overlaps.slice(0, 3).map(x => x.name);
+                      const overflow = overlaps.length - overlapNames.length;
+                      const delta = v.mentions_delta ?? 0;
+                      return (
+                        <div key={`${group.dimension_id}-${idx}`} className="flex flex-col gap-1">
+                          <div
+                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] font-medium"
+                            style={{ backgroundColor: `${accent}12`, color: accent, border: `1px solid ${accent}33` }}
                           >
-                            {v.mentions}
-                          </span>
-                          {delta !== 0 && (
-                            <span className={cn('text-[10px]', delta > 0 ? 'text-emerald-600' : 'text-rose-600')}>
-                              {delta > 0 ? '▲' : '▼'}{Math.abs(delta)}
+                            <span>{v.value}</span>
+                            <span
+                              className="font-mono-ui text-[10px] px-1.5 py-0.5 rounded-full"
+                              style={{ backgroundColor: `${accent}22` }}
+                            >
+                              {v.mentions}
                             </span>
+                            {delta !== 0 && (
+                              <span className={cn('text-[10px]', delta > 0 ? 'text-emerald-600' : 'text-rose-600')}>
+                                {delta > 0 ? '▲' : '▼'}{Math.abs(delta)}
+                              </span>
+                            )}
+                          </div>
+                          {overlapNames.length > 0 && (
+                            <p className="text-[10px] text-muted-foreground pl-1">
+                              also: {overlapNames.join(', ')}{overflow > 0 ? ` +${overflow}` : ''}
+                            </p>
                           )}
                         </div>
-                        {overlapNames.length > 0 && (
-                          <p className="text-[10px] text-muted-foreground pl-1">
-                            also: {overlapNames.join(', ')}{overflow > 0 ? ` +${overflow}` : ''}
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+            {hasMore && (
+              <button
+                type="button"
+                onClick={() => setExpanded(e => !e)}
+                className="mt-4 inline-flex items-center gap-1.5 text-[11px] tracking-[0.12em] uppercase text-muted-foreground hover:text-foreground transition-colors font-mono-ui"
+              >
+                {expanded ? (
+                  <>Show less <ChevronUp className="h-3 w-3" /></>
+                ) : (
+                  <>Show all {groups.length} attributes <ChevronDown className="h-3 w-3" /></>
+                )}
+              </button>
+            )}
+          </>
         )}
       </div>
     </section>
   );
 };
+
 
 // ---------- Executive Summary ----------
 interface SummaryRow {
