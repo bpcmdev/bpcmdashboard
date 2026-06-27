@@ -2067,6 +2067,7 @@ const BrandAttributesSection = ({ clientId, accent, clientName }: { clientId: st
   const isEmpty = !row || !row.groups || row.groups.length === 0 || row.total_groups === 0;
 
   const [expanded, setExpanded] = useState(false);
+  const [selectedAttr, setSelectedAttr] = useState<{ group: BrandAttrGroup; value: BrandAttrValue } | null>(null);
 
   // Hide the section entirely when there's no data — no header, no card, no empty state.
   if (!loading && isEmpty) return null;
