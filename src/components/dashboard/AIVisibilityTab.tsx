@@ -2941,6 +2941,7 @@ const AIVisibilityTab = () => {
       <ModelBrandMatrix rows={matrix} loading={loading.matrix} />
       <CompetitiveTable rows={summary} loading={loading.summary} />
       <PerPlatformCompetitiveSov rows={platformCompetitive} loading={loading.platformCompetitive} />
+      <AiShoppingVisibilitySection clientId={activeClientId} accent={clientColor || '#1B2B8A'} />
       <PullQuotesSection
         clientId={activeClientId}
         p_start={p_start}
