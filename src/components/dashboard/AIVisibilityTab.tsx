@@ -2481,21 +2481,35 @@ const AiShoppingVisibilitySection = ({ clientId, accent }: { clientId: string | 
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-px bg-border border border-border">
-                  {[
-                    { label: 'Visibility', value: `${vis}%` },
-                    { label: 'Share of Voice', value: `${sov}%` },
-                    { label: 'Avg Position', value: selected.avg_position != null ? `#${Number(selected.avg_position).toFixed(1)}` : '—' },
-                    { label: 'Mentions', value: (selected.mention_count ?? 0).toLocaleString() },
-                    { label: 'Wins', value: (selected.win_count ?? 0).toLocaleString() },
-                    ...(price ? [{ label: 'Price range', value: price }] : []),
-                  ].map((s) => (
-                    <div key={s.label} className="bg-card p-3">
-                      <div className="text-[10px] font-bold tracking-[0.15em] uppercase text-muted-foreground">{s.label}</div>
-                      <div className="text-base font-semibold text-foreground mt-1 tabular-nums">{s.value}</div>
+                {(() => {
+                  const wins = selected.win_count ?? 0;
+                  const mentions = selected.mention_count ?? 0;
+                  const avg = selected.avg_position;
+                  const winsValue = wins === 0
+                    ? 'Emerging'
+                    : wins <= 2
+                      ? `Rising · ${wins} time${wins === 1 ? '' : 's'}`
+                      : `Leading · ${wins} time${wins === 1 ? '' : 's'}`;
+                  const winsNote = wins === 0 ? 'Not yet ranked #1 — building presence' : null;
+                  return (
+                    <div className="grid grid-cols-2 gap-px bg-border border border-border">
+                      {[
+                        { label: 'Visibility', value: `${vis}%` },
+                        { label: 'Share of Voice', value: `${sov}%` },
+                        { label: 'Avg Position', value: positionTierDetail(avg) },
+                        { label: 'Mentions', value: mentions.toLocaleString() },
+                        { label: 'AI Top Picks', value: winsValue, note: winsNote },
+                        ...(price ? [{ label: 'Price range', value: price, note: null }] : []),
+                      ].map((s) => (
+                        <div key={s.label} className="bg-card p-3">
+                          <div className="text-[10px] font-bold tracking-[0.15em] uppercase text-muted-foreground">{s.label}</div>
+                          <div className="text-base font-semibold text-foreground mt-1 tabular-nums">{s.value}</div>
+                          {s.note && <div className="text-[11px] text-muted-foreground mt-1 leading-snug">{s.note}</div>}
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  );
+                })()}
 
                 {selected.categories && selected.categories.length > 0 && (
                   <div>
@@ -2508,10 +2522,23 @@ const AiShoppingVisibilitySection = ({ clientId, accent }: { clientId: string | 
                   </div>
                 )}
 
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {selected.name} appeared in {(selected.mention_count ?? 0).toLocaleString()} AI shopping answers this period
-                  {selected.avg_position != null ? `, ranking on average at position ${Number(selected.avg_position).toFixed(1)}` : ''}.
-                </p>
+                {(() => {
+                  const wins = selected.win_count ?? 0;
+                  const mentions = selected.mention_count ?? 0;
+                  const avg = selected.avg_position;
+                  if (mentions === 0) return null;
+                  const s = mentions === 1 ? '' : 's';
+                  let sentence: string;
+                  if (wins > 0 && avg != null) {
+                    const winS = wins === 1 ? '' : 's';
+                    sentence = `${selected.name} was recommended by AI assistants ${mentions} time${s} this period, ranking in the top ${Math.ceil(avg)} on average — and placed #1 ${wins} time${winS}.`;
+                  } else if (avg != null && avg <= 3) {
+                    sentence = `${selected.name} appeared in ${mentions} AI shopping response${s} this period, consistently placed in the top 3 — a strong signal of growing AI presence.`;
+                  } else {
+                    sentence = `${selected.name} was featured in ${mentions} AI shopping response${s} this period, building its presence across AI recommendations.`;
+                  }
+                  return <p className="text-sm text-muted-foreground leading-relaxed">{sentence}</p>;
+                })()}
               </div>
             );
           })()}
