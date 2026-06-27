@@ -312,7 +312,25 @@ const PeriodControls = ({
 );
 
 // ---------- Platform Score Cards ----------
-const PlatformScoreCards = ({ rows, loading }: { rows: PlatformScoreRow[]; loading: boolean }) => {
+const scoreBadge = (score: number): { label: string; cls: string } => {
+  if (score >= 40) return { label: 'STRONG', cls: 'bg-foreground text-background' };
+  if (score >= 20) return { label: 'MODERATE', cls: 'bg-corp-news' };
+  return { label: 'NEEDS WORK', cls: 'border border-destructive text-destructive' };
+};
+
+const PlatformScoreCards = ({
+  rows, loading, clientId, pStart, pEnd, clientName, onApplyPlatformFilter,
+}: {
+  rows: PlatformScoreRow[];
+  loading: boolean;
+  clientId: string;
+  pStart: string | null;
+  pEnd: string | null;
+  clientName?: string | null;
+  onApplyPlatformFilter?: (p: string) => void;
+}) => {
+  const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
+
   if (loading) {
     return (
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
@@ -321,37 +339,218 @@ const PlatformScoreCards = ({ rows, loading }: { rows: PlatformScoreRow[]; loadi
     );
   }
   const byPlatform = new Map(rows.map(r => [r.platform, r]));
+  const tileBase = 'text-left bg-card border border-border p-3 cursor-pointer hover:border-foreground/30 hover:-translate-y-0.5 transition-all focus:outline-none focus:ring-2 focus:ring-foreground/20';
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-      {ALL_KNOWN_PLATFORMS.map(key => {
-        const r = byPlatform.get(key);
-        if (!r) {
+    <>
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+        {ALL_KNOWN_PLATFORMS.map(key => {
+          const r = byPlatform.get(key);
+          if (!r) {
+            return (
+              <button
+                type="button"
+                key={key}
+                onClick={() => setSelectedPlatform(key)}
+                className={cn(tileBase, 'opacity-50')}
+              >
+                <p className="text-[10px] font-bold tracking-[0.1em] uppercase">{platformLabel(key)}</p>
+                <p className="text-xs text-muted-foreground mt-6">No data</p>
+              </button>
+            );
+          }
+          const score = Math.round((r.visibility ?? 0) * 100);
+          const badge = scoreBadge(score);
           return (
-            <div key={key} className="bg-card border border-border p-3 opacity-50">
+            <button
+              type="button"
+              key={key}
+              onClick={() => setSelectedPlatform(key)}
+              className={tileBase}
+            >
               <p className="text-[10px] font-bold tracking-[0.1em] uppercase">{platformLabel(key)}</p>
-              <p className="text-xs text-muted-foreground mt-6">No data</p>
-            </div>
+              <p style={{ fontFamily: 'DM Mono, monospace' }} className="text-3xl font-bold mt-2 mb-1 text-foreground">{score}</p>
+              <span className={cn('inline-block text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 mb-1.5', badge.cls)}>
+                {badge.label}
+              </span>
+              <p className="text-[9px] text-muted-foreground leading-tight">
+                SoV {fmtPct(r.share_of_voice)} · Sent {fmtInt(r.sentiment)} · Pos {fmtPos(r.avg_position)}
+              </p>
+            </button>
           );
+        })}
+      </div>
+      <PlatformDetailSheet
+        platform={selectedPlatform}
+        onClose={() => setSelectedPlatform(null)}
+        row={selectedPlatform ? byPlatform.get(selectedPlatform) ?? null : null}
+        clientId={clientId}
+        pStart={pStart}
+        pEnd={pEnd}
+        clientName={clientName}
+        onApplyPlatformFilter={onApplyPlatformFilter}
+      />
+    </>
+  );
+};
+
+const PlatformDetailSheet = ({
+  platform, onClose, row, clientId, pStart, pEnd, clientName, onApplyPlatformFilter,
+}: {
+  platform: string | null;
+  onClose: () => void;
+  row: PlatformScoreRow | null;
+  clientId: string;
+  pStart: string | null;
+  pEnd: string | null;
+  clientName?: string | null;
+  onApplyPlatformFilter?: (p: string) => void;
+}) => {
+  const [chats, setChats] = useState<ChatRow[]>([]);
+  const [loadingChats, setLoadingChats] = useState(false);
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!platform || !clientId) return;
+    let cancelled = false;
+    setExpanded(null);
+    setChats([]);
+    setLoadingChats(true);
+    (async () => {
+      try {
+        const { data, error } = await supabase.rpc('peec_chats_page', {
+          p_client_id: clientId,
+          p_start: pStart,
+          p_end: pEnd,
+          p_only_mentioned: true,
+          p_platform: platform,
+          p_limit: 15,
+          p_offset: 0,
+        });
+        if (cancelled) return;
+        if (error) {
+          console.error('peec_chats_page (platform sheet) failed:', error);
+          setChats([]);
+        } else {
+          setChats((data ?? []) as ChatRow[]);
         }
-        const score = Math.round((r.visibility ?? 0) * 100);
-        let badge: { label: string; cls: string };
-        if (score >= 40) badge = { label: 'STRONG', cls: 'bg-foreground text-background' };
-        else if (score >= 20) badge = { label: 'MODERATE', cls: 'bg-corp-news' };
-        else badge = { label: 'NEEDS WORK', cls: 'border border-destructive text-destructive' };
-        return (
-          <div key={key} className="bg-card border border-border p-3">
-            <p className="text-[10px] font-bold tracking-[0.1em] uppercase">{platformLabel(key)}</p>
-            <p style={{ fontFamily: 'DM Mono, monospace' }} className="text-3xl font-bold mt-2 mb-1 text-foreground">{score}</p>
-            <span className={cn('inline-block text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 mb-1.5', badge.cls)}>
-              {badge.label}
-            </span>
-            <p className="text-[9px] text-muted-foreground leading-tight">
-              SoV {fmtPct(r.share_of_voice)} · Sent {fmtInt(r.sentiment)} · Pos {fmtPos(r.avg_position)}
-            </p>
+      } catch (err) {
+        console.error('platform sheet chats fetch error:', err);
+        if (!cancelled) setChats([]);
+      } finally {
+        if (!cancelled) setLoadingChats(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [platform, clientId, pStart, pEnd]);
+
+  const open = platform !== null;
+  const score = row ? Math.round((row.visibility ?? 0) * 100) : null;
+  const badge = score != null ? scoreBadge(score) : null;
+  const mentionedLabel = clientName ? `${clientName.toUpperCase()} MENTIONS` : 'CLIENT MENTIONS';
+
+  return (
+    <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
+        {platform && (
+          <div className="space-y-6 pt-2">
+            <div>
+              <p className="font-mono-ui text-[10px] tracking-[0.22em] uppercase text-muted-foreground mb-1">
+                AI Platform
+              </p>
+              <SheetTitle className="font-display text-2xl font-bold tracking-tight">
+                {platformLabel(platform)}
+              </SheetTitle>
+            </div>
+
+            {!row ? (
+              <div className="bg-card border border-border p-4">
+                <p className="text-xs text-muted-foreground">No visibility data for this platform yet.</p>
+              </div>
+            ) : (
+              <>
+                <div className="bg-card border border-border p-4 flex items-center gap-4">
+                  <p style={{ fontFamily: 'DM Mono, monospace' }} className="text-5xl font-bold text-foreground tabular-nums">
+                    {score}
+                  </p>
+                  {badge && (
+                    <span className={cn('inline-block text-[10px] font-bold tracking-[0.12em] uppercase px-2 py-1', badge.cls)}>
+                      {badge.label}
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { label: 'Share of Voice', value: fmtPct(row.share_of_voice) },
+                    { label: 'Sentiment', value: fmtInt(row.sentiment) },
+                    { label: 'Avg Position', value: fmtPos(row.avg_position) },
+                  ].map((m) => (
+                    <div key={m.label} className="bg-card border border-border p-3">
+                      <p className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground mb-1">
+                        {m.label}
+                      </p>
+                      <p style={{ fontFamily: 'DM Mono, monospace' }} className="text-lg font-bold text-foreground tabular-nums">
+                        {m.value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            <section>
+              <h3 className="font-mono-ui text-[10px] tracking-[0.18em] uppercase text-muted-foreground mb-2">
+                {mentionedLabel} on {platformLabel(platform)}
+              </h3>
+              <div className="bg-card border border-border divide-y divide-border">
+                {loadingChats ? (
+                  Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="h-14 bg-muted/40 animate-pulse" />
+                  ))
+                ) : chats.length === 0 ? (
+                  <p className="text-xs text-muted-foreground p-4 text-center">
+                    No mentions on this platform in this period.
+                  </p>
+                ) : (
+                  chats.map((c) => {
+                    const isOpen = expanded === c.chat_id;
+                    return (
+                      <div key={c.chat_id}>
+                        <button
+                          type="button"
+                          onClick={() => setExpanded(isOpen ? null : c.chat_id)}
+                          className="w-full flex items-start gap-3 px-3 py-3 text-left hover:bg-muted/30 transition-colors"
+                        >
+                          <p className="flex-1 text-sm text-foreground line-clamp-2">{c.prompt_text}</p>
+                          <span className="font-mono-ui text-[10px] tracking-[0.1em] uppercase text-muted-foreground shrink-0 mt-0.5">
+                            Pos {c.client_position ?? '—'}
+                          </span>
+                        </button>
+                        {isOpen && (
+                          <div className="px-3 pb-3 -mt-1">
+                            <div className="bg-muted/30 border border-border p-3 max-h-64 overflow-y-auto whitespace-pre-wrap text-xs leading-relaxed text-foreground">
+                              {c.response_text || '— no response text —'}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </section>
+
+            {onApplyPlatformFilter && (
+              <button
+                onClick={() => { onApplyPlatformFilter(platform); onClose(); }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 border border-border text-[11px] font-mono-ui tracking-[0.18em] uppercase font-medium hover:bg-muted/40 transition-colors"
+              >
+                View all {platformLabel(platform)} chats →
+              </button>
+            )}
           </div>
-        );
-      })}
-    </div>
+        )}
+      </SheetContent>
+    </Sheet>
   );
 };
 
