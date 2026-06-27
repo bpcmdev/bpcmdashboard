@@ -2134,8 +2134,10 @@ const BrandAttributesSection = ({ clientId, accent, clientName }: { clientId: st
                       const delta = v.mentions_delta ?? 0;
                       return (
                         <div key={`${group.dimension_id}-${idx}`} className="flex flex-col gap-1">
-                          <div
-                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] font-medium"
+                          <button
+                            type="button"
+                            onClick={() => setSelectedAttr({ group, value: v })}
+                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] font-medium cursor-pointer transition-all hover:brightness-95 hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
                             style={{ backgroundColor: `${accent}12`, color: accent, border: `1px solid ${accent}33` }}
                           >
                             <span>{v.value}</span>
@@ -2150,7 +2152,7 @@ const BrandAttributesSection = ({ clientId, accent, clientName }: { clientId: st
                                 {delta > 0 ? '▲' : '▼'}{Math.abs(delta)}
                               </span>
                             )}
-                          </div>
+                          </button>
                           {overlapNames.length > 0 && (
                             <p className="text-[10px] text-muted-foreground pl-1">
                               also: {overlapNames.join(', ')}{overflow > 0 ? ` +${overflow}` : ''}
