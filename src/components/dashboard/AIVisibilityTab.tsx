@@ -2296,6 +2296,30 @@ const fmtPriceRange = (pr: ShoppingProductRow['price_range']): string | null => 
   return range.min === range.max ? fmt(range.min) : `${fmt(range.min)}–${fmt(range.max)}`;
 };
 
+const positionTier = (p: number | null | undefined): string => {
+  if (p == null) return '—';
+  if (p <= 3) return 'Top 3';
+  if (p <= 5) return 'Top 5';
+  if (p <= 10) return 'Featured';
+  return 'Present';
+};
+
+const positionTierDetail = (p: number | null | undefined): string => {
+  if (p == null) return '—';
+  const n = Number(p).toFixed(1);
+  if (p <= 3) return `Top 3 · #${n}`;
+  if (p <= 5) return `Top 5 · #${n}`;
+  if (p <= 10) return `Featured · #${n}`;
+  return `Present · #${n}`;
+};
+
+const rankTier = (idx: number, expanded: boolean): { label: string; tone: 'top' | 'high' | 'growing' | 'active' } => {
+  if (idx === 0) return { label: 'Most Visible', tone: 'top' };
+  if (idx <= 2) return { label: 'High Visibility', tone: 'high' };
+  if (idx <= 7) return { label: 'Growing Presence', tone: 'growing' };
+  return { label: 'Active', tone: 'active' };
+};
+
 const AiShoppingVisibilitySection = ({ clientId, accent }: { clientId: string | null; accent: string }) => {
   const [rows, setRows] = useState<ShoppingProductRow[]>([]);
   const [loading, setLoading] = useState(true);
