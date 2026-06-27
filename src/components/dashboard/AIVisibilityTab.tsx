@@ -2387,15 +2387,29 @@ const AiShoppingVisibilitySection = ({ clientId, accent }: { clientId: string | 
           const pct = Math.round((p.visibility ?? 0) * 100);
           const isTop = idx === 0;
           const initial = (p.name?.trim()?.[0] ?? '?').toUpperCase();
+          const tier = rankTier(idx, expanded);
+          const tierClass =
+            tier.tone === 'top'
+              ? 'text-foreground border-transparent'
+              : 'text-muted-foreground border-border bg-muted/40';
+          const tierStyle =
+            tier.tone === 'top'
+              ? { backgroundColor: `${accent}1A`, color: accent }
+              : undefined;
           return (
             <li key={p.product_id}>
               <button
                 type="button"
                 onClick={() => setSelected(p)}
-                className={`w-full grid grid-cols-[28px_44px_1fr_auto] gap-4 items-center px-6 py-3 text-left hover:bg-muted/40 transition-colors ${isTop ? 'bg-muted/30' : ''}`}
+                className={`w-full grid grid-cols-[120px_44px_1fr_auto] gap-4 items-center px-6 py-3 text-left hover:bg-muted/40 transition-colors ${isTop ? 'bg-muted/30' : ''}`}
               >
-                <div className={`font-mono text-sm tabular-nums ${isTop ? 'text-foreground font-semibold' : 'text-muted-foreground'}`}>
-                  {idx + 1}
+                <div>
+                  <span
+                    className={`inline-block px-2 py-0.5 rounded-sm border text-[10px] font-mono font-semibold uppercase tracking-[0.12em] ${tierClass}`}
+                    style={tierStyle}
+                  >
+                    {tier.label}
+                  </span>
                 </div>
                 {p.image_url ? (
                   <img src={p.image_url} alt="" className="h-10 w-10 rounded object-cover bg-muted" loading="lazy" />
@@ -2421,7 +2435,7 @@ const AiShoppingVisibilitySection = ({ clientId, accent }: { clientId: string | 
                   </div>
                 </div>
                 <div className="flex items-center gap-4 text-[11px] font-mono uppercase tracking-wider text-muted-foreground whitespace-nowrap">
-                  <span>Avg {p.avg_position != null ? `#${Number(p.avg_position).toFixed(1)}` : '—'}</span>
+                  <span>{positionTier(p.avg_position)}</span>
                   <span>{(p.mention_count ?? 0).toLocaleString()} mentions</span>
                 </div>
               </button>
