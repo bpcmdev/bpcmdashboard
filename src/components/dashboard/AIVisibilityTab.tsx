@@ -2032,7 +2032,7 @@ const fmtDateSafe = (s?: string | null) => {
   return isNaN(d.getTime()) ? '' : format(d, 'MMM d, yyyy');
 };
 
-const BrandAttributesSection = ({ clientId, accent }: { clientId: string | null; accent: string }) => {
+const BrandAttributesSection = ({ clientId, accent, clientName }: { clientId: string | null; accent: string; clientName: string }) => {
   const [row, setRow] = useState<BrandAttrRow | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -2067,6 +2067,7 @@ const BrandAttributesSection = ({ clientId, accent }: { clientId: string | null;
   const isEmpty = !row || !row.groups || row.groups.length === 0 || row.total_groups === 0;
 
   const [expanded, setExpanded] = useState(false);
+  const [selectedAttr, setSelectedAttr] = useState<{ group: BrandAttrGroup; value: BrandAttrValue } | null>(null);
 
   // Hide the section entirely when there's no data — no header, no card, no empty state.
   if (!loading && isEmpty) return null;
@@ -2085,6 +2086,9 @@ const BrandAttributesSection = ({ clientId, accent }: { clientId: string | null;
           <h2 className="text-lg font-medium tracking-tight">
             Attributes AI associates with your brand vs competitors
           </h2>
+          <p className="text-[12px] text-muted-foreground mt-1.5">
+            Tap any attribute to see how AI describes it and how you compare.
+          </p>
         </div>
         {windowLabel && (
           <p className="font-mono-ui text-[10px] tracking-[0.18em] uppercase text-muted-foreground pt-1">
@@ -2130,8 +2134,10 @@ const BrandAttributesSection = ({ clientId, accent }: { clientId: string | null;
                       const delta = v.mentions_delta ?? 0;
                       return (
                         <div key={`${group.dimension_id}-${idx}`} className="flex flex-col gap-1">
-                          <div
-                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] font-medium"
+                          <button
+                            type="button"
+                            onClick={() => setSelectedAttr({ group, value: v })}
+                            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] font-medium cursor-pointer transition-all hover:brightness-95 hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
                             style={{ backgroundColor: `${accent}12`, color: accent, border: `1px solid ${accent}33` }}
                           >
                             <span>{v.value}</span>
@@ -2146,7 +2152,7 @@ const BrandAttributesSection = ({ clientId, accent }: { clientId: string | null;
                                 {delta > 0 ? '▲' : '▼'}{Math.abs(delta)}
                               </span>
                             )}
-                          </div>
+                          </button>
                           {overlapNames.length > 0 && (
                             <p className="text-[10px] text-muted-foreground pl-1">
                               also: {overlapNames.join(', ')}{overflow > 0 ? ` +${overflow}` : ''}
@@ -2175,6 +2181,88 @@ const BrandAttributesSection = ({ clientId, accent }: { clientId: string | null;
           </>
         )}
       </div>
+      <Sheet open={!!selectedAttr} onOpenChange={(o) => { if (!o) setSelectedAttr(null); }}>
+        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+          {selectedAttr && (() => {
+            const { group, value: v } = selectedAttr;
+            const dimLower = group.name.toLowerCase();
+            const mentions = v.mentions ?? 0;
+            const delta = v.mentions_delta ?? 0;
+            const competitors = row?.competitors ?? [];
+            const compRanked = (v.competitor_mentions ?? [])
+              .map((count, i) => ({ name: competitors[i]?.name ?? `Competitor ${i + 1}`, count: count ?? 0 }))
+              .filter(x => x.count > 0)
+              .sort((a, b) => b.count - a.count);
+            const topCompCount = compRanked[0]?.count ?? 0;
+            const leadsOrTies = mentions >= topCompCount;
+            const insight = compRanked.length === 0
+              ? `No competitors were described this way — this is a distinctive association for ${clientName}.`
+              : leadsOrTies
+                ? `This is a strength ${clientName} is associated with more than most competitors.`
+                : `Competitors currently own this association more strongly — an opportunity to reinforce it in earned coverage.`;
+            return (
+              <div className="space-y-6">
+                <SheetHeader className="space-y-2 text-left">
+                  <p className="font-mono-ui text-[10px] tracking-[0.22em] uppercase text-muted-foreground">
+                    {group.name}
+                  </p>
+                  <SheetTitle className="text-2xl font-medium tracking-tight" style={{ color: accent }}>
+                    {v.value}
+                  </SheetTitle>
+                </SheetHeader>
+
+                <p className="text-sm leading-relaxed text-foreground">
+                  Across AI assistants this period, {clientName}'s {dimLower} was described as
+                  {' '}&ldquo;{v.value}&rdquo; in {mentions} response{mentions === 1 ? '' : 's'}.
+                </p>
+
+                <div className="text-[12px]">
+                  {delta > 0 && <span className="text-emerald-600">▲ Up {delta} vs the prior period</span>}
+                  {delta < 0 && <span className="text-rose-600">▼ Down {Math.abs(delta)} vs the prior period</span>}
+                  {delta === 0 && <span className="text-muted-foreground">No change vs the prior period.</span>}
+                </div>
+
+                <div>
+                  <p className="font-mono-ui text-[10px] tracking-[0.18em] uppercase text-muted-foreground mb-2">
+                    How often competitors are described this way
+                  </p>
+                  {compRanked.length === 0 ? (
+                    <p className="text-[12px] text-muted-foreground">
+                      No competitors were described this way — this is a distinctive association for {clientName}.
+                    </p>
+                  ) : (
+                    <ul className="space-y-1.5">
+                      <li className="flex items-center justify-between text-[12px] px-2.5 py-1.5 rounded-md" style={{ backgroundColor: `${accent}10`, border: `1px solid ${accent}33` }}>
+                        <span className="font-medium" style={{ color: accent }}>{clientName} (you)</span>
+                        <span className="font-mono-ui" style={{ color: accent }}>{mentions}</span>
+                      </li>
+                      {compRanked.map((c, i) => (
+                        <li key={i} className="flex items-center justify-between text-[12px] px-2.5 py-1.5 rounded-md bg-muted/40">
+                          <span>{c.name}</span>
+                          <span className="font-mono-ui text-muted-foreground">{c.count}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                <div className="border-t border-border pt-4">
+                  <p className="font-mono-ui text-[10px] tracking-[0.18em] uppercase text-muted-foreground mb-1.5">
+                    What this means
+                  </p>
+                  <p className="text-[13px] leading-relaxed text-foreground">{insight}</p>
+                </div>
+
+                {windowLabel && (
+                  <p className="text-[10px] text-muted-foreground pt-2 border-t border-border/60">
+                    Perception window: {windowLabel}
+                  </p>
+                )}
+              </div>
+            );
+          })()}
+        </SheetContent>
+      </Sheet>
     </section>
   );
 };
@@ -2620,7 +2708,7 @@ const AIVisibilityTab = () => {
 
         onApplyPlatformFilter={(p) => setPlatform(p as Platform)}
       />
-      <BrandAttributesSection clientId={activeClientId} accent={clientColor || '#1B2B8A'} />
+      <BrandAttributesSection clientId={activeClientId} accent={clientColor || '#1B2B8A'} clientName={clientName || 'your brand'} />
       <KpiCards rows={kpis} loading={loading.kpis} />
       {isAdmin && (
         <GeoRecommendationsSection
