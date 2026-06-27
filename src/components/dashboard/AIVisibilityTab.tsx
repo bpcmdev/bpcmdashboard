@@ -2086,6 +2086,9 @@ const BrandAttributesSection = ({ clientId, accent, clientName }: { clientId: st
           <h2 className="text-lg font-medium tracking-tight">
             Attributes AI associates with your brand vs competitors
           </h2>
+          <p className="text-[12px] text-muted-foreground mt-1.5">
+            Tap any attribute to see how AI describes it and how you compare.
+          </p>
         </div>
         {windowLabel && (
           <p className="font-mono-ui text-[10px] tracking-[0.18em] uppercase text-muted-foreground pt-1">
