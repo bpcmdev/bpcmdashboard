@@ -2181,6 +2181,88 @@ const BrandAttributesSection = ({ clientId, accent, clientName }: { clientId: st
           </>
         )}
       </div>
+      <Sheet open={!!selectedAttr} onOpenChange={(o) => { if (!o) setSelectedAttr(null); }}>
+        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+          {selectedAttr && (() => {
+            const { group, value: v } = selectedAttr;
+            const dimLower = group.name.toLowerCase();
+            const mentions = v.mentions ?? 0;
+            const delta = v.mentions_delta ?? 0;
+            const competitors = row?.competitors ?? [];
+            const compRanked = (v.competitor_mentions ?? [])
+              .map((count, i) => ({ name: competitors[i]?.name ?? `Competitor ${i + 1}`, count: count ?? 0 }))
+              .filter(x => x.count > 0)
+              .sort((a, b) => b.count - a.count);
+            const topCompCount = compRanked[0]?.count ?? 0;
+            const leadsOrTies = mentions >= topCompCount;
+            const insight = compRanked.length === 0
+              ? `No competitors were described this way — this is a distinctive association for ${clientName}.`
+              : leadsOrTies
+                ? `This is a strength ${clientName} is associated with more than most competitors.`
+                : `Competitors currently own this association more strongly — an opportunity to reinforce it in earned coverage.`;
+            return (
+              <div className="space-y-6">
+                <SheetHeader className="space-y-2 text-left">
+                  <p className="font-mono-ui text-[10px] tracking-[0.22em] uppercase text-muted-foreground">
+                    {group.name}
+                  </p>
+                  <SheetTitle className="text-2xl font-medium tracking-tight" style={{ color: accent }}>
+                    {v.value}
+                  </SheetTitle>
+                </SheetHeader>
+
+                <p className="text-sm leading-relaxed text-foreground">
+                  Across AI assistants this period, {clientName}'s {dimLower} was described as
+                  {' '}&ldquo;{v.value}&rdquo; in {mentions} response{mentions === 1 ? '' : 's'}.
+                </p>
+
+                <div className="text-[12px]">
+                  {delta > 0 && <span className="text-emerald-600">▲ Up {delta} vs the prior period</span>}
+                  {delta < 0 && <span className="text-rose-600">▼ Down {Math.abs(delta)} vs the prior period</span>}
+                  {delta === 0 && <span className="text-muted-foreground">No change vs the prior period.</span>}
+                </div>
+
+                <div>
+                  <p className="font-mono-ui text-[10px] tracking-[0.18em] uppercase text-muted-foreground mb-2">
+                    How often competitors are described this way
+                  </p>
+                  {compRanked.length === 0 ? (
+                    <p className="text-[12px] text-muted-foreground">
+                      No competitors were described this way — this is a distinctive association for {clientName}.
+                    </p>
+                  ) : (
+                    <ul className="space-y-1.5">
+                      <li className="flex items-center justify-between text-[12px] px-2.5 py-1.5 rounded-md" style={{ backgroundColor: `${accent}10`, border: `1px solid ${accent}33` }}>
+                        <span className="font-medium" style={{ color: accent }}>{clientName} (you)</span>
+                        <span className="font-mono-ui" style={{ color: accent }}>{mentions}</span>
+                      </li>
+                      {compRanked.map((c, i) => (
+                        <li key={i} className="flex items-center justify-between text-[12px] px-2.5 py-1.5 rounded-md bg-muted/40">
+                          <span>{c.name}</span>
+                          <span className="font-mono-ui text-muted-foreground">{c.count}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                <div className="border-t border-border pt-4">
+                  <p className="font-mono-ui text-[10px] tracking-[0.18em] uppercase text-muted-foreground mb-1.5">
+                    What this means
+                  </p>
+                  <p className="text-[13px] leading-relaxed text-foreground">{insight}</p>
+                </div>
+
+                {windowLabel && (
+                  <p className="text-[10px] text-muted-foreground pt-2 border-t border-border/60">
+                    Perception window: {windowLabel}
+                  </p>
+                )}
+              </div>
+            );
+          })()}
+        </SheetContent>
+      </Sheet>
     </section>
   );
 };
