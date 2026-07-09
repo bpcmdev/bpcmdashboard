@@ -3162,14 +3162,14 @@ const AIVisibilityTab = () => {
         competitiveRows={platformCompetitive}
         clientName={clientName}
       />
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <TopDomainsTable rows={domains} loading={loading.domains} />
-        <TopUrlsTable rows={urls} loading={loading.urls} />
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <SearchQueriesTable rows={queries} loading={loading.queries} />
-        <ShoppingTable rows={products} loading={loading.products} />
-      </div>
+      <SourcesAndQueriesSection
+        domains={domains}
+        urls={urls}
+        queries={queries}
+        products={products}
+        loading={loading}
+        accent={clientColor || '#1B2B8A'}
+      />
       <ConversationIntelligence
         clientId={activeClientId}
         p_start={p_start}
