@@ -1844,6 +1844,56 @@ const ShoppingTable = ({ rows, loading }: { rows: ProductRow[]; loading: boolean
   );
 };
 
+// ---------- Sources & Queries switcher ----------
+type SourcesView = 'domains' | 'urls' | 'queries' | 'products';
+const SourcesAndQueriesSection = ({
+  domains, urls, queries, products, loading, accent,
+}: {
+  domains: DomainRow[];
+  urls: UrlRow[];
+  queries: QueryRow[];
+  products: ProductRow[];
+  loading: { domains: boolean; urls: boolean; queries: boolean; products: boolean };
+  accent: string;
+}) => {
+  const [view, setView] = useState<SourcesView>('domains');
+  const options = [
+    { key: 'domains', label: 'Top Domains' },
+    { key: 'urls', label: 'Source URLs' },
+    { key: 'queries', label: 'Search Queries' },
+    { key: 'products', label: 'Products' },
+  ] as const;
+
+  return (
+    <div className="bg-card border border-border p-5 space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <h3 className="font-mono-ui text-[10px] tracking-[0.22em] uppercase text-muted-foreground">
+          Sources & Queries
+        </h3>
+        <div className="flex gap-0 border border-border w-fit">
+          {options.map((opt) => (
+            <button
+              key={opt.key}
+              onClick={() => setView(opt.key)}
+              className={cn(
+                'px-3 py-1.5 text-[10px] font-semibold tracking-[0.1em] uppercase transition-colors',
+                view === opt.key ? 'text-white' : 'text-muted-foreground hover:text-foreground'
+              )}
+              style={view === opt.key ? { backgroundColor: accent } : undefined}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {view === 'domains' && <TopDomainsTable rows={domains} loading={loading.domains} />}
+      {view === 'urls' && <TopUrlsTable rows={urls} loading={loading.urls} />}
+      {view === 'queries' && <SearchQueriesTable rows={queries} loading={loading.queries} />}
+      {view === 'products' && <ShoppingTable rows={products} loading={loading.products} />}
+    </div>
+  );
+};
+
 // ---------- AI GEO Recommendations (admin-only) ----------
 interface GeoRecommendation {
   title: string;
