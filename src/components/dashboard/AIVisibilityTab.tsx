@@ -2890,7 +2890,7 @@ const PullQuotesSection = ({
             <Skeleton key={i} className="h-28 w-full" />
           ))}
         </div>
-      ) : quotes.length === 0 ? (
+      ) : quotes.length < 2 ? (
         <div className="py-10 text-center text-sm text-muted-foreground">
           No brand mentions to quote in this period yet.
         </div>
@@ -2902,13 +2902,13 @@ const PullQuotesSection = ({
               <figure
                 key={i}
                 className={cn(
-                  'bg-background border border-border border-l-4 p-5 flex flex-col gap-4',
+                  'bg-background border border-border border-l-4 p-5 flex flex-col gap-4 min-h-[180px]',
                   sentimentEdge(q.sentiment),
                 )}
               >
                 <blockquote className="font-display italic text-[15px] leading-relaxed text-foreground/90 relative">
                   <span className="text-3xl leading-none text-muted-foreground mr-1 align-top">“</span>
-                  {q.text}
+                  <span className="line-clamp-3 inline">{q.text}</span>
                   <span className="text-2xl leading-none text-muted-foreground ml-0.5">”</span>
                 </blockquote>
                 <figcaption className="flex items-center justify-between mt-auto pt-2 border-t border-border">
