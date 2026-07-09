@@ -2761,11 +2761,56 @@ const ExecutiveSummarySection = ({
 // ---------- What AI Is Saying About You (pull-quotes) ----------
 interface PullQuote { text: string; platform: string; date: string; sentiment: number | null }
 
+const cleanSentence = (raw: string): string => {
+  let s = raw;
+  s = s.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1');
+  s = s.replace(/https?:\/\/\S+/gi, '');
+  s = s.replace(/\?utm_[^\s)]*/gi, '');
+  s = s.replace(/utm_[a-z_]+=[^\s&)]+/gi, '');
+  s = s.replace(/\*\*|\*|`+|#{1,6}\s?|>\s?|---+|\|\|\|/g, '');
+  s = s.replace(/^\s*(?:[-•]|\d+[.)])\s+/, '');
+  s = s.replace(/\s+/g, ' ').trim();
+  s = s.replace(/\s*[|,\-–—]\s*$/, '').trim();
+  return s;
+};
+
+const countBrandLikeTokens = (s: string, brand: string): number => {
+  const brandLc = brand.toLowerCase();
+  const matches = s.match(/\b(?:[A-Z][a-zA-Z0-9&.'-]+)(?:\s+(?:[A-Z][a-zA-Z0-9&.'-]+|of|de|la|&)){0,2}\b/g) ?? [];
+  const set = new Set<string>();
+  const stop = /^(The|This|That|These|Those|It|I|A|An|AI|In|On|At|For|And|But|Or|With|By|From|To|As|Is|Are|Was|Were|Its|Their|Our|Your|My|While|When|Where|Why|How|What|Who|Which|Also|However|Though|Although|Because|If|So|Yet|Not|No|Yes|Best|Top|New|First|Most|More|Less)$/i;
+  for (const m of matches) {
+    const lc = m.toLowerCase();
+    if (lc === brandLc || brandLc.includes(lc) || lc.includes(brandLc)) continue;
+    if (stop.test(m)) continue;
+    set.add(lc);
+  }
+  return set.size;
+};
+
 const extractMentionSentences = (text: string, brand: string): string[] => {
   if (!text || !brand) return [];
   const sentences = text.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(Boolean);
   const lc = brand.toLowerCase();
-  return sentences.filter(s => s.toLowerCase().includes(lc));
+  const out: string[] = [];
+  for (const raw of sentences) {
+    const cleaned = cleanSentence(raw);
+    if (cleaned.length < 40 || cleaned.length > 240) continue;
+    if (/https?:\/\//i.test(cleaned)) continue;
+    if (/utm_/i.test(cleaned)) continue;
+    if ((cleaned.match(/\|/g) ?? []).length >= 2) continue;
+    if (!cleaned.toLowerCase().includes(lc)) continue;
+    if (countBrandLikeTokens(cleaned, brand) >= 3) continue;
+    const idx = cleaned.toLowerCase().indexOf(lc);
+    let finalText = cleaned;
+    if (idx > 60) {
+      const sub = cleaned.slice(Math.max(0, idx - 10));
+      const trimmed = sub.replace(/^[^A-Z0-9"']*/, '');
+      if (trimmed.length >= 40 && trimmed.length <= 240) finalText = trimmed;
+    }
+    out.push(finalText);
+  }
+  return out;
 };
 
 const PullQuotesSection = ({
@@ -2808,9 +2853,9 @@ const PullQuotesSection = ({
               date: r.date,
               sentiment: brandEntry?.sentiment ?? null,
             });
-            if (collected.length >= 10) break;
+            if (collected.length >= 8) break;
           }
-          if (collected.length >= 10) break;
+          if (collected.length >= 8) break;
         }
         setQuotes(collected);
       } catch (err) {
@@ -2845,7 +2890,7 @@ const PullQuotesSection = ({
             <Skeleton key={i} className="h-28 w-full" />
           ))}
         </div>
-      ) : quotes.length === 0 ? (
+      ) : quotes.length < 2 ? (
         <div className="py-10 text-center text-sm text-muted-foreground">
           No brand mentions to quote in this period yet.
         </div>
@@ -2857,13 +2902,13 @@ const PullQuotesSection = ({
               <figure
                 key={i}
                 className={cn(
-                  'bg-background border border-border border-l-4 p-5 flex flex-col gap-4',
+                  'bg-background border border-border border-l-4 p-5 flex flex-col gap-4 min-h-[180px]',
                   sentimentEdge(q.sentiment),
                 )}
               >
                 <blockquote className="font-display italic text-[15px] leading-relaxed text-foreground/90 relative">
                   <span className="text-3xl leading-none text-muted-foreground mr-1 align-top">“</span>
-                  {q.text}
+                  <span className="line-clamp-3 inline">{q.text}</span>
                   <span className="text-2xl leading-none text-muted-foreground ml-0.5">”</span>
                 </blockquote>
                 <figcaption className="flex items-center justify-between mt-auto pt-2 border-t border-border">
