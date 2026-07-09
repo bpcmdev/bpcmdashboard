@@ -960,6 +960,52 @@ const PerPlatformCompetitiveSov = ({ rows, loading }: { rows: PlatformCompetitiv
   );
 };
 
+// ---------- Competitive Analysis (view switcher) ----------
+const CompetitiveAnalysisSection = ({
+  matrix, summary, platformCompetitive, loading, accent,
+}: {
+  matrix: MatrixRow[];
+  summary: BrandSummaryRow[];
+  platformCompetitive: PlatformCompetitiveRow[];
+  loading: { matrix: boolean; summary: boolean; platformCompetitive: boolean };
+  accent: string;
+}) => {
+  const [view, setView] = useState<'model' | 'competitive' | 'platform'>('competitive');
+  const options = [
+    { key: 'model', label: 'By Model' },
+    { key: 'competitive', label: 'Competitive Set' },
+    { key: 'platform', label: 'By Platform' },
+  ] as const;
+
+  return (
+    <div className="bg-card border border-border p-5 space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <h3 className="font-mono-ui text-[10px] tracking-[0.22em] uppercase text-muted-foreground">
+          Competitive Analysis
+        </h3>
+        <div className="flex gap-0 border border-border w-fit">
+          {options.map((opt) => (
+            <button
+              key={opt.key}
+              onClick={() => setView(opt.key)}
+              className={cn(
+                'px-3 py-1.5 text-[10px] font-semibold tracking-[0.1em] uppercase transition-colors',
+                view === opt.key ? 'text-white' : 'text-muted-foreground hover:text-foreground'
+              )}
+              style={view === opt.key ? { backgroundColor: accent } : undefined}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {view === 'model' && <ModelBrandMatrix rows={matrix} loading={loading.matrix} />}
+      {view === 'competitive' && <CompetitiveTable rows={summary} loading={loading.summary} />}
+      {view === 'platform' && <PerPlatformCompetitiveSov rows={platformCompetitive} loading={loading.platformCompetitive} />}
+    </div>
+  );
+};
+
 // ---------- Gap Analysis: Source Opportunities ----------
 const GAP_PAGE = 20;
 const SourceOpportunities = ({
