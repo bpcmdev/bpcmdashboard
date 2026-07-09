@@ -3090,9 +3090,13 @@ const AIVisibilityTab = () => {
         />
       )}
       <TrendChart rows={trend} loading={loading.trend} />
-      <ModelBrandMatrix rows={matrix} loading={loading.matrix} />
-      <CompetitiveTable rows={summary} loading={loading.summary} />
-      <PerPlatformCompetitiveSov rows={platformCompetitive} loading={loading.platformCompetitive} />
+      <CompetitiveAnalysisSection
+        matrix={matrix}
+        summary={summary}
+        platformCompetitive={platformCompetitive}
+        loading={loading}
+        accent={clientColor || '#1B2B8A'}
+      />
       <AiShoppingVisibilitySection clientId={activeClientId} accent={clientColor || '#1B2B8A'} />
       <PullQuotesSection
         clientId={activeClientId}
