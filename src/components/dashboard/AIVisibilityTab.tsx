@@ -2853,9 +2853,9 @@ const PullQuotesSection = ({
               date: r.date,
               sentiment: brandEntry?.sentiment ?? null,
             });
-            if (collected.length >= 10) break;
+            if (collected.length >= 8) break;
           }
-          if (collected.length >= 10) break;
+          if (collected.length >= 8) break;
         }
         setQuotes(collected);
       } catch (err) {
