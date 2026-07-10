@@ -69,6 +69,7 @@ const normalizePost = (post: Record<string, unknown>): PostLite => ({
 const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, variant = 'card', openSignal }: Props) => {
   const [open, setOpen] = useState(false);
   const [posts, setPosts] = useState<PostLite[] | null>(null);
+  const [totals, setTotals] = useState<{ count: number; reach: number; emv: number } | null>(null);
   const [loading, setLoading] = useState(false);
   const { activeClientId, isAllTime, effectiveFrom, effectiveTo } = useWeek();
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -105,12 +106,24 @@ const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, varia
         .ilike('campaign_name', `%${keyword}%`)
         .order('emv', { ascending: false })
         .limit(50);
+      let totalsQ = supabase
+        .from('lefty_posts')
+        .select('reach, emv', { count: 'exact' })
+        .eq('client_id', activeClientId)
+        .ilike('campaign_name', `%${keyword}%`);
       if (!isAllTime && effectiveFrom && effectiveTo) {
         q = q.gte('posted_at', effectiveFrom).lte('posted_at', `${effectiveTo}T23:59:59.999Z`);
+        totalsQ = totalsQ.gte('posted_at', effectiveFrom).lte('posted_at', `${effectiveTo}T23:59:59.999Z`);
       }
-      const { data } = await q;
+      const [{ data }, { data: allRows, count }] = await Promise.all([q, totalsQ]);
       if (cancelled) return;
       setPosts(((data ?? []) as Record<string, unknown>[]).map(normalizePost));
+      const rows = (allRows ?? []) as { reach: number | null; emv: number | null }[];
+      setTotals({
+        count: count ?? rows.length,
+        reach: rows.reduce((s, r) => s + (r.reach ?? 0), 0),
+        emv: rows.reduce((s, r) => s + (r.emv ?? 0), 0),
+      });
       setLoading(false);
     })();
     return () => { cancelled = true; };
@@ -214,9 +227,9 @@ const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, varia
           {/* Tracked totals */}
           <div className="grid grid-cols-3 gap-3">
             {[
-              { label: 'Tracked Posts', value: loading ? '…' : String(breakdown.count) },
-              { label: 'Tracked Reach', value: loading ? '…' : formatCount(breakdown.totalReach) },
-              { label: 'Tracked EMV', value: loading ? '…' : formatMoney(breakdown.totalEmv) },
+              { label: 'Tracked Posts', value: loading ? '…' : String(totals?.count ?? breakdown.count) },
+              { label: 'Tracked Reach', value: loading ? '…' : formatCount(totals?.reach ?? breakdown.totalReach) },
+              { label: 'Tracked EMV', value: loading ? '…' : formatMoney(totals?.emv ?? breakdown.totalEmv) },
             ].map(stat => (
               <div key={stat.label} className="border border-black/[0.08] bg-white px-3 py-2">
                 <p className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground">{stat.label}</p>
