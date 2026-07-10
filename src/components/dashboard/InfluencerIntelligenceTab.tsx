@@ -1120,12 +1120,17 @@ const InfluencerIntelligenceTab = () => {
                         </div>
                         <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-foreground shrink-0 mt-0.5" />
                       </div>
-                      <div className="flex items-center gap-2 mb-4">
+                      <div className="flex items-center gap-2 mb-3">
                         <NetworkBadge network={p.network ?? ''} />
                         <span className="font-mono-ui text-[9px] tracking-[0.12em] uppercase text-muted-foreground">
                           {postTypeOf(p.post_link)}
                         </span>
                       </div>
+                      {p.caption_excerpt && (
+                        <p className="text-[12px] italic text-muted-foreground mb-3 line-clamp-3">
+                          "{p.caption_excerpt.length > 140 ? p.caption_excerpt.slice(0, 140).trimEnd() + '…' : p.caption_excerpt}"
+                        </p>
+                      )}
                       <div className="grid grid-cols-2 gap-3 pt-3 border-t border-black/[0.06]">
                         <div>
                           <p className="font-mono-ui text-[8px] tracking-[0.18em] uppercase text-muted-foreground">Reach</p>
