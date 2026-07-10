@@ -227,9 +227,9 @@ const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, varia
           {/* Tracked totals */}
           <div className="grid grid-cols-3 gap-3">
             {[
-              { label: 'Tracked Posts', value: loading ? '…' : String(breakdown.count) },
-              { label: 'Tracked Reach', value: loading ? '…' : formatCount(breakdown.totalReach) },
-              { label: 'Tracked EMV', value: loading ? '…' : formatMoney(breakdown.totalEmv) },
+              { label: 'Tracked Posts', value: loading ? '…' : String(totals?.count ?? breakdown.count) },
+              { label: 'Tracked Reach', value: loading ? '…' : formatCount(totals?.reach ?? breakdown.totalReach) },
+              { label: 'Tracked EMV', value: loading ? '…' : formatMoney(totals?.emv ?? breakdown.totalEmv) },
             ].map(stat => (
               <div key={stat.label} className="border border-black/[0.08] bg-white px-3 py-2">
                 <p className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground">{stat.label}</p>
