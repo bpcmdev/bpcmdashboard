@@ -603,14 +603,15 @@ const InfluencerIntelligenceTab = () => {
     setTableSort(s => s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'desc' });
   };
 
-  // Influencer leaderboard
+  // Influencer leaderboard (enriched with lefty_influencers profile via meta_id)
   const influencers = useMemo(() => {
-    const map = new Map<string, { name: string; followers: number; posts: number; reach: number; emv: number; engSum: number; engN: number; postsList: LeftyPost[] }>();
+    const map = new Map<string, { name: string; metaId: string | null; postsFollowers: number; posts: number; reach: number; emv: number; engSum: number; engN: number; postsList: LeftyPost[] }>();
     filteredPosts.forEach(p => {
       const name = (p.author_name ?? '').trim();
       if (!name) return;
-      const cur = map.get(name) ?? { name, followers: 0, posts: 0, reach: 0, emv: 0, engSum: 0, engN: 0, postsList: [] };
-      cur.followers = Math.max(cur.followers, p.followers ?? 0);
+      const cur = map.get(name) ?? { name, metaId: null, postsFollowers: 0, posts: 0, reach: 0, emv: 0, engSum: 0, engN: 0, postsList: [] };
+      cur.postsFollowers = Math.max(cur.postsFollowers, p.followers ?? 0);
+      if (!cur.metaId && p.meta_id) cur.metaId = p.meta_id;
       cur.posts += 1;
       cur.reach += p.reach ?? 0;
       cur.emv += p.emv ?? 0;
@@ -619,9 +620,14 @@ const InfluencerIntelligenceTab = () => {
       map.set(name, cur);
     });
     return Array.from(map.values())
-      .map(x => ({ ...x, avgEng: x.engN > 0 ? (x.engSum / x.engN) * 100 : 0 }))
+      .map(x => {
+        const profile = x.metaId ? influencerProfiles.get(x.metaId) ?? null : null;
+        // Prefer authoritative followers from lefty_influencers when available.
+        const followers = profile?.followers ?? x.postsFollowers;
+        return { ...x, followers, profile, avgEng: x.engN > 0 ? (x.engSum / x.engN) * 100 : 0 };
+      })
       .sort((a, b) => b.emv - a.emv);
-  }, [filteredPosts]);
+  }, [filteredPosts, influencerProfiles]);
 
   const topPostsGrid = useMemo(
     () => [...filteredPosts].sort((a, b) => (b.emv ?? 0) - (a.emv ?? 0)).slice(0, 12),
