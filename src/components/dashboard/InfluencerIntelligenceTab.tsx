@@ -1158,10 +1158,47 @@ const InfluencerIntelligenceTab = () => {
           </SheetHeader>
           {drawerAuthorData && (
             <div className="mt-4 space-y-4">
+              {/* Social profile links */}
+              {drawerAuthorData.profile && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  {drawerAuthorData.profile.instagram_url && (
+                    <a href={drawerAuthorData.profile.instagram_url} target="_blank" rel="noreferrer"
+                      className="w-8 h-8 flex items-center justify-center border border-black/10 hover:border-black/40 transition-colors"
+                      title="Instagram">
+                      <Instagram className="w-4 h-4" />
+                    </a>
+                  )}
+                  {drawerAuthorData.profile.tiktok_url && (
+                    <a href={drawerAuthorData.profile.tiktok_url} target="_blank" rel="noreferrer"
+                      className="w-8 h-8 flex items-center justify-center border border-black/10 hover:border-black/40 transition-colors font-mono-ui text-[10px] font-bold"
+                      title="TikTok">
+                      TT
+                    </a>
+                  )}
+                  {drawerAuthorData.profile.youtube_url && (
+                    <a href={drawerAuthorData.profile.youtube_url} target="_blank" rel="noreferrer"
+                      className="w-8 h-8 flex items-center justify-center border border-black/10 hover:border-black/40 transition-colors"
+                      title="YouTube">
+                      <Youtube className="w-4 h-4" />
+                    </a>
+                  )}
+                  {drawerAuthorData.profile.x_url && (
+                    <a href={drawerAuthorData.profile.x_url} target="_blank" rel="noreferrer"
+                      className="w-8 h-8 flex items-center justify-center border border-black/10 hover:border-black/40 transition-colors"
+                      title="X (Twitter)">
+                      <Twitter className="w-4 h-4" />
+                    </a>
+                  )}
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="border border-black/10 p-3">
                   <p className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground">Followers</p>
                   <p className="font-display text-lg font-bold">{formatCount(drawerAuthorData.followers)}</p>
+                  {drawerAuthorData.profile && (
+                    <p className="text-[9px] text-muted-foreground mt-0.5">Global (Lefty)</p>
+                  )}
                 </div>
                 <div className="border border-black/10 p-3">
                   <p className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground">Total EMV</p>
@@ -1176,6 +1213,43 @@ const InfluencerIntelligenceTab = () => {
                   <p className="font-display text-lg font-bold">{drawerAuthorData.avgEng.toFixed(2)}%</p>
                 </div>
               </div>
+
+              {/* Static vs Video engagement rate comparison */}
+              {drawerAuthorData.profile && (
+                (drawerAuthorData.profile.static_eng_rate != null || drawerAuthorData.profile.video_eng_rate != null) && (
+                  <div className="border border-black/10 p-4">
+                    <p className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground mb-3">Engagement rate by format</p>
+                    {(() => {
+                      const s = (drawerAuthorData.profile!.static_eng_rate ?? 0) * 100;
+                      const v = (drawerAuthorData.profile!.video_eng_rate ?? 0) * 100;
+                      const max = Math.max(s, v, 0.01);
+                      return (
+                        <div className="space-y-3">
+                          <div>
+                            <div className="flex justify-between items-baseline mb-1">
+                              <span className="text-xs text-muted-foreground">Static</span>
+                              <span className="font-display text-sm font-bold tabular-nums">{s.toFixed(2)}%</span>
+                            </div>
+                            <div className="h-2 bg-black/[0.06] overflow-hidden">
+                              <div className="h-full" style={{ width: `${(s / max) * 100}%`, backgroundColor: accent }} />
+                            </div>
+                          </div>
+                          <div>
+                            <div className="flex justify-between items-baseline mb-1">
+                              <span className="text-xs text-muted-foreground">Video</span>
+                              <span className="font-display text-sm font-bold tabular-nums">{v.toFixed(2)}%</span>
+                            </div>
+                            <div className="h-2 bg-black/[0.06] overflow-hidden">
+                              <div className="h-full" style={{ width: `${(v / max) * 100}%`, backgroundColor: GOLD }} />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )
+              )}
+
               <div>
                 <p className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground mb-2">Posts</p>
                 <div className="divide-y divide-black/[0.06] border border-black/10">
