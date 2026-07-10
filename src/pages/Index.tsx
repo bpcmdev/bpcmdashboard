@@ -80,6 +80,7 @@ function DashboardContent() {
         'KEY WINS': 'key_wins',
         'PRODUCT LAUNCHES': 'product_launches',
         'EARNED MEDIA': 'earned_media',
+        'INFLUENCER INTELLIGENCE': 'influencer_social',
         'INFLUENCER & SOCIAL': 'influencer_social',
         'CORPORATE COMMS': 'corporate_comms',
         'AI VISIBILITY': 'ai_visibility',
