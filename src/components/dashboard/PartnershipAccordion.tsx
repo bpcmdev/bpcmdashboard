@@ -106,12 +106,24 @@ const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, varia
         .ilike('campaign_name', `%${keyword}%`)
         .order('emv', { ascending: false })
         .limit(50);
+      let totalsQ = supabase
+        .from('lefty_posts')
+        .select('reach, emv', { count: 'exact' })
+        .eq('client_id', activeClientId)
+        .ilike('campaign_name', `%${keyword}%`);
       if (!isAllTime && effectiveFrom && effectiveTo) {
         q = q.gte('posted_at', effectiveFrom).lte('posted_at', `${effectiveTo}T23:59:59.999Z`);
+        totalsQ = totalsQ.gte('posted_at', effectiveFrom).lte('posted_at', `${effectiveTo}T23:59:59.999Z`);
       }
-      const { data } = await q;
+      const [{ data }, { data: allRows, count }] = await Promise.all([q, totalsQ]);
       if (cancelled) return;
       setPosts(((data ?? []) as Record<string, unknown>[]).map(normalizePost));
+      const rows = (allRows ?? []) as { reach: number | null; emv: number | null }[];
+      setTotals({
+        count: count ?? rows.length,
+        reach: rows.reduce((s, r) => s + (r.reach ?? 0), 0),
+        emv: rows.reduce((s, r) => s + (r.emv ?? 0), 0),
+      });
       setLoading(false);
     })();
     return () => { cancelled = true; };
