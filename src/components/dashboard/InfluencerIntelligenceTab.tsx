@@ -3,7 +3,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   Line, ComposedChart, BarChart, Bar, LabelList, Cell,
 } from 'recharts';
-import { ChevronDown, ChevronUp, ExternalLink, Search, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, ExternalLink, Search, X, Instagram, Youtube, Twitter } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -36,6 +36,12 @@ interface LeftyPost {
   engagement_rate: number | null;
   post_link: string | null;
   posted_at: string | null;
+  likes: number | null;
+  comments: number | null;
+  views: number | null;
+  shares: number | null;
+  meta_id: string | null;
+  caption_excerpt: string | null;
 }
 
 interface Partnership {
@@ -48,6 +54,33 @@ interface Partnership {
   start_date: string | null;
   end_date: string | null;
   notes?: string | null;
+}
+
+interface LeftyMonthlyPerf {
+  client_id: string;
+  month_start: string;
+  active_influencers: number | null;
+  posts: number | null;
+  impressions: number | null;
+  engagements: number | null;
+  est_reach: number | null;
+  eng_rate: number | null;
+  emv: number | null;
+}
+
+interface LeftyInfluencer {
+  meta_id: string;
+  name: string | null;
+  instagram_url: string | null;
+  tiktok_url: string | null;
+  youtube_url: string | null;
+  x_url: string | null;
+  followers: number | null;
+  blended_eng_rate: number | null;
+  static_eng_rate: number | null;
+  video_eng_rate: number | null;
+  emv: number | null;
+  est_reach: number | null;
 }
 
 type DateRangeKey = '30d' | '90d' | '12mo' | 'all';
