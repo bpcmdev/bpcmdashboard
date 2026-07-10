@@ -480,22 +480,58 @@ const InfluencerIntelligenceTab = () => {
     };
   }, [filteredPosts, priorPosts]);
 
-  // Monthly series for chart (filtered)
+  // Engagement helper (likes + comments + shares; views tracked separately)
+  const engagementsOf = (p: LeftyPost) => (p.likes ?? 0) + (p.comments ?? 0) + (p.shares ?? 0);
+
+  // Engagement breakdown totals (from filtered posts, no row caps)
+  const engagementTotals = useMemo(() => {
+    let likes = 0, comments = 0, views = 0, shares = 0;
+    filteredPosts.forEach(p => {
+      likes += p.likes ?? 0;
+      comments += p.comments ?? 0;
+      views += p.views ?? 0;
+      shares += p.shares ?? 0;
+    });
+    return { likes, comments, views, shares, engagements: likes + comments + shares };
+  }, [filteredPosts]);
+
+  // Monthly series for chart (filtered).
+  // Prefers lefty_monthly_perf when neutral filters, otherwise computes from posts.
   const filteredMonthly = useMemo(() => {
-    const map = new Map<string, { posts: number; reach: number; emv: number }>();
+    const neutralFilters = network === 'all' && selectedCampaigns.length === 0;
+    const fromIso = dateRange === 'all' ? '' :
+      daysAgoIso(dateRange === '30d' ? 30 : dateRange === '90d' ? 90 : 365);
+
+    if (neutralFilters && monthlyPerf.length > 0) {
+      const inWindow = monthlyPerf.filter(m => !fromIso || (m.month_start ?? '') >= fromIso.slice(0, 7));
+      return inWindow
+        .slice()
+        .sort((a, b) => (a.month_start ?? '').localeCompare(b.month_start ?? ''))
+        .map(m => ({
+          month: monthLabel(monthKey(m.month_start ?? '')),
+          key: monthKey(m.month_start ?? ''),
+          posts: m.posts ?? 0,
+          reach: m.est_reach ?? 0,
+          emv: m.emv ?? 0,
+          engagements: m.engagements ?? 0,
+        }));
+    }
+
+    const map = new Map<string, { posts: number; reach: number; emv: number; engagements: number }>();
     filteredPosts.forEach(p => {
       if (!p.posted_at) return;
       const k = monthKey(p.posted_at);
-      const cur = map.get(k) ?? { posts: 0, reach: 0, emv: 0 };
+      const cur = map.get(k) ?? { posts: 0, reach: 0, emv: 0, engagements: 0 };
       cur.posts += 1;
       cur.reach += p.reach ?? 0;
       cur.emv += p.emv ?? 0;
+      cur.engagements += engagementsOf(p);
       map.set(k, cur);
     });
     return Array.from(map.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([k, v]) => ({ month: monthLabel(k), key: k, ...v }));
-  }, [filteredPosts]);
+  }, [filteredPosts, monthlyPerf, network, selectedCampaigns, dateRange]);
 
   // Campaign aggregates (from filtered posts)
   const campaignAgg = useMemo(() => {
