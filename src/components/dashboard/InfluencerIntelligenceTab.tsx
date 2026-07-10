@@ -304,12 +304,15 @@ const InfluencerIntelligenceTab = () => {
 
   const [posts, setPosts] = useState<LeftyPost[]>([]);
   const [partnerships, setPartnerships] = useState<Partnership[]>([]);
+  const [monthlyPerf, setMonthlyPerf] = useState<LeftyMonthlyPerf[]>([]);
+  const [influencerProfiles, setInfluencerProfiles] = useState<Map<string, LeftyInfluencer>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
   const [dateRange, setDateRange] = useState<DateRangeKey>('12mo');
   const [network, setNetwork] = useState<NetworkKey>('all');
   const [selectedCampaigns, setSelectedCampaigns] = useState<string[]>([]);
+  const [chartSeries, setChartSeries] = useState<'emv' | 'posts' | 'engagements'>('emv');
 
   const [tableSearch, setTableSearch] = useState('');
   const [tableSort, setTableSort] = useState<{ key: string; dir: 'asc' | 'desc' }>({ key: 'emv', dir: 'desc' });
@@ -333,7 +336,7 @@ const InfluencerIntelligenceTab = () => {
       while (true) {
         const { data, error: err } = await supabase
           .from('lefty_posts')
-          .select('id, campaign_name, network, author_name, followers, impressions, reach, emv, engagement_rate, post_link, posted_at')
+          .select('id, campaign_name, network, author_name, followers, impressions, reach, emv, engagement_rate, post_link, posted_at, likes, comments, views, shares, meta_id, caption_excerpt')
           .eq('client_id', activeClientId)
           .order('posted_at', { ascending: false })
           .range(from, from + PAGE - 1);
@@ -350,13 +353,42 @@ const InfluencerIntelligenceTab = () => {
         .select('id, partner_name, type, status, description, emv_generated, start_date, end_date, notes')
         .eq('client_id', activeClientId)
         .order('created_at', { ascending: false });
+
+      // Lefty monthly rollup (may not exist for every client — silent fallback)
+      const { data: mpData } = await supabase
+        .from('lefty_monthly_perf')
+        .select('client_id, month_start, active_influencers, posts, impressions, engagements, est_reach, eng_rate, emv')
+        .eq('client_id', activeClientId)
+        .order('month_start', { ascending: true });
+
+      // Influencer profiles keyed by meta_id
+      const metaIds = Array.from(new Set(all.map(p => p.meta_id).filter((x): x is string => !!x)));
+      let profiles: LeftyInfluencer[] = [];
+      if (metaIds.length > 0) {
+        // Chunk to avoid URL length issues
+        const CHUNK = 200;
+        for (let i = 0; i < metaIds.length; i += CHUNK) {
+          const slice = metaIds.slice(i, i + CHUNK);
+          const { data: infData } = await supabase
+            .from('lefty_influencers')
+            .select('meta_id, name, instagram_url, tiktok_url, youtube_url, x_url, followers, blended_eng_rate, static_eng_rate, video_eng_rate, emv, est_reach')
+            .in('meta_id', slice);
+          if (infData) profiles = profiles.concat(infData as LeftyInfluencer[]);
+        }
+      }
+
       if (cancelled) return;
       setPosts(all);
       setPartnerships((pData ?? []) as Partnership[]);
+      setMonthlyPerf((mpData ?? []) as LeftyMonthlyPerf[]);
+      const profMap = new Map<string, LeftyInfluencer>();
+      profiles.forEach(p => profMap.set(p.meta_id, p));
+      setInfluencerProfiles(profMap);
       setLoading(false);
     })();
     return () => { cancelled = true; };
   }, [activeClientId, refreshKey]);
+
 
   // Distinct campaigns from posts
   const campaignList = useMemo(() => {
