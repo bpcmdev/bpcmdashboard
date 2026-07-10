@@ -517,35 +517,44 @@ const InfluencerIntelligenceTab = () => {
     const fromIso = dateRange === 'all' ? '' :
       daysAgoIso(dateRange === '30d' ? 30 : dateRange === '90d' ? 90 : 365);
 
+    let rows: { key: string; posts: number; reach: number; emv: number; engagements: number }[] = [];
+
     if (neutralFilters && monthlyPerf.length > 0) {
       const inWindow = monthlyPerf.filter(m => !fromIso || (m.month_start ?? '') >= fromIso.slice(0, 7));
-      return inWindow
-        .slice()
-        .sort((a, b) => (a.month_start ?? '').localeCompare(b.month_start ?? ''))
-        .map(m => ({
-          month: monthLabel(monthKey(m.month_start ?? '')),
-          key: monthKey(m.month_start ?? ''),
-          posts: m.posts ?? 0,
-          reach: m.est_reach ?? 0,
-          emv: m.emv ?? 0,
-          engagements: m.engagements ?? 0,
-        }));
+      rows = inWindow.map(m => ({
+        key: monthKey(m.month_start ?? ''),
+        posts: m.posts ?? 0,
+        reach: m.est_reach ?? 0,
+        emv: m.emv ?? 0,
+        engagements: m.engagements ?? 0,
+      }));
+    } else {
+      const map = new Map<string, { posts: number; reach: number; emv: number; engagements: number }>();
+      filteredPosts.forEach(p => {
+        if (!p.posted_at) return;
+        const k = monthKey(p.posted_at);
+        const cur = map.get(k) ?? { posts: 0, reach: 0, emv: 0, engagements: 0 };
+        cur.posts += 1;
+        cur.reach += p.reach ?? 0;
+        cur.emv += p.emv ?? 0;
+        cur.engagements += engagementsOf(p);
+        map.set(k, cur);
+      });
+      rows = Array.from(map.entries()).map(([k, v]) => ({ key: k, ...v }));
     }
 
-    const map = new Map<string, { posts: number; reach: number; emv: number; engagements: number }>();
-    filteredPosts.forEach(p => {
-      if (!p.posted_at) return;
-      const k = monthKey(p.posted_at);
-      const cur = map.get(k) ?? { posts: 0, reach: 0, emv: 0, engagements: 0 };
-      cur.posts += 1;
-      cur.reach += p.reach ?? 0;
-      cur.emv += p.emv ?? 0;
-      cur.engagements += engagementsOf(p);
-      map.set(k, cur);
+    if (rows.length === 0) return [];
+    rows.sort((a, b) => a.key.localeCompare(b.key));
+
+    // Fill missing months with zeros so the axis is continuous.
+    const startKey = fromIso ? fromIso.slice(0, 7) : rows[0].key;
+    const endKey = monthKey(new Date().toISOString().slice(0, 10));
+    const allKeys = monthRange(startKey < rows[0].key ? startKey : rows[0].key, endKey > rows[rows.length - 1].key ? endKey : rows[rows.length - 1].key);
+    const byKey = new Map(rows.map(r => [r.key, r]));
+    return allKeys.map(k => {
+      const r = byKey.get(k) ?? { key: k, posts: 0, reach: 0, emv: 0, engagements: 0 };
+      return { month: monthLabel(k), key: k, ...r };
     });
-    return Array.from(map.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([k, v]) => ({ month: monthLabel(k), key: k, ...v }));
   }, [filteredPosts, monthlyPerf, network, selectedCampaigns, dateRange]);
 
   // Campaign aggregates (from filtered posts)
