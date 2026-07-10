@@ -64,7 +64,7 @@ const PartnershipsTab = () => {
   const { refreshKey, activeClientId: clientId, isAllTime, effectiveFrom, effectiveTo } = useWeek();
   const { isAdmin, clientColor } = useAdmin();
   const [partnerships, setPartnerships] = useState<Partnership[]>([]);
-  const [postsForStats, setPostsForStats] = useState<Array<{ author_name: string | null; reach: number | null; emv: number | null; campaign_name: string | null }>>([]);
+  const [campaignStats, setCampaignStats] = useState<Record<string, { posts: number; reach: number; emv: number; influencers: number }>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [activePage, setActivePage] = useState(1);
