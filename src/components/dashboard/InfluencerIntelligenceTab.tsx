@@ -3,7 +3,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   Line, ComposedChart, BarChart, Bar, LabelList, Cell,
 } from 'recharts';
-import { ChevronDown, ChevronUp, ExternalLink, Search, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, ExternalLink, Search, X, Instagram, Youtube, Twitter } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -36,6 +36,12 @@ interface LeftyPost {
   engagement_rate: number | null;
   post_link: string | null;
   posted_at: string | null;
+  likes: number | null;
+  comments: number | null;
+  views: number | null;
+  shares: number | null;
+  meta_id: string | null;
+  caption_excerpt: string | null;
 }
 
 interface Partnership {
@@ -48,6 +54,33 @@ interface Partnership {
   start_date: string | null;
   end_date: string | null;
   notes?: string | null;
+}
+
+interface LeftyMonthlyPerf {
+  client_id: string;
+  month_start: string;
+  active_influencers: number | null;
+  posts: number | null;
+  impressions: number | null;
+  engagements: number | null;
+  est_reach: number | null;
+  eng_rate: number | null;
+  emv: number | null;
+}
+
+interface LeftyInfluencer {
+  meta_id: string;
+  name: string | null;
+  instagram_url: string | null;
+  tiktok_url: string | null;
+  youtube_url: string | null;
+  x_url: string | null;
+  followers: number | null;
+  blended_eng_rate: number | null;
+  static_eng_rate: number | null;
+  video_eng_rate: number | null;
+  emv: number | null;
+  est_reach: number | null;
 }
 
 type DateRangeKey = '30d' | '90d' | '12mo' | 'all';
@@ -271,12 +304,15 @@ const InfluencerIntelligenceTab = () => {
 
   const [posts, setPosts] = useState<LeftyPost[]>([]);
   const [partnerships, setPartnerships] = useState<Partnership[]>([]);
+  const [monthlyPerf, setMonthlyPerf] = useState<LeftyMonthlyPerf[]>([]);
+  const [influencerProfiles, setInfluencerProfiles] = useState<Map<string, LeftyInfluencer>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
   const [dateRange, setDateRange] = useState<DateRangeKey>('12mo');
   const [network, setNetwork] = useState<NetworkKey>('all');
   const [selectedCampaigns, setSelectedCampaigns] = useState<string[]>([]);
+  const [chartSeries, setChartSeries] = useState<'emv' | 'posts' | 'engagements'>('emv');
 
   const [tableSearch, setTableSearch] = useState('');
   const [tableSort, setTableSort] = useState<{ key: string; dir: 'asc' | 'desc' }>({ key: 'emv', dir: 'desc' });
@@ -300,7 +336,7 @@ const InfluencerIntelligenceTab = () => {
       while (true) {
         const { data, error: err } = await supabase
           .from('lefty_posts')
-          .select('id, campaign_name, network, author_name, followers, impressions, reach, emv, engagement_rate, post_link, posted_at')
+          .select('id, campaign_name, network, author_name, followers, impressions, reach, emv, engagement_rate, post_link, posted_at, likes, comments, views, shares, meta_id, caption_excerpt')
           .eq('client_id', activeClientId)
           .order('posted_at', { ascending: false })
           .range(from, from + PAGE - 1);
@@ -317,13 +353,42 @@ const InfluencerIntelligenceTab = () => {
         .select('id, partner_name, type, status, description, emv_generated, start_date, end_date, notes')
         .eq('client_id', activeClientId)
         .order('created_at', { ascending: false });
+
+      // Lefty monthly rollup (may not exist for every client — silent fallback)
+      const { data: mpData } = await supabase
+        .from('lefty_monthly_perf')
+        .select('client_id, month_start, active_influencers, posts, impressions, engagements, est_reach, eng_rate, emv')
+        .eq('client_id', activeClientId)
+        .order('month_start', { ascending: true });
+
+      // Influencer profiles keyed by meta_id
+      const metaIds = Array.from(new Set(all.map(p => p.meta_id).filter((x): x is string => !!x)));
+      let profiles: LeftyInfluencer[] = [];
+      if (metaIds.length > 0) {
+        // Chunk to avoid URL length issues
+        const CHUNK = 200;
+        for (let i = 0; i < metaIds.length; i += CHUNK) {
+          const slice = metaIds.slice(i, i + CHUNK);
+          const { data: infData } = await supabase
+            .from('lefty_influencers')
+            .select('meta_id, name, instagram_url, tiktok_url, youtube_url, x_url, followers, blended_eng_rate, static_eng_rate, video_eng_rate, emv, est_reach')
+            .in('meta_id', slice);
+          if (infData) profiles = profiles.concat(infData as LeftyInfluencer[]);
+        }
+      }
+
       if (cancelled) return;
       setPosts(all);
       setPartnerships((pData ?? []) as Partnership[]);
+      setMonthlyPerf((mpData ?? []) as LeftyMonthlyPerf[]);
+      const profMap = new Map<string, LeftyInfluencer>();
+      profiles.forEach(p => profMap.set(p.meta_id, p));
+      setInfluencerProfiles(profMap);
       setLoading(false);
     })();
     return () => { cancelled = true; };
   }, [activeClientId, refreshKey]);
+
 
   // Distinct campaigns from posts
   const campaignList = useMemo(() => {
@@ -415,22 +480,58 @@ const InfluencerIntelligenceTab = () => {
     };
   }, [filteredPosts, priorPosts]);
 
-  // Monthly series for chart (filtered)
+  // Engagement helper (likes + comments + shares; views tracked separately)
+  const engagementsOf = (p: LeftyPost) => (p.likes ?? 0) + (p.comments ?? 0) + (p.shares ?? 0);
+
+  // Engagement breakdown totals (from filtered posts, no row caps)
+  const engagementTotals = useMemo(() => {
+    let likes = 0, comments = 0, views = 0, shares = 0;
+    filteredPosts.forEach(p => {
+      likes += p.likes ?? 0;
+      comments += p.comments ?? 0;
+      views += p.views ?? 0;
+      shares += p.shares ?? 0;
+    });
+    return { likes, comments, views, shares, engagements: likes + comments + shares };
+  }, [filteredPosts]);
+
+  // Monthly series for chart (filtered).
+  // Prefers lefty_monthly_perf when neutral filters, otherwise computes from posts.
   const filteredMonthly = useMemo(() => {
-    const map = new Map<string, { posts: number; reach: number; emv: number }>();
+    const neutralFilters = network === 'all' && selectedCampaigns.length === 0;
+    const fromIso = dateRange === 'all' ? '' :
+      daysAgoIso(dateRange === '30d' ? 30 : dateRange === '90d' ? 90 : 365);
+
+    if (neutralFilters && monthlyPerf.length > 0) {
+      const inWindow = monthlyPerf.filter(m => !fromIso || (m.month_start ?? '') >= fromIso.slice(0, 7));
+      return inWindow
+        .slice()
+        .sort((a, b) => (a.month_start ?? '').localeCompare(b.month_start ?? ''))
+        .map(m => ({
+          month: monthLabel(monthKey(m.month_start ?? '')),
+          key: monthKey(m.month_start ?? ''),
+          posts: m.posts ?? 0,
+          reach: m.est_reach ?? 0,
+          emv: m.emv ?? 0,
+          engagements: m.engagements ?? 0,
+        }));
+    }
+
+    const map = new Map<string, { posts: number; reach: number; emv: number; engagements: number }>();
     filteredPosts.forEach(p => {
       if (!p.posted_at) return;
       const k = monthKey(p.posted_at);
-      const cur = map.get(k) ?? { posts: 0, reach: 0, emv: 0 };
+      const cur = map.get(k) ?? { posts: 0, reach: 0, emv: 0, engagements: 0 };
       cur.posts += 1;
       cur.reach += p.reach ?? 0;
       cur.emv += p.emv ?? 0;
+      cur.engagements += engagementsOf(p);
       map.set(k, cur);
     });
     return Array.from(map.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([k, v]) => ({ month: monthLabel(k), key: k, ...v }));
-  }, [filteredPosts]);
+  }, [filteredPosts, monthlyPerf, network, selectedCampaigns, dateRange]);
 
   // Campaign aggregates (from filtered posts)
   const campaignAgg = useMemo(() => {
@@ -502,14 +603,15 @@ const InfluencerIntelligenceTab = () => {
     setTableSort(s => s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'desc' });
   };
 
-  // Influencer leaderboard
+  // Influencer leaderboard (enriched with lefty_influencers profile via meta_id)
   const influencers = useMemo(() => {
-    const map = new Map<string, { name: string; followers: number; posts: number; reach: number; emv: number; engSum: number; engN: number; postsList: LeftyPost[] }>();
+    const map = new Map<string, { name: string; metaId: string | null; postsFollowers: number; posts: number; reach: number; emv: number; engSum: number; engN: number; postsList: LeftyPost[] }>();
     filteredPosts.forEach(p => {
       const name = (p.author_name ?? '').trim();
       if (!name) return;
-      const cur = map.get(name) ?? { name, followers: 0, posts: 0, reach: 0, emv: 0, engSum: 0, engN: 0, postsList: [] };
-      cur.followers = Math.max(cur.followers, p.followers ?? 0);
+      const cur = map.get(name) ?? { name, metaId: null, postsFollowers: 0, posts: 0, reach: 0, emv: 0, engSum: 0, engN: 0, postsList: [] };
+      cur.postsFollowers = Math.max(cur.postsFollowers, p.followers ?? 0);
+      if (!cur.metaId && p.meta_id) cur.metaId = p.meta_id;
       cur.posts += 1;
       cur.reach += p.reach ?? 0;
       cur.emv += p.emv ?? 0;
@@ -518,9 +620,14 @@ const InfluencerIntelligenceTab = () => {
       map.set(name, cur);
     });
     return Array.from(map.values())
-      .map(x => ({ ...x, avgEng: x.engN > 0 ? (x.engSum / x.engN) * 100 : 0 }))
+      .map(x => {
+        const profile = x.metaId ? influencerProfiles.get(x.metaId) ?? null : null;
+        // Prefer authoritative followers from lefty_influencers when available.
+        const followers = profile?.followers ?? x.postsFollowers;
+        return { ...x, followers, profile, avgEng: x.engN > 0 ? (x.engSum / x.engN) * 100 : 0 };
+      })
       .sort((a, b) => b.emv - a.emv);
-  }, [filteredPosts]);
+  }, [filteredPosts, influencerProfiles]);
 
   const topPostsGrid = useMemo(
     () => [...filteredPosts].sort((a, b) => (b.emv ?? 0) - (a.emv ?? 0)).slice(0, 12),
@@ -566,11 +673,28 @@ const InfluencerIntelligenceTab = () => {
 
             {/* 3. Performance Over Time */}
             <section className="bg-card border border-black/10 p-6 animate-fade-in">
-              <div className="flex items-baseline justify-between mb-6">
+              <div className="flex flex-wrap items-baseline justify-between gap-3 mb-4">
                 <span className="section-label">Performance Over Time</span>
-                <span className="font-mono-ui text-[10px] tracking-[0.12em] uppercase text-muted-foreground">
-                  Monthly EMV · Post Volume
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="font-mono-ui text-[10px] tracking-[0.12em] uppercase text-muted-foreground">
+                    {monthlyPerf.length > 0 && network === 'all' && selectedCampaigns.length === 0
+                      ? 'Lefty monthly rollup'
+                      : 'Computed from posts'}
+                  </span>
+                  <div className="flex items-center border border-black/10">
+                    {(['emv', 'posts', 'engagements'] as const).map(k => (
+                      <button
+                        key={k}
+                        onClick={() => setChartSeries(k)}
+                        className={`font-mono-ui text-[10px] tracking-[0.12em] uppercase px-3 py-1.5 transition-all ${
+                          chartSeries === k ? 'bg-foreground text-background' : 'bg-transparent text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        {k === 'emv' ? 'EMV' : k === 'posts' ? 'Posts' : 'Engagements'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
               {filteredMonthly.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-16 text-center">No posts in the selected window.</p>
@@ -585,23 +709,99 @@ const InfluencerIntelligenceTab = () => {
                     </defs>
                     <CartesianGrid stroke="rgba(0,0,0,0.06)" strokeDasharray="2 4" vertical={false} />
                     <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'hsl(0 0% 40%)' }} axisLine={false} tickLine={false} />
-                    <YAxis yAxisId="left" tick={{ fontSize: 10, fill: 'hsl(0 0% 40%)' }} axisLine={false} tickLine={false} tickFormatter={(v) => formatMoney(v)} />
-                    <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: GOLD }} axisLine={false} tickLine={false} />
+                    <YAxis
+                      yAxisId="left"
+                      tick={{ fontSize: 10, fill: 'hsl(0 0% 40%)' }}
+                      axisLine={false}
+                      tickLine={false}
+                      tickFormatter={(v) => chartSeries === 'emv' ? formatMoney(v) : formatCount(v)}
+                    />
+                    <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: GOLD }} axisLine={false} tickLine={false} tickFormatter={(v) => formatCount(v)} />
                     <Tooltip
                       contentStyle={{ backgroundColor: 'white', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 4, fontSize: 12, padding: 12 }}
                       formatter={(value: number, name: string) => {
                         if (name === 'EMV') return [formatMoney(value), name];
                         if (name === 'Reach') return [formatReach(value), name];
+                        if (name === 'Engagements') return [formatCount(value), name];
                         return [value.toLocaleString(), name];
                       }}
                     />
-                    <Area yAxisId="left" type="monotone" dataKey="emv" name="EMV" stroke={accent} strokeWidth={2} fill="url(#perfGrad)" />
-                    <Line yAxisId="right" type="monotone" dataKey="posts" name="Posts" stroke={GOLD} strokeWidth={2} dot={{ r: 3, fill: GOLD }} />
+                    {chartSeries === 'emv' && (
+                      <Area yAxisId="left" type="monotone" dataKey="emv" name="EMV" stroke={accent} strokeWidth={2} fill="url(#perfGrad)" />
+                    )}
+                    {chartSeries === 'engagements' && (
+                      <Area yAxisId="left" type="monotone" dataKey="engagements" name="Engagements" stroke={accent} strokeWidth={2} fill="url(#perfGrad)" />
+                    )}
+                    {chartSeries === 'posts' && (
+                      <Area yAxisId="left" type="monotone" dataKey="posts" name="Posts" stroke={accent} strokeWidth={2} fill="url(#perfGrad)" />
+                    )}
+                    {chartSeries !== 'posts' && (
+                      <Line yAxisId="right" type="monotone" dataKey="posts" name="Posts" stroke={GOLD} strokeWidth={2} dot={{ r: 3, fill: GOLD }} />
+                    )}
                     <Line yAxisId="left" type="monotone" dataKey="reach" name="Reach" stroke="transparent" dot={false} />
                   </ComposedChart>
                 </ResponsiveContainer>
               )}
+
+              {/* Engagement Breakdown */}
+              <div className="mt-6 pt-6 border-t border-black/[0.08]">
+                <div className="flex items-baseline justify-between mb-4">
+                  <span className="section-label">Engagement Breakdown</span>
+                  <span className="font-mono-ui text-[10px] tracking-[0.12em] uppercase text-muted-foreground">Filtered window</span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {[
+                    { label: 'Likes', value: engagementTotals.likes, color: '#E4405F' },
+                    { label: 'Comments', value: engagementTotals.comments, color: accent },
+                    { label: 'Views', value: engagementTotals.views, color: '#000000' },
+                    { label: 'Shares', value: engagementTotals.shares, color: GOLD },
+                  ].map(m => (
+                    <div key={m.label} className="border border-black/10 p-3">
+                      <p className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground">{m.label}</p>
+                      <p className="font-display text-xl font-bold tabular-nums mt-1" style={{ color: m.color }}>{formatCount(m.value)}</p>
+                    </div>
+                  ))}
+                </div>
+                {/* Engagement mix bar (likes+comments+shares) */}
+                {engagementTotals.engagements > 0 && (
+                  <div className="mt-4">
+                    <p className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground mb-2">Engagement mix</p>
+                    <div className="flex h-3 w-full overflow-hidden border border-black/10">
+                      {[
+                        { key: 'Likes', v: engagementTotals.likes, color: '#E4405F' },
+                        { key: 'Comments', v: engagementTotals.comments, color: accent },
+                        { key: 'Shares', v: engagementTotals.shares, color: GOLD },
+                      ].map(seg => {
+                        const pct = (seg.v / engagementTotals.engagements) * 100;
+                        return pct > 0 ? (
+                          <div
+                            key={seg.key}
+                            title={`${seg.key}: ${formatCount(seg.v)} (${pct.toFixed(1)}%)`}
+                            style={{ width: `${pct}%`, backgroundColor: seg.color }}
+                          />
+                        ) : null;
+                      })}
+                    </div>
+                    <div className="flex flex-wrap gap-4 mt-2">
+                      {[
+                        { key: 'Likes', color: '#E4405F' },
+                        { key: 'Comments', color: accent },
+                        { key: 'Shares', color: GOLD },
+                      ].map(l => (
+                        <span key={l.key} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                          <span className="w-2 h-2 inline-block" style={{ backgroundColor: l.color }} />
+                          {l.key}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <p className="text-[10px] text-muted-foreground mt-3 italic">
+                  Like counts unavailable for some Instagram posts due to platform privacy settings.
+                </p>
+              </div>
             </section>
+
 
             {/* 4. Campaign Performance */}
             <section className="space-y-6 animate-fade-in">
@@ -920,12 +1120,17 @@ const InfluencerIntelligenceTab = () => {
                         </div>
                         <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-foreground shrink-0 mt-0.5" />
                       </div>
-                      <div className="flex items-center gap-2 mb-4">
+                      <div className="flex items-center gap-2 mb-3">
                         <NetworkBadge network={p.network ?? ''} />
                         <span className="font-mono-ui text-[9px] tracking-[0.12em] uppercase text-muted-foreground">
                           {postTypeOf(p.post_link)}
                         </span>
                       </div>
+                      {p.caption_excerpt && (
+                        <p className="text-[12px] italic text-muted-foreground mb-3 line-clamp-3">
+                          "{p.caption_excerpt.length > 140 ? p.caption_excerpt.slice(0, 140).trimEnd() + '…' : p.caption_excerpt}"
+                        </p>
+                      )}
                       <div className="grid grid-cols-2 gap-3 pt-3 border-t border-black/[0.06]">
                         <div>
                           <p className="font-mono-ui text-[8px] tracking-[0.18em] uppercase text-muted-foreground">Reach</p>
@@ -953,10 +1158,47 @@ const InfluencerIntelligenceTab = () => {
           </SheetHeader>
           {drawerAuthorData && (
             <div className="mt-4 space-y-4">
+              {/* Social profile links */}
+              {drawerAuthorData.profile && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  {drawerAuthorData.profile.instagram_url && (
+                    <a href={drawerAuthorData.profile.instagram_url} target="_blank" rel="noreferrer"
+                      className="w-8 h-8 flex items-center justify-center border border-black/10 hover:border-black/40 transition-colors"
+                      title="Instagram">
+                      <Instagram className="w-4 h-4" />
+                    </a>
+                  )}
+                  {drawerAuthorData.profile.tiktok_url && (
+                    <a href={drawerAuthorData.profile.tiktok_url} target="_blank" rel="noreferrer"
+                      className="w-8 h-8 flex items-center justify-center border border-black/10 hover:border-black/40 transition-colors font-mono-ui text-[10px] font-bold"
+                      title="TikTok">
+                      TT
+                    </a>
+                  )}
+                  {drawerAuthorData.profile.youtube_url && (
+                    <a href={drawerAuthorData.profile.youtube_url} target="_blank" rel="noreferrer"
+                      className="w-8 h-8 flex items-center justify-center border border-black/10 hover:border-black/40 transition-colors"
+                      title="YouTube">
+                      <Youtube className="w-4 h-4" />
+                    </a>
+                  )}
+                  {drawerAuthorData.profile.x_url && (
+                    <a href={drawerAuthorData.profile.x_url} target="_blank" rel="noreferrer"
+                      className="w-8 h-8 flex items-center justify-center border border-black/10 hover:border-black/40 transition-colors"
+                      title="X (Twitter)">
+                      <Twitter className="w-4 h-4" />
+                    </a>
+                  )}
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="border border-black/10 p-3">
                   <p className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground">Followers</p>
                   <p className="font-display text-lg font-bold">{formatCount(drawerAuthorData.followers)}</p>
+                  {drawerAuthorData.profile && (
+                    <p className="text-[9px] text-muted-foreground mt-0.5">Global (Lefty)</p>
+                  )}
                 </div>
                 <div className="border border-black/10 p-3">
                   <p className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground">Total EMV</p>
@@ -971,6 +1213,43 @@ const InfluencerIntelligenceTab = () => {
                   <p className="font-display text-lg font-bold">{drawerAuthorData.avgEng.toFixed(2)}%</p>
                 </div>
               </div>
+
+              {/* Static vs Video engagement rate comparison */}
+              {drawerAuthorData.profile && (
+                (drawerAuthorData.profile.static_eng_rate != null || drawerAuthorData.profile.video_eng_rate != null) && (
+                  <div className="border border-black/10 p-4">
+                    <p className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground mb-3">Engagement rate by format</p>
+                    {(() => {
+                      const s = (drawerAuthorData.profile!.static_eng_rate ?? 0) * 100;
+                      const v = (drawerAuthorData.profile!.video_eng_rate ?? 0) * 100;
+                      const max = Math.max(s, v, 0.01);
+                      return (
+                        <div className="space-y-3">
+                          <div>
+                            <div className="flex justify-between items-baseline mb-1">
+                              <span className="text-xs text-muted-foreground">Static</span>
+                              <span className="font-display text-sm font-bold tabular-nums">{s.toFixed(2)}%</span>
+                            </div>
+                            <div className="h-2 bg-black/[0.06] overflow-hidden">
+                              <div className="h-full" style={{ width: `${(s / max) * 100}%`, backgroundColor: accent }} />
+                            </div>
+                          </div>
+                          <div>
+                            <div className="flex justify-between items-baseline mb-1">
+                              <span className="text-xs text-muted-foreground">Video</span>
+                              <span className="font-display text-sm font-bold tabular-nums">{v.toFixed(2)}%</span>
+                            </div>
+                            <div className="h-2 bg-black/[0.06] overflow-hidden">
+                              <div className="h-full" style={{ width: `${(v / max) * 100}%`, backgroundColor: GOLD }} />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )
+              )}
+
               <div>
                 <p className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground mb-2">Posts</p>
                 <div className="divide-y divide-black/[0.06] border border-black/10">
