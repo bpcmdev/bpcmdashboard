@@ -64,7 +64,7 @@ const PartnershipsTab = () => {
   const { refreshKey, activeClientId: clientId, isAllTime, effectiveFrom, effectiveTo } = useWeek();
   const { isAdmin, clientColor } = useAdmin();
   const [partnerships, setPartnerships] = useState<Partnership[]>([]);
-  const [postsForStats, setPostsForStats] = useState<Array<{ author_name: string | null; reach: number | null; emv: number | null; campaign_name: string | null }>>([]);
+  const [campaignStats, setCampaignStats] = useState<Record<string, { posts: number; reach: number; emv: number; influencers: number }>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [activePage, setActivePage] = useState(1);
@@ -95,17 +95,32 @@ const PartnershipsTab = () => {
       }
       setPartnerships(data ?? []);
 
-      // Posts for chart aggregation (post count / influencer count / reach per campaign).
-      let pq = supabase
-        .from('lefty_posts')
-        .select('author_name, reach, emv, campaign_name, posted_at')
-        .eq('client_id', clientId)
-        .limit(5000);
-      if (!isAllTime && effectiveFrom && effectiveTo) {
-        pq = pq.gte('posted_at', effectiveFrom).lte('posted_at', `${effectiveTo}T23:59:59.999Z`);
-      }
-      const { data: posts } = await pq;
-      setPostsForStats(posts ?? []);
+      // Per-campaign accurate aggregates for the top 10 partnerships by stored EMV.
+      const topForStats = ((data ?? []) as Partnership[])
+        .filter(p => p.emv_generated && p.emv_generated > 0)
+        .sort((a, b) => (b.emv_generated ?? 0) - (a.emv_generated ?? 0))
+        .slice(0, 10);
+      const entries = await Promise.all(topForStats.map(async (p) => {
+        const kw = coreKeyword(p.partner_name);
+        let cq = supabase
+          .from('lefty_posts')
+          .select('author_name, reach, emv', { count: 'exact' })
+          .eq('client_id', clientId)
+          .ilike('campaign_name', `%${kw}%`);
+        if (!isAllTime && effectiveFrom && effectiveTo) {
+          cq = cq.gte('posted_at', effectiveFrom).lte('posted_at', `${effectiveTo}T23:59:59.999Z`);
+        }
+        const { data: rows, count } = await cq;
+        const list = (rows ?? []) as { author_name: string | null; reach: number | null; emv: number | null }[];
+        const influencers = new Set(list.map(r => (r.author_name ?? '').trim()).filter(Boolean));
+        return [p.id, {
+          posts: count ?? list.length,
+          reach: list.reduce((s, r) => s + (r.reach ?? 0), 0),
+          emv: list.reduce((s, r) => s + (r.emv ?? 0), 0),
+          influencers: influencers.size,
+        }] as const;
+      }));
+      setCampaignStats(Object.fromEntries(entries));
 
       setLoading(false);
     };
@@ -130,22 +145,17 @@ const PartnershipsTab = () => {
       .sort((a, b) => (b.emv_generated ?? 0) - (a.emv_generated ?? 0))
       .slice(0, 10);
     return top.map(p => {
-      const kw = coreKeyword(p.partner_name);
-      const matched = postsForStats.filter(post =>
-        typeof post.campaign_name === 'string' && post.campaign_name.toLowerCase().includes(kw)
-      );
-      const influencers = new Set(matched.map(m => (m.author_name ?? '').trim()).filter(Boolean));
-      const reach = matched.reduce((s, m) => s + (m.reach ?? 0), 0);
+      const s = campaignStats[p.id];
       return {
         id: p.id,
         program: p.partner_name,
-        emv: p.emv_generated ?? 0,
-        posts: matched.length,
-        influencers: influencers.size,
-        reach,
+        emv: s?.emv ?? p.emv_generated ?? 0,
+        posts: s?.posts ?? 0,
+        influencers: s?.influencers ?? 0,
+        reach: s?.reach ?? 0,
       };
     });
-  }, [partnerships, postsForStats]);
+  }, [partnerships, campaignStats]);
 
   const yMax = useMemo(() => niceCeil(Math.max(0, ...emvData.map(d => d.emv))), [emvData]);
   const yTicks = useMemo(() => [0, 0.25, 0.5, 0.75, 1].map(f => yMax * f), [yMax]);
