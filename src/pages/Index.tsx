@@ -10,11 +10,10 @@ import EarnedMediaTab from '@/components/dashboard/EarnedMediaTab';
 import KeyWinsTab from '@/components/dashboard/KeyWinsTab';
 import ProductLaunchesTab from '@/components/dashboard/ProductLaunchesTab';
 import PipelineMomentsTab from '@/components/dashboard/PipelineMomentsTab';
-import InfluencerSocialTab from '@/components/dashboard/InfluencerSocialTab';
+import InfluencerIntelligenceTab from '@/components/dashboard/InfluencerIntelligenceTab';
 import CorporateCommsTab from '@/components/dashboard/CorporateCommsTab';
 import AIVisibilityTab from '@/components/dashboard/AIVisibilityTab';
 
-import PartnershipsTab from '@/components/dashboard/PartnershipsTab';
 import TikTokShopTab from '@/components/dashboard/TikTokShopTab';
 import ResourceManagementTab from '@/components/dashboard/ResourceManagementTab';
 import AtAGlanceTab from '@/components/dashboard/AtAGlanceTab';
@@ -31,10 +30,11 @@ const TAB_MAP: Record<string, React.ComponentType> = {
   'PRODUCT LAUNCHES': ProductLaunchesTab,
   'PIPELINE & MOMENTS': PipelineMomentsTab,
   'EARNED MEDIA': EarnedMediaTab,
-  'INFLUENCER & SOCIAL': InfluencerSocialTab,
+  'INFLUENCER INTELLIGENCE': InfluencerIntelligenceTab,
+  'INFLUENCER & SOCIAL': InfluencerIntelligenceTab,
   'CORPORATE COMMS': CorporateCommsTab,
   'AI VISIBILITY': AIVisibilityTab,
-  'PARTNERSHIPS': PartnershipsTab,
+  'PARTNERSHIPS': InfluencerIntelligenceTab,
   'WHOLESALE / RETAIL': WholesaleRetailTab,
   'TIKTOK SHOP': TikTokShopTab,
   'RESOURCE MANAGEMENT': ResourceManagementTab,
@@ -80,6 +80,7 @@ function DashboardContent() {
         'KEY WINS': 'key_wins',
         'PRODUCT LAUNCHES': 'product_launches',
         'EARNED MEDIA': 'earned_media',
+        'INFLUENCER INTELLIGENCE': 'influencer_social',
         'INFLUENCER & SOCIAL': 'influencer_social',
         'CORPORATE COMMS': 'corporate_comms',
         'AI VISIBILITY': 'ai_visibility',
