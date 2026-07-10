@@ -673,11 +673,28 @@ const InfluencerIntelligenceTab = () => {
 
             {/* 3. Performance Over Time */}
             <section className="bg-card border border-black/10 p-6 animate-fade-in">
-              <div className="flex items-baseline justify-between mb-6">
+              <div className="flex flex-wrap items-baseline justify-between gap-3 mb-4">
                 <span className="section-label">Performance Over Time</span>
-                <span className="font-mono-ui text-[10px] tracking-[0.12em] uppercase text-muted-foreground">
-                  Monthly EMV · Post Volume
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="font-mono-ui text-[10px] tracking-[0.12em] uppercase text-muted-foreground">
+                    {monthlyPerf.length > 0 && network === 'all' && selectedCampaigns.length === 0
+                      ? 'Lefty monthly rollup'
+                      : 'Computed from posts'}
+                  </span>
+                  <div className="flex items-center border border-black/10">
+                    {(['emv', 'posts', 'engagements'] as const).map(k => (
+                      <button
+                        key={k}
+                        onClick={() => setChartSeries(k)}
+                        className={`font-mono-ui text-[10px] tracking-[0.12em] uppercase px-3 py-1.5 transition-all ${
+                          chartSeries === k ? 'bg-foreground text-background' : 'bg-transparent text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        {k === 'emv' ? 'EMV' : k === 'posts' ? 'Posts' : 'Engagements'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
               {filteredMonthly.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-16 text-center">No posts in the selected window.</p>
@@ -692,23 +709,99 @@ const InfluencerIntelligenceTab = () => {
                     </defs>
                     <CartesianGrid stroke="rgba(0,0,0,0.06)" strokeDasharray="2 4" vertical={false} />
                     <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'hsl(0 0% 40%)' }} axisLine={false} tickLine={false} />
-                    <YAxis yAxisId="left" tick={{ fontSize: 10, fill: 'hsl(0 0% 40%)' }} axisLine={false} tickLine={false} tickFormatter={(v) => formatMoney(v)} />
-                    <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: GOLD }} axisLine={false} tickLine={false} />
+                    <YAxis
+                      yAxisId="left"
+                      tick={{ fontSize: 10, fill: 'hsl(0 0% 40%)' }}
+                      axisLine={false}
+                      tickLine={false}
+                      tickFormatter={(v) => chartSeries === 'emv' ? formatMoney(v) : formatCount(v)}
+                    />
+                    <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: GOLD }} axisLine={false} tickLine={false} tickFormatter={(v) => formatCount(v)} />
                     <Tooltip
                       contentStyle={{ backgroundColor: 'white', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 4, fontSize: 12, padding: 12 }}
                       formatter={(value: number, name: string) => {
                         if (name === 'EMV') return [formatMoney(value), name];
                         if (name === 'Reach') return [formatReach(value), name];
+                        if (name === 'Engagements') return [formatCount(value), name];
                         return [value.toLocaleString(), name];
                       }}
                     />
-                    <Area yAxisId="left" type="monotone" dataKey="emv" name="EMV" stroke={accent} strokeWidth={2} fill="url(#perfGrad)" />
-                    <Line yAxisId="right" type="monotone" dataKey="posts" name="Posts" stroke={GOLD} strokeWidth={2} dot={{ r: 3, fill: GOLD }} />
+                    {chartSeries === 'emv' && (
+                      <Area yAxisId="left" type="monotone" dataKey="emv" name="EMV" stroke={accent} strokeWidth={2} fill="url(#perfGrad)" />
+                    )}
+                    {chartSeries === 'engagements' && (
+                      <Area yAxisId="left" type="monotone" dataKey="engagements" name="Engagements" stroke={accent} strokeWidth={2} fill="url(#perfGrad)" />
+                    )}
+                    {chartSeries === 'posts' && (
+                      <Area yAxisId="left" type="monotone" dataKey="posts" name="Posts" stroke={accent} strokeWidth={2} fill="url(#perfGrad)" />
+                    )}
+                    {chartSeries !== 'posts' && (
+                      <Line yAxisId="right" type="monotone" dataKey="posts" name="Posts" stroke={GOLD} strokeWidth={2} dot={{ r: 3, fill: GOLD }} />
+                    )}
                     <Line yAxisId="left" type="monotone" dataKey="reach" name="Reach" stroke="transparent" dot={false} />
                   </ComposedChart>
                 </ResponsiveContainer>
               )}
+
+              {/* Engagement Breakdown */}
+              <div className="mt-6 pt-6 border-t border-black/[0.08]">
+                <div className="flex items-baseline justify-between mb-4">
+                  <span className="section-label">Engagement Breakdown</span>
+                  <span className="font-mono-ui text-[10px] tracking-[0.12em] uppercase text-muted-foreground">Filtered window</span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {[
+                    { label: 'Likes', value: engagementTotals.likes, color: '#E4405F' },
+                    { label: 'Comments', value: engagementTotals.comments, color: accent },
+                    { label: 'Views', value: engagementTotals.views, color: '#000000' },
+                    { label: 'Shares', value: engagementTotals.shares, color: GOLD },
+                  ].map(m => (
+                    <div key={m.label} className="border border-black/10 p-3">
+                      <p className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground">{m.label}</p>
+                      <p className="font-display text-xl font-bold tabular-nums mt-1" style={{ color: m.color }}>{formatCount(m.value)}</p>
+                    </div>
+                  ))}
+                </div>
+                {/* Engagement mix bar (likes+comments+shares) */}
+                {engagementTotals.engagements > 0 && (
+                  <div className="mt-4">
+                    <p className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground mb-2">Engagement mix</p>
+                    <div className="flex h-3 w-full overflow-hidden border border-black/10">
+                      {[
+                        { key: 'Likes', v: engagementTotals.likes, color: '#E4405F' },
+                        { key: 'Comments', v: engagementTotals.comments, color: accent },
+                        { key: 'Shares', v: engagementTotals.shares, color: GOLD },
+                      ].map(seg => {
+                        const pct = (seg.v / engagementTotals.engagements) * 100;
+                        return pct > 0 ? (
+                          <div
+                            key={seg.key}
+                            title={`${seg.key}: ${formatCount(seg.v)} (${pct.toFixed(1)}%)`}
+                            style={{ width: `${pct}%`, backgroundColor: seg.color }}
+                          />
+                        ) : null;
+                      })}
+                    </div>
+                    <div className="flex flex-wrap gap-4 mt-2">
+                      {[
+                        { key: 'Likes', color: '#E4405F' },
+                        { key: 'Comments', color: accent },
+                        { key: 'Shares', color: GOLD },
+                      ].map(l => (
+                        <span key={l.key} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                          <span className="w-2 h-2 inline-block" style={{ backgroundColor: l.color }} />
+                          {l.key}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <p className="text-[10px] text-muted-foreground mt-3 italic">
+                  Like counts unavailable for some Instagram posts due to platform privacy settings.
+                </p>
+              </div>
             </section>
+
 
             {/* 4. Campaign Performance */}
             <section className="space-y-6 animate-fade-in">
