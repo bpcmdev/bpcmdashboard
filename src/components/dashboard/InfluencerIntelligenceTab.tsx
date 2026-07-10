@@ -127,6 +127,21 @@ const daysAgoIso = (days: number): string => {
   return d.toISOString().slice(0, 10);
 };
 
+// Return every YYYY-MM between (inclusive) two keys.
+const monthRange = (startKey: string, endKey: string): string[] => {
+  if (!startKey || !endKey || startKey > endKey) return [];
+  const [sy, sm] = startKey.split('-').map(Number);
+  const [ey, em] = endKey.split('-').map(Number);
+  const out: string[] = [];
+  let y = sy, m = sm;
+  while (y < ey || (y === ey && m <= em)) {
+    out.push(`${y}-${String(m).padStart(2, '0')}`);
+    m++;
+    if (m > 12) { m = 1; y++; }
+  }
+  return out;
+};
+
 // ---------- animated count ----------
 function useCountUp(target: number, duration = 900): number {
   const [val, setVal] = useState(0);
