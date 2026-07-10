@@ -24,9 +24,17 @@ const TabNavigation = ({ activeTab, onTabChange, enabledTabs, isAdmin }: TabNavi
   // Admins always see every tab; clients are filtered by their enabled_tabs config.
   // If enabledTabs is null/undefined (e.g. column missing), default to showing all
   // so the dashboard never goes blank for legacy data.
-  const visibleTabs = isAdmin || !Array.isArray(enabledTabs)
+  // Treat legacy 'partnerships' enabled_tabs entry as an alias for the merged
+  // 'influencer_social' Influencer Intelligence tab so nothing disappears from
+  // clients whose config only lists the old ID.
+  const effectiveEnabled = Array.isArray(enabledTabs)
+    ? (enabledTabs.includes('partnerships') && !enabledTabs.includes('influencer_social')
+        ? [...enabledTabs, 'influencer_social']
+        : enabledTabs)
+    : enabledTabs;
+  const visibleTabs = isAdmin || !Array.isArray(effectiveEnabled)
     ? ALL_TABS
-    : ALL_TABS.filter(t => enabledTabs.includes(t.id));
+    : ALL_TABS.filter(t => effectiveEnabled.includes(t.id));
 
   // Render a stable, never-empty list (admin fallback covers edge cases).
   const tabs = visibleTabs.length ? visibleTabs : ALL_TABS;
