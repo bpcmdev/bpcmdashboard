@@ -723,48 +723,58 @@ const InfluencerIntelligenceTab = () => {
               {filteredMonthly.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-16 text-center">No posts in the selected window.</p>
               ) : (
-                <ResponsiveContainer width="100%" height={360}>
-                  <ComposedChart data={filteredMonthly} margin={{ top: 10, right: 32, left: 8, bottom: 8 }}>
-                    <defs>
-                      <linearGradient id="perfGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={accent} stopOpacity={0.35} />
-                        <stop offset="100%" stopColor={accent} stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid stroke="rgba(0,0,0,0.06)" strokeDasharray="2 4" vertical={false} />
-                    <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'hsl(0 0% 40%)' }} axisLine={false} tickLine={false} />
-                    <YAxis
-                      yAxisId="left"
-                      tick={{ fontSize: 10, fill: 'hsl(0 0% 40%)' }}
-                      axisLine={false}
-                      tickLine={false}
-                      tickFormatter={(v) => chartSeries === 'emv' ? formatMoney(v) : formatCount(v)}
-                    />
-                    <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: GOLD }} axisLine={false} tickLine={false} tickFormatter={(v) => formatCount(v)} />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: 'white', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 4, fontSize: 12, padding: 12 }}
-                      formatter={(value: number, name: string) => {
-                        if (name === 'EMV') return [formatMoney(value), name];
-                        if (name === 'Reach') return [formatReach(value), name];
-                        if (name === 'Engagements') return [formatCount(value), name];
-                        return [value.toLocaleString(), name];
-                      }}
-                    />
-                    {chartSeries === 'emv' && (
-                      <Area yAxisId="left" type="monotone" dataKey="emv" name="EMV" stroke={accent} strokeWidth={2} fill="url(#perfGrad)" />
-                    )}
-                    {chartSeries === 'engagements' && (
-                      <Area yAxisId="left" type="monotone" dataKey="engagements" name="Engagements" stroke={accent} strokeWidth={2} fill="url(#perfGrad)" />
-                    )}
-                    {chartSeries === 'posts' && (
-                      <Area yAxisId="left" type="monotone" dataKey="posts" name="Posts" stroke={accent} strokeWidth={2} fill="url(#perfGrad)" />
-                    )}
-                    {chartSeries !== 'posts' && (
-                      <Line yAxisId="right" type="monotone" dataKey="posts" name="Posts" stroke={GOLD} strokeWidth={2} dot={{ r: 3, fill: GOLD }} />
-                    )}
-                    <Line yAxisId="left" type="monotone" dataKey="reach" name="Reach" stroke="transparent" dot={false} />
-                  </ComposedChart>
-                </ResponsiveContainer>
+                (() => {
+                  const seriesConfig = {
+                    emv:         { key: 'emv',         label: 'EMV',         color: GOLD,       format: (v: number) => formatMoney(v) },
+                    posts:       { key: 'posts',       label: 'Posts',       color: '#1B2B8A',  format: (v: number) => formatCount(v) },
+                    engagements: { key: 'engagements', label: 'Engagements', color: '#111111',  format: (v: number) => formatCount(v) },
+                  } as const;
+                  const cfg = seriesConfig[chartSeries];
+                  return (
+                    <ResponsiveContainer width="100%" height={360}>
+                      <AreaChart data={filteredMonthly} margin={{ top: 10, right: 24, left: 8, bottom: 8 }}>
+                        <defs>
+                          <linearGradient id="perfGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor={cfg.color} stopOpacity={0.28} />
+                            <stop offset="100%" stopColor={cfg.color} stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid stroke="rgba(0,0,0,0.06)" strokeDasharray="2 4" vertical={false} />
+                        <XAxis
+                          dataKey="month"
+                          interval={0}
+                          tick={{ fontSize: 11, fill: 'hsl(0 0% 40%)' }}
+                          axisLine={false}
+                          tickLine={false}
+                        />
+                        <YAxis
+                          tick={{ fontSize: 10, fill: 'hsl(0 0% 40%)' }}
+                          axisLine={false}
+                          tickLine={false}
+                          tickCount={4}
+                          tickFormatter={cfg.format}
+                          width={56}
+                        />
+                        <Tooltip
+                          cursor={{ stroke: 'rgba(0,0,0,0.15)', strokeWidth: 1 }}
+                          contentStyle={{ backgroundColor: 'white', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 4, fontSize: 12, padding: 12 }}
+                          formatter={(value: number) => [cfg.format(value), cfg.label]}
+                          labelStyle={{ fontSize: 11, color: 'hsl(0 0% 40%)', marginBottom: 4 }}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey={cfg.key}
+                          name={cfg.label}
+                          stroke={cfg.color}
+                          strokeWidth={2}
+                          fill="url(#perfGrad)"
+                          dot={false}
+                          activeDot={{ r: 4, fill: cfg.color, stroke: 'white', strokeWidth: 2 }}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  );
+                })()
               )}
 
               {/* Engagement Breakdown */}
