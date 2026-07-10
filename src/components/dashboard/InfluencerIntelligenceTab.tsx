@@ -906,21 +906,52 @@ const InfluencerIntelligenceTab = () => {
                   {top10Campaigns.length === 0 ? (
                     <p className="text-xs text-muted-foreground py-16 text-center">No campaign data.</p>
                   ) : (
-                    <ResponsiveContainer width="100%" height={Math.max(260, top10Campaigns.length * 40 + 40)}>
-                      <BarChart data={top10Campaigns} layout="vertical" margin={{ top: 8, right: 56, left: 8, bottom: 8 }}>
-                        <CartesianGrid stroke="rgba(0,0,0,0.06)" strokeDasharray="2 4" horizontal={false} />
-                        <XAxis type="number" tickFormatter={(v) => formatMoney(v)} tick={{ fontSize: 10, fill: 'hsl(0 0% 40%)' }} axisLine={false} tickLine={false} />
-                        <YAxis type="category" dataKey="name" width={140} tick={{ fontSize: 11, fill: 'hsl(0 0% 20%)' }} axisLine={false} tickLine={false} />
+                    <ResponsiveContainer width="100%" height={Math.max(280, top10Campaigns.length * 44 + 40)}>
+                      <BarChart data={top10Campaigns} layout="vertical" margin={{ top: 8, right: 64, left: 8, bottom: 8 }} barCategoryGap={10}>
+                        <defs>
+                          <linearGradient id="barLeader" x1="0" y1="0" x2="1" y2="0">
+                            <stop offset="0%" stopColor={ROYAL} stopOpacity={0.95} />
+                            <stop offset="100%" stopColor={GOLD} stopOpacity={0.95} />
+                          </linearGradient>
+                          <linearGradient id="barRest" x1="0" y1="0" x2="1" y2="0">
+                            <stop offset="0%" stopColor={ROYAL} stopOpacity={0.55} />
+                            <stop offset="100%" stopColor={ROYAL} stopOpacity={0.9} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid stroke="rgba(0,0,0,0.05)" strokeDasharray="2 4" horizontal={false} />
+                        <XAxis type="number" tickFormatter={(v) => formatMoney(v)} tick={{ fontSize: 10, fill: 'hsl(0 0% 45%)' }} axisLine={false} tickLine={false} />
+                        <YAxis
+                          type="category"
+                          dataKey="name"
+                          width={190}
+                          interval={0}
+                          axisLine={false}
+                          tickLine={false}
+                          tick={(props: { x: number; y: number; payload: { value: string } }) => {
+                            const { x, y, payload } = props;
+                            const raw = payload.value || '';
+                            const max = 26;
+                            const label = raw.length > max ? raw.slice(0, max - 1).trimEnd() + '…' : raw;
+                            return (
+                              <g transform={`translate(${x},${y})`}>
+                                <text x={-6} y={0} dy={4} textAnchor="end" fontSize={11} fill="hsl(0 0% 20%)" fontFamily="DM Sans, sans-serif">
+                                  {label}
+                                  <title>{raw}</title>
+                                </text>
+                              </g>
+                            );
+                          }}
+                        />
                         <Tooltip
-                          cursor={{ fill: 'rgba(0,0,0,0.04)' }}
+                          cursor={{ fill: 'rgba(27,43,138,0.06)' }}
                           content={(props: { active?: boolean; payload?: Array<{ payload: typeof top10Campaigns[number] }> }) => {
                             if (!props.active || !props.payload?.[0]) return null;
                             const d = props.payload[0].payload;
                             return (
-                              <div className="bg-white border border-black/10 px-3 py-2 text-[11px] shadow-sm min-w-[180px]">
+                              <div className="bg-white border border-black/10 px-3 py-2 text-[11px] shadow-md min-w-[200px]">
                                 <p className="font-semibold text-foreground mb-1.5">{d.name}</p>
                                 <div className="space-y-0.5 text-muted-foreground">
-                                  <div className="flex justify-between gap-4"><span>EMV</span><span className="tabular-nums font-semibold text-foreground">{formatMoney(d.emv)}</span></div>
+                                  <div className="flex justify-between gap-4"><span>EMV</span><span className="tabular-nums font-semibold" style={{ color: GOLD }}>{formatMoney(d.emv)}</span></div>
                                   <div className="flex justify-between gap-4"><span>Posts</span><span className="tabular-nums">{d.posts}</span></div>
                                   <div className="flex justify-between gap-4"><span>Reach</span><span className="tabular-nums">{formatReach(d.reach)}</span></div>
                                 </div>
@@ -929,9 +960,30 @@ const InfluencerIntelligenceTab = () => {
                             );
                           }}
                         />
-                        <Bar dataKey="emv" fill={accent} radius={[0, 2, 2, 0]} isAnimationActive onClick={(d) => scrollToCampaign((d as unknown as { name: string }).name)} style={{ cursor: 'pointer' }}>
-                          {top10Campaigns.map((c) => <Cell key={c.name} fill={accent} />)}
-                          <LabelList dataKey="emv" position="right" formatter={(v: number) => formatMoney(v)} style={{ fontSize: 11, fontFamily: 'DM Mono, monospace', fill: 'hsl(0 0% 20%)' }} />
+                        <Bar
+                          dataKey="emv"
+                          radius={[0, 6, 6, 0]}
+                          barSize={22}
+                          isAnimationActive
+                          animationDuration={700}
+                          animationEasing="ease-out"
+                          onClick={(d) => scrollToCampaign((d as unknown as { name: string }).name)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          {top10Campaigns.map((c, i) => (
+                            <Cell
+                              key={c.name}
+                              fill={i === 0 ? 'url(#barLeader)' : 'url(#barRest)'}
+                              stroke={i === 0 ? GOLD : 'transparent'}
+                              strokeWidth={i === 0 ? 1 : 0}
+                            />
+                          ))}
+                          <LabelList
+                            dataKey="emv"
+                            position="right"
+                            formatter={(v: number) => formatMoney(v)}
+                            style={{ fontSize: 11, fontFamily: 'DM Mono, monospace', fill: 'hsl(0 0% 20%)', fontWeight: 500 }}
+                          />
                         </Bar>
                       </BarChart>
                     </ResponsiveContainer>
