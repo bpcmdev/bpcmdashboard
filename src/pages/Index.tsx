@@ -10,11 +10,10 @@ import EarnedMediaTab from '@/components/dashboard/EarnedMediaTab';
 import KeyWinsTab from '@/components/dashboard/KeyWinsTab';
 import ProductLaunchesTab from '@/components/dashboard/ProductLaunchesTab';
 import PipelineMomentsTab from '@/components/dashboard/PipelineMomentsTab';
-import InfluencerSocialTab from '@/components/dashboard/InfluencerSocialTab';
+import InfluencerIntelligenceTab from '@/components/dashboard/InfluencerIntelligenceTab';
 import CorporateCommsTab from '@/components/dashboard/CorporateCommsTab';
 import AIVisibilityTab from '@/components/dashboard/AIVisibilityTab';
 
-import PartnershipsTab from '@/components/dashboard/PartnershipsTab';
 import TikTokShopTab from '@/components/dashboard/TikTokShopTab';
 import ResourceManagementTab from '@/components/dashboard/ResourceManagementTab';
 import AtAGlanceTab from '@/components/dashboard/AtAGlanceTab';
