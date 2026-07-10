@@ -69,6 +69,7 @@ const normalizePost = (post: Record<string, unknown>): PostLite => ({
 const PartnershipAccordion = ({ partnership, statusBadge, accent, isAdmin, variant = 'card', openSignal }: Props) => {
   const [open, setOpen] = useState(false);
   const [posts, setPosts] = useState<PostLite[] | null>(null);
+  const [totals, setTotals] = useState<{ count: number; reach: number; emv: number } | null>(null);
   const [loading, setLoading] = useState(false);
   const { activeClientId, isAllTime, effectiveFrom, effectiveTo } = useWeek();
   const rootRef = useRef<HTMLDivElement | null>(null);
