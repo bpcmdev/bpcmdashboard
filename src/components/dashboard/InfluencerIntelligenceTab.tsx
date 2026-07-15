@@ -11,6 +11,7 @@ import { formatMoney, formatReach, formatCount } from '@/lib/format';
 import DataStateWrapper from './DataStateWrapper';
 import EmptyState from './EmptyState';
 import Sparkline from './Sparkline';
+import PaginationControls from './PaginationControls';
 import { LinkPreviewTrigger } from './LinkPreviewDrawer';
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle,
@@ -331,11 +332,17 @@ const InfluencerIntelligenceTab = () => {
 
   const [tableSearch, setTableSearch] = useState('');
   const [tableSort, setTableSort] = useState<{ key: string; dir: 'asc' | 'desc' }>({ key: 'emv', dir: 'desc' });
+  const [tablePage, setTablePage] = useState(1);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [leaderLimit, setLeaderLimit] = useState(10);
   const [drawerAuthor, setDrawerAuthor] = useState<string | null>(null);
   const [flashRow, setFlashRow] = useState<string | null>(null);
   const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
+
+  // Reset campaign table page when search or sort changes.
+  useEffect(() => {
+    setTablePage(1);
+  }, [tableSearch, tableSort]);
 
   // Fetch all data (no row caps)
   useEffect(() => {
@@ -622,6 +629,11 @@ const InfluencerIntelligenceTab = () => {
     });
     return rows;
   }, [campaignAgg, partnerships, tableSearch, tableSort]);
+
+  const PAGE_SIZE = 10;
+  const totalPages = Math.max(1, Math.ceil(tableRows.length / PAGE_SIZE));
+  const safeTablePage = Math.min(tablePage, totalPages);
+  const paginatedRows = tableRows.slice((safeTablePage - 1) * PAGE_SIZE, safeTablePage * PAGE_SIZE);
 
   const toggleSort = (key: string) => {
     setTableSort(s => s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'desc' });
@@ -1035,7 +1047,7 @@ const InfluencerIntelligenceTab = () => {
                       {tableRows.length === 0 && (
                         <tr><td colSpan={7} className="py-6 text-center text-xs text-muted-foreground">No matching campaigns.</td></tr>
                       )}
-                      {tableRows.map(r => {
+                      {paginatedRows.map(r => {
                         const isOpen = expandedRow === r.id;
                         const flash = flashRow === r.id;
                         return (
@@ -1075,6 +1087,7 @@ const InfluencerIntelligenceTab = () => {
                     </tbody>
                   </table>
                 </div>
+                <PaginationControls currentPage={safeTablePage} totalPages={totalPages} onPageChange={setTablePage} />
               </div>
             </section>
 
