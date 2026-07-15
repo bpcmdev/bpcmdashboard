@@ -1047,7 +1047,7 @@ const InfluencerIntelligenceTab = () => {
                       {tableRows.length === 0 && (
                         <tr><td colSpan={7} className="py-6 text-center text-xs text-muted-foreground">No matching campaigns.</td></tr>
                       )}
-                      {tableRows.map(r => {
+                      {paginatedRows.map(r => {
                         const isOpen = expandedRow === r.id;
                         const flash = flashRow === r.id;
                         return (
@@ -1087,6 +1087,7 @@ const InfluencerIntelligenceTab = () => {
                     </tbody>
                   </table>
                 </div>
+                <PaginationControls currentPage={safeTablePage} totalPages={totalPages} onPageChange={setTablePage} />
               </div>
             </section>
 
