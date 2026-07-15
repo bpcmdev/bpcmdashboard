@@ -339,6 +339,11 @@ const InfluencerIntelligenceTab = () => {
   const [flashRow, setFlashRow] = useState<string | null>(null);
   const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
 
+  // Reset campaign table page when search or sort changes.
+  useEffect(() => {
+    setTablePage(1);
+  }, [tableSearch, tableSort]);
+
   // Fetch all data (no row caps)
   useEffect(() => {
     if (!activeClientId) return;
@@ -624,6 +629,11 @@ const InfluencerIntelligenceTab = () => {
     });
     return rows;
   }, [campaignAgg, partnerships, tableSearch, tableSort]);
+
+  const PAGE_SIZE = 10;
+  const totalPages = Math.max(1, Math.ceil(tableRows.length / PAGE_SIZE));
+  const safeTablePage = Math.min(tablePage, totalPages);
+  const paginatedRows = tableRows.slice((safeTablePage - 1) * PAGE_SIZE, safeTablePage * PAGE_SIZE);
 
   const toggleSort = (key: string) => {
     setTableSort(s => s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'desc' });
