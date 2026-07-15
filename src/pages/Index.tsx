@@ -42,16 +42,16 @@ const TAB_MAP: Record<string, React.ComponentType> = {
 
 /** Inner component that can access WeekContext */
 function DashboardContent() {
-  const [activeTab, setActiveTab] = useState('EARNED MEDIA');
+  const [activeTab, setActiveTab] = useState('AT A GLANCE');
   const { clientColor, isAdmin, enabledTabs } = useAdmin();
   const { activeClientId } = useWeek();
-  const { isNew } = useIsNewClient();
+  const { isNew, checklist } = useIsNewClient();
   const [dismissedFor, setDismissedFor] = useState<string | null>(null);
   const TabContent = TAB_MAP[activeTab];
 
   const openAdmin = () => window.dispatchEvent(new CustomEvent('bpcm:open-admin-panel'));
 
-  // Reset dismissal when client changes so a fresh new client sees the welcome.
+  // Reset dismissal when client changes so a fresh new client sees the banner.
   useEffect(() => {
     setDismissedFor(null);
   }, [activeClientId]);
@@ -96,8 +96,7 @@ function DashboardContent() {
     }
   }, [enabledTabs, isAdmin, activeTab]);
 
-  // Getting Started checklist is an internal BPCM setup task — admins only.
-  const showWelcome = isAdmin && isNew === true && dismissedFor !== activeClientId;
+  const showSetupBanner = isAdmin && isNew === true && dismissedFor !== activeClientId && !!checklist;
 
   return (
     <div
@@ -105,17 +104,19 @@ function DashboardContent() {
       style={clientColor ? { '--client-accent': clientColor } as React.CSSProperties : undefined}
     >
       <DashboardHeader />
-      {!showWelcome && <NarrativeTicker />}
-      {!showWelcome && <NotableThisWeek />}
-      {!showWelcome && <KpiBar />}
-      {!showWelcome && <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} enabledTabs={enabledTabs} isAdmin={isAdmin} />}
-      {showWelcome ? (
-        <GettingStarted
-          onDismiss={() => setDismissedFor(activeClientId)}
-          onJumpToTab={(tab) => { setActiveTab(tab); setDismissedFor(activeClientId); }}
+      {showSetupBanner && checklist && (
+        <SetupBanner
+          checklist={checklist}
+          onJumpToTab={(tab) => setActiveTab(tab)}
           onOpenAdmin={openAdmin}
+          onDismiss={() => setDismissedFor(activeClientId)}
         />
-      ) : TabContent ? (
+      )}
+      <NarrativeTicker />
+      <NotableThisWeek />
+      <KpiBar />
+      <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} enabledTabs={enabledTabs} isAdmin={isAdmin} />
+      {TabContent ? (
         <div key={activeTab} className="tab-content-enter">
           <TabContent />
         </div>
@@ -127,6 +128,7 @@ function DashboardContent() {
     </div>
   );
 }
+
 
 const Index = () => {
   const { loading } = useAuth(true);
