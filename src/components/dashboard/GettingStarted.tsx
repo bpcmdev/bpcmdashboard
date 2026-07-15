@@ -12,7 +12,7 @@ interface GettingStartedProps {
   onOpenAdmin: () => void;
 }
 
-interface ChecklistState {
+export interface ChecklistState {
   hasPlacements: boolean;
   hasKeyWins: boolean;
   hasPipeline: boolean;
