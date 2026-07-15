@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
-import { CheckCircle2, Circle, ArrowRight } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { CheckCircle2, Circle, ArrowRight, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
 import { useAdmin } from '@/hooks/useAdmin';
 import { Skeleton } from '@/components/ui/skeleton';
+
 
 interface GettingStartedProps {
   onDismiss: () => void;
