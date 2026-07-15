@@ -11,6 +11,7 @@ import { formatMoney, formatReach, formatCount } from '@/lib/format';
 import DataStateWrapper from './DataStateWrapper';
 import EmptyState from './EmptyState';
 import Sparkline from './Sparkline';
+import PaginationControls from './PaginationControls';
 import { LinkPreviewTrigger } from './LinkPreviewDrawer';
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle,
@@ -331,6 +332,7 @@ const InfluencerIntelligenceTab = () => {
 
   const [tableSearch, setTableSearch] = useState('');
   const [tableSort, setTableSort] = useState<{ key: string; dir: 'asc' | 'desc' }>({ key: 'emv', dir: 'desc' });
+  const [tablePage, setTablePage] = useState(1);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [leaderLimit, setLeaderLimit] = useState(10);
   const [drawerAuthor, setDrawerAuthor] = useState<string | null>(null);
