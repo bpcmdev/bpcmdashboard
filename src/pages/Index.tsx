@@ -19,7 +19,7 @@ import ResourceManagementTab from '@/components/dashboard/ResourceManagementTab'
 import AtAGlanceTab from '@/components/dashboard/AtAGlanceTab';
 import ProductIntelligenceTab from '@/components/dashboard/ProductIntelligenceTab';
 import WholesaleRetailTab from '@/components/dashboard/WholesaleRetailTab';
-import GettingStarted, { SetupBanner, useIsNewClient } from '@/components/dashboard/GettingStarted';
+import { SetupBanner, useIsNewClient } from '@/components/dashboard/GettingStarted';
 import NotableThisWeek from '@/components/dashboard/NotableThisWeek';
 import { LinkPreviewProvider } from '@/components/dashboard/LinkPreviewDrawer';
 
