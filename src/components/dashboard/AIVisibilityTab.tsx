@@ -2011,7 +2011,7 @@ const GeoRecommendationsSection = ({
     <div className="bg-card border border-border p-5 space-y-4">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2 flex-wrap">
-          <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground">AI GEO Recommendations</h3>
+          <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground">GEO Improvement Playbook</h3>
           <span className="text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[hsl(var(--chart-gold))] text-foreground">✦ Beta</span>
           {generatedAt && (
             <span className="text-[10px] text-muted-foreground">
