@@ -1902,7 +1902,18 @@ interface GeoRecommendation {
   priority: 'high' | 'medium' | 'low';
   targets: string[];
   platforms: string[];
+  impact_estimate?: string;
+  timeline?: string;
 }
+
+const PLAYBOOK_PALETTE = [
+  { bg: 'bg-blue-50', border: 'border-l-blue-500', text: 'text-blue-700' },
+  { bg: 'bg-emerald-50', border: 'border-l-emerald-500', text: 'text-emerald-700' },
+  { bg: 'bg-amber-50', border: 'border-l-amber-500', text: 'text-amber-700' },
+  { bg: 'bg-red-50', border: 'border-l-red-500', text: 'text-red-700' },
+  { bg: 'bg-purple-50', border: 'border-l-purple-500', text: 'text-purple-700' },
+];
+const PLAYBOOK_LONGGAME = { bg: 'bg-muted/40', border: 'border-l-muted-foreground/60', text: 'text-foreground' };
 interface GeoSuggestions {
   headline: string;
   summary: string;
