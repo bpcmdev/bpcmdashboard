@@ -1902,7 +1902,18 @@ interface GeoRecommendation {
   priority: 'high' | 'medium' | 'low';
   targets: string[];
   platforms: string[];
+  impact_estimate?: string;
+  timeline?: string;
 }
+
+const PLAYBOOK_PALETTE = [
+  { bg: 'bg-blue-50', border: 'border-l-blue-500', text: 'text-blue-700' },
+  { bg: 'bg-emerald-50', border: 'border-l-emerald-500', text: 'text-emerald-700' },
+  { bg: 'bg-amber-50', border: 'border-l-amber-500', text: 'text-amber-700' },
+  { bg: 'bg-red-50', border: 'border-l-red-500', text: 'text-red-700' },
+  { bg: 'bg-purple-50', border: 'border-l-purple-500', text: 'text-purple-700' },
+];
+const PLAYBOOK_LONGGAME = { bg: 'bg-muted/40', border: 'border-l-muted-foreground/60', text: 'text-foreground' };
 interface GeoSuggestions {
   headline: string;
   summary: string;
@@ -2000,7 +2011,7 @@ const GeoRecommendationsSection = ({
     <div className="bg-card border border-border p-5 space-y-4">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2 flex-wrap">
-          <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground">AI GEO Recommendations</h3>
+          <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground">GEO Improvement Playbook</h3>
           <span className="text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 bg-[hsl(var(--chart-gold))] text-foreground">✦ Beta</span>
           {generatedAt && (
             <span className="text-[10px] text-muted-foreground">
@@ -2041,57 +2052,79 @@ const GeoRecommendationsSection = ({
             {suggestions!.summary && (
               <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{suggestions!.summary}</p>
             )}
+            <p className="text-[11px] text-muted-foreground/80 mt-2 leading-relaxed">
+              Ranked by impact-to-effort ratio. Each quick win is executable within 30 days and maps to a specific platform gap in the scorecards above.
+              <span className="italic"> Impact estimates are directional projections, not measured forecasts.</span>
+            </p>
           </div>
 
           {suggestions!.recommendations?.length > 0 && (
             <div className="space-y-3">
-              {suggestions!.recommendations.map((rec, i) => (
-                <div key={i} className="flex gap-3 border border-border p-4 bg-background">
-                  <div className="shrink-0">
-                    <span className={cn(
-                      'inline-block text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5',
-                      PRIORITY_STYLES[rec.priority] || PRIORITY_STYLES.low
-                    )}>
-                      {rec.priority}
-                    </span>
-                  </div>
-                  <div className="flex-1 space-y-1.5 min-w-0">
-                    <p className="text-sm font-bold text-foreground">{rec.title}</p>
-                    {rec.action && <p className="text-[13px] text-foreground/90">{rec.action}</p>}
-                    {rec.rationale && <p className="text-[11px] text-muted-foreground leading-relaxed">{rec.rationale}</p>}
-                    {(rec.targets?.length ?? 0) > 0 && (
-                      <div className="flex flex-wrap gap-1 pt-1">
-                        {rec.targets.map((t, j) => {
-                          const isUrl = /^https?:\/\//i.test(t);
-                          let label = t;
-                          if (isUrl) {
-                            try { label = new URL(t).hostname; } catch { /* keep raw */ }
-                          }
-                          const cls = 'text-[9px] font-medium px-1.5 py-0.5 bg-muted text-muted-foreground border border-border';
-                          return isUrl ? (
-                            <a key={j} href={t} target="_blank" rel="noopener noreferrer" className={cn(cls, 'hover:bg-muted-foreground/10')}>
-                              {label}
-                            </a>
-                          ) : (
-                            <span key={j} className={cls}>{label}</span>
-                          );
-                        })}
+              {suggestions!.recommendations.map((rec, i) => {
+                const isLast = i === suggestions!.recommendations.length - 1;
+                const isLongGame = isLast && suggestions!.recommendations.length > 1;
+                const palette = isLongGame ? PLAYBOOK_LONGGAME : PLAYBOOK_PALETTE[i % PLAYBOOK_PALETTE.length];
+                const badge = isLongGame ? '∞' : String(i + 1);
+                const hasFooter = !!(rec.impact_estimate || rec.timeline);
+                return (
+                  <div key={i} className={cn('flex gap-4 border-l-4 p-4', palette.bg, palette.border)}>
+                    <div className="shrink-0 w-10 flex items-start justify-center pt-0.5">
+                      <span className={cn('font-display font-bold text-3xl leading-none', palette.text)}>{badge}</span>
+                    </div>
+                    <div className="flex-1 space-y-1.5 min-w-0">
+                      <div className="flex items-baseline gap-2 flex-wrap">
+                        <p className="text-sm font-bold text-foreground">{rec.title}</p>
+                        {isLongGame && (
+                          <span className={cn('text-[9px] font-bold tracking-[0.1em] uppercase', palette.text)}>Long Game</span>
+                        )}
                       </div>
-                    )}
-                    {(rec.platforms?.length ?? 0) > 0 && (
-                      <div className="flex flex-wrap gap-1 pt-1">
-                        {rec.platforms.map((p, j) => (
-                          <span key={j} className="text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 bg-foreground text-background">
-                            {platformLabel(p)}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                      {rec.action && <p className="text-[13px] text-foreground/90">{rec.action}</p>}
+                      {rec.rationale && <p className="text-[11px] text-muted-foreground leading-relaxed">{rec.rationale}</p>}
+                      {(rec.targets?.length ?? 0) > 0 && (
+                        <div className="flex flex-wrap gap-1 pt-1">
+                          {rec.targets.map((t, j) => {
+                            const isUrl = /^https?:\/\//i.test(t);
+                            let label = t;
+                            if (isUrl) {
+                              try { label = new URL(t).hostname; } catch { /* keep raw */ }
+                            }
+                            const cls = 'text-[9px] font-medium px-1.5 py-0.5 bg-white/60 text-foreground/70 border border-border/60';
+                            return isUrl ? (
+                              <a key={j} href={t} target="_blank" rel="noopener noreferrer" className={cn(cls, 'hover:bg-white')}>
+                                {label}
+                              </a>
+                            ) : (
+                              <span key={j} className={cls}>{label}</span>
+                            );
+                          })}
+                        </div>
+                      )}
+                      {(rec.platforms?.length ?? 0) > 0 && (
+                        <div className="flex flex-wrap gap-1 pt-1">
+                          {rec.platforms.map((p, j) => (
+                            <span key={j} className="text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5 bg-foreground text-background">
+                              {platformLabel(p)}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {hasFooter && (
+                        <p
+                          className={cn('text-[11px] font-bold pt-1.5', palette.text)}
+                          title="Directional projection, not a measured forecast"
+                        >
+                          {rec.impact_estimate && <>Estimated: {rec.impact_estimate}</>}
+                          {rec.impact_estimate && rec.timeline && <> · </>}
+                          {rec.timeline && <>Timeline: {rec.timeline}</>}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
+
 
           {suggestions!.watch_items?.length > 0 && (
             <div className="pt-2 border-t border-border">
