@@ -318,7 +318,7 @@ const NetworkBadge = ({ network }: { network: string }) => {
 // ---------- main tab ----------
 const InfluencerIntelligenceTab = () => {
   const { activeClientId, refreshKey } = useWeek();
-  const { clientColor } = useAdmin();
+  const { clientColor, isAdmin } = useAdmin();
   const accent = clientColor || ROYAL;
 
   const [posts, setPosts] = useState<LeftyPost[]>([]);
