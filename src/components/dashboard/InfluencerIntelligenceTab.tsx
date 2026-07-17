@@ -693,6 +693,9 @@ const InfluencerIntelligenceTab = () => {
           <EmptyState icon="📣" title="No influencer data yet" description="Once posts are synced, the intelligence view will populate here." />
         ) : (
           <>
+            {activeClientId && (
+              <InfluencerSummarySection clientId={activeClientId} accent={accent} isAdmin={isAdmin} />
+            )}
             {/* 1. Hero KPI band */}
             <section className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
               <KpiCard label="Total Posts" value={kpis.posts.cur} prior={kpis.posts.prior} format={n => Math.round(n).toLocaleString()} spark={spark('posts')} delay={0} />
