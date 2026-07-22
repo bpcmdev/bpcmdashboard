@@ -88,7 +88,6 @@ interface LeftyInfluencer {
 }
 
 type NetworkKey = 'all' | 'Instagram' | 'TikTok';
-type NetworkKey = 'all' | 'Instagram' | 'TikTok';
 
 // ---------- helpers ----------
 const normalizeNetwork = (n: string | null): string => {
