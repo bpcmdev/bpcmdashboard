@@ -87,7 +87,7 @@ interface LeftyInfluencer {
   est_reach: number | null;
 }
 
-type DateRangeKey = '30d' | '90d' | '12mo' | 'all';
+type NetworkKey = 'all' | 'Instagram' | 'TikTok';
 type NetworkKey = 'all' | 'Instagram' | 'TikTok';
 
 // ---------- helpers ----------
