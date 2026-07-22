@@ -320,7 +320,6 @@ const InfluencerIntelligenceTab = () => {
   const [error, setError] = useState(false);
 
   const [network, setNetwork] = useState<NetworkKey>('all');
-  const [network, setNetwork] = useState<NetworkKey>('all');
   const [selectedCampaigns, setSelectedCampaigns] = useState<string[]>([]);
   const [chartSeries, setChartSeries] = useState<'emv' | 'posts' | 'engagements'>('emv');
 
