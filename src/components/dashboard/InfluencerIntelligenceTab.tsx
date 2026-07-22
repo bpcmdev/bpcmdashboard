@@ -425,31 +425,16 @@ const InfluencerIntelligenceTab = () => {
     return Array.from(set).sort();
   }, [posts]);
 
-  // Filtered posts (current period)
-  const { filteredPosts, priorPosts } = useMemo(() => {
-    const now = new Date();
-    let fromIso = '';
-    let priorFromIso = '';
-    let priorToIso = '';
-    if (dateRange !== 'all') {
-      const days = dateRange === '30d' ? 30 : dateRange === '90d' ? 90 : 365;
-      fromIso = daysAgoIso(days);
-      priorFromIso = daysAgoIso(days * 2);
-      priorToIso = fromIso;
-    }
-    const matches = (p: LeftyPost, from: string, to?: string) => {
-      if (!p.posted_at) return false;
-      const iso = p.posted_at.slice(0, 10);
-      if (from && iso < from) return false;
-      if (to && iso >= to) return false;
+  // Filtered posts (server already scoped by date; only apply network/campaign here).
+  const filteredPosts = useMemo(() => {
+    return posts.filter(p => {
       if (network !== 'all' && normalizeNetwork(p.network) !== network) return false;
       if (selectedCampaigns.length > 0 && (!p.campaign_name || !selectedCampaigns.includes(p.campaign_name))) return false;
       return true;
-    };
-    const cur = posts.filter(p => matches(p, fromIso));
-    const prev = dateRange === 'all' ? [] : posts.filter(p => matches(p, priorFromIso, priorToIso));
-    return { filteredPosts: cur, priorPosts: prev };
-  }, [posts, dateRange, network, selectedCampaigns]);
+    });
+  }, [posts, network, selectedCampaigns]);
+  // No client-side prior-period comparison — global week selector drives the window.
+  const priorPosts: LeftyPost[] = [];
 
   // Monthly aggregates over the last 6 months (for KPI sparklines) — from all posts
   const sixMonthKeys = useMemo(() => {
