@@ -209,8 +209,6 @@ const KpiCard = ({ label, value, prior, format, spark, delay }: KpiCardProps) =>
 
 // ---------- filter bar ----------
 interface FilterBarProps {
-  dateRange: DateRangeKey;
-  setDateRange: (k: DateRangeKey) => void;
   network: NetworkKey;
   setNetwork: (n: NetworkKey) => void;
   campaigns: string[];
@@ -218,7 +216,7 @@ interface FilterBarProps {
   setSelectedCampaigns: (c: string[]) => void;
 }
 const FilterBar = ({
-  dateRange, setDateRange, network, setNetwork,
+  network, setNetwork,
   campaigns, selectedCampaigns, setSelectedCampaigns,
 }: FilterBarProps) => {
   const Pill = <T extends string>({ value, active, onClick, label }: { value: T; active: boolean; onClick: (v: T) => void; label: string }) => (
@@ -235,12 +233,6 @@ const FilterBar = ({
   return (
     <div className="sticky top-0 z-20 -mx-6 px-6 py-3 bg-background/95 backdrop-blur border-b border-black/10">
       <div className="flex flex-wrap items-center gap-4">
-        <div className="flex items-center gap-1 border border-black/10">
-          <Pill value="30d" active={dateRange === '30d'} onClick={setDateRange} label="30D" />
-          <Pill value="90d" active={dateRange === '90d'} onClick={setDateRange} label="90D" />
-          <Pill value="12mo" active={dateRange === '12mo'} onClick={setDateRange} label="12MO" />
-          <Pill value="all" active={dateRange === 'all'} onClick={setDateRange} label="All Time" />
-        </div>
         <div className="flex items-center gap-1 border border-black/10">
           <Pill value="all" active={network === 'all'} onClick={setNetwork} label="All" />
           <Pill value="Instagram" active={network === 'Instagram'} onClick={setNetwork} label="Instagram" />
