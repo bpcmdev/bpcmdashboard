@@ -512,14 +512,13 @@ const InfluencerIntelligenceTab = () => {
   // Prefers lefty_monthly_perf when neutral filters, otherwise computes from posts.
   const filteredMonthly = useMemo(() => {
     const neutralFilters = network === 'all' && selectedCampaigns.length === 0;
-    const fromIso = dateRange === 'all' ? '' :
-      daysAgoIso(dateRange === '30d' ? 30 : dateRange === '90d' ? 90 : 365);
+    const fromIso = isAllTime ? '' : effectiveFrom;
+    const toIso = isAllTime ? '' : effectiveTo;
 
     let rows: { key: string; posts: number; reach: number; emv: number; engagements: number }[] = [];
 
     if (neutralFilters && monthlyPerf.length > 0) {
-      const inWindow = monthlyPerf.filter(m => !fromIso || (m.month_start ?? '') >= fromIso.slice(0, 7));
-      rows = inWindow.map(m => ({
+      rows = monthlyPerf.map(m => ({
         key: monthKey(m.month_start ?? ''),
         posts: m.posts ?? 0,
         reach: m.est_reach ?? 0,
@@ -546,14 +545,17 @@ const InfluencerIntelligenceTab = () => {
 
     // Fill missing months with zeros so the axis is continuous.
     const startKey = fromIso ? fromIso.slice(0, 7) : rows[0].key;
-    const endKey = monthKey(new Date().toISOString().slice(0, 10));
-    const allKeys = monthRange(startKey < rows[0].key ? startKey : rows[0].key, endKey > rows[rows.length - 1].key ? endKey : rows[rows.length - 1].key);
+    const endKey = toIso ? toIso.slice(0, 7) : rows[rows.length - 1].key;
+    const allKeys = monthRange(
+      startKey < rows[0].key ? startKey : rows[0].key,
+      endKey > rows[rows.length - 1].key ? endKey : rows[rows.length - 1].key,
+    );
     const byKey = new Map(rows.map(r => [r.key, r]));
     return allKeys.map(k => {
       const r = byKey.get(k) ?? { key: k, posts: 0, reach: 0, emv: 0, engagements: 0 };
       return { month: monthLabel(k), key: k, ...r };
     });
-  }, [filteredPosts, monthlyPerf, network, selectedCampaigns, dateRange]);
+  }, [filteredPosts, monthlyPerf, network, selectedCampaigns, isAllTime, effectiveFrom, effectiveTo]);
 
   // Campaign aggregates (from filtered posts)
   const campaignAgg = useMemo(() => {
