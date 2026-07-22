@@ -697,7 +697,6 @@ const InfluencerIntelligenceTab = () => {
 
             {/* 2. Filter bar (sticky) */}
             <FilterBar
-              dateRange={dateRange} setDateRange={setDateRange}
               network={network} setNetwork={setNetwork}
               campaigns={campaignList}
               selectedCampaigns={selectedCampaigns} setSelectedCampaigns={setSelectedCampaigns}
