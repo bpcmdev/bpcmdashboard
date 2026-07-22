@@ -337,9 +337,10 @@ const InfluencerIntelligenceTab = () => {
     setTablePage(1);
   }, [tableSearch, tableSort]);
 
-  // Fetch all data (no row caps)
+  // Fetch data scoped to the global WeekContext (posted_at / month_start / partnership overlap).
   useEffect(() => {
     if (!activeClientId) return;
+    if (!isAllTime && (!effectiveFrom || !effectiveTo)) return;
     let cancelled = false;
     (async () => {
       setLoading(true);
@@ -349,10 +350,14 @@ const InfluencerIntelligenceTab = () => {
       let from = 0;
       // eslint-disable-next-line no-constant-condition
       while (true) {
-        const { data, error: err } = await supabase
+        let q = supabase
           .from('lefty_posts')
           .select('id, campaign_name, network, author_name, followers, impressions, reach, emv, engagement_rate, post_link, posted_at, likes, comments, views, shares, meta_id, caption_excerpt')
-          .eq('client_id', activeClientId)
+          .eq('client_id', activeClientId);
+        if (!isAllTime) {
+          q = q.gte('posted_at', effectiveFrom).lte('posted_at', `${effectiveTo}T23:59:59.999Z`);
+        }
+        const { data, error: err } = await q
           .order('posted_at', { ascending: false })
           .range(from, from + PAGE - 1);
         if (cancelled) return;
@@ -363,24 +368,32 @@ const InfluencerIntelligenceTab = () => {
         from += PAGE;
         if (from > 100000) break;
       }
-      const { data: pData } = await supabase
+
+      let pq = supabase
         .from('partnerships')
         .select('id, partner_name, type, status, description, emv_generated, start_date, end_date, notes')
-        .eq('client_id', activeClientId)
-        .order('created_at', { ascending: false });
+        .eq('client_id', activeClientId);
+      if (!isAllTime) {
+        pq = pq
+          .or(`start_date.is.null,start_date.lte.${effectiveTo}`)
+          .or(`end_date.is.null,end_date.gte.${effectiveFrom}`);
+      }
+      const { data: pData } = await pq.order('created_at', { ascending: false });
 
-      // Lefty monthly rollup (may not exist for every client — silent fallback)
-      const { data: mpData } = await supabase
+      // Lefty monthly rollup — filter by month_start within window.
+      let mq = supabase
         .from('lefty_monthly_perf')
         .select('client_id, month_start, active_influencers, posts, impressions, engagements, est_reach, eng_rate, emv')
-        .eq('client_id', activeClientId)
-        .order('month_start', { ascending: true });
+        .eq('client_id', activeClientId);
+      if (!isAllTime) {
+        mq = mq.gte('month_start', effectiveFrom).lte('month_start', effectiveTo);
+      }
+      const { data: mpData } = await mq.order('month_start', { ascending: true });
 
       // Influencer profiles keyed by meta_id
       const metaIds = Array.from(new Set(all.map(p => p.meta_id).filter((x): x is string => !!x)));
       let profiles: LeftyInfluencer[] = [];
       if (metaIds.length > 0) {
-        // Chunk to avoid URL length issues
         const CHUNK = 200;
         for (let i = 0; i < metaIds.length; i += CHUNK) {
           const slice = metaIds.slice(i, i + CHUNK);
@@ -402,7 +415,7 @@ const InfluencerIntelligenceTab = () => {
       setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [activeClientId, refreshKey]);
+  }, [activeClientId, refreshKey, isAllTime, effectiveFrom, effectiveTo]);
 
 
   // Distinct campaigns from posts
