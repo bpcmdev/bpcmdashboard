@@ -308,7 +308,7 @@ const NetworkBadge = ({ network }: { network: string }) => {
 
 // ---------- main tab ----------
 const InfluencerIntelligenceTab = () => {
-  const { activeClientId, refreshKey } = useWeek();
+  const { activeClientId, refreshKey, isAllTime, effectiveFrom, effectiveTo } = useWeek();
   const { clientColor, isAdmin } = useAdmin();
   const accent = clientColor || ROYAL;
 
@@ -319,7 +319,7 @@ const InfluencerIntelligenceTab = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  const [dateRange, setDateRange] = useState<DateRangeKey>('12mo');
+  const [network, setNetwork] = useState<NetworkKey>('all');
   const [network, setNetwork] = useState<NetworkKey>('all');
   const [selectedCampaigns, setSelectedCampaigns] = useState<string[]>([]);
   const [chartSeries, setChartSeries] = useState<'emv' | 'posts' | 'engagements'>('emv');
