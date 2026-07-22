@@ -90,7 +90,7 @@ const DashboardHeader = () => {
             <img src={clientLogo} alt={clientName ?? ''} className="h-6 w-auto" />
           )}
           <span className="font-display text-sm md:text-base font-bold tracking-[0.06em] uppercase text-white truncate">
-            {clientName ?? 'Loading…'}
+            {clientName ? `SATORI × ${clientName}` : 'Loading…'}
           </span>
         </div>
 
