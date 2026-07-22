@@ -46,7 +46,7 @@ function getCategoryClass(category: string): string {
 }
 
 const KeyWinsTab = () => {
-  const { refreshKey, activeClientId: clientId } = useWeek();
+  const { refreshKey, activeClientId: clientId, isAllTime, effectiveFrom, effectiveTo } = useWeek();
   const { isAdmin } = useAdmin();
   const [wins, setWins] = useState<KeyWin[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,14 +57,20 @@ const KeyWinsTab = () => {
 
   useEffect(() => {
     if (!clientId) return;
+    if (!isAllTime && (!effectiveFrom || !effectiveTo)) return;
     const fetch = async () => {
       setLoading(true);
       setError(false);
-      const { data, error: err } = await supabase
+      let q = supabase
         .from('key_wins')
         .select('*')
-        .eq('client_id', clientId)
-        .order('created_at', { ascending: false });
+        .eq('client_id', clientId);
+      if (!isAllTime) {
+        q = q
+          .gte('created_at', effectiveFrom)
+          .lte('created_at', `${effectiveTo}T23:59:59.999Z`);
+      }
+      const { data, error: err } = await q.order('created_at', { ascending: false });
       if (err) {
         console.error('[KeyWinsTab] error:', err);
         setError(true);
@@ -73,7 +79,7 @@ const KeyWinsTab = () => {
       setLoading(false);
     };
     fetch();
-  }, [clientId, refreshKey]);
+  }, [clientId, refreshKey, isAllTime, effectiveFrom, effectiveTo]);
 
   const categories = ['ALL', ...Array.from(new Set(wins.map(w => w.category).filter(Boolean)))];
   const filtered = activeCategory === 'ALL' ? wins : wins.filter(w => w.category === activeCategory);

@@ -87,7 +87,6 @@ interface LeftyInfluencer {
   est_reach: number | null;
 }
 
-type DateRangeKey = '30d' | '90d' | '12mo' | 'all';
 type NetworkKey = 'all' | 'Instagram' | 'TikTok';
 
 // ---------- helpers ----------
@@ -210,8 +209,6 @@ const KpiCard = ({ label, value, prior, format, spark, delay }: KpiCardProps) =>
 
 // ---------- filter bar ----------
 interface FilterBarProps {
-  dateRange: DateRangeKey;
-  setDateRange: (k: DateRangeKey) => void;
   network: NetworkKey;
   setNetwork: (n: NetworkKey) => void;
   campaigns: string[];
@@ -219,7 +216,7 @@ interface FilterBarProps {
   setSelectedCampaigns: (c: string[]) => void;
 }
 const FilterBar = ({
-  dateRange, setDateRange, network, setNetwork,
+  network, setNetwork,
   campaigns, selectedCampaigns, setSelectedCampaigns,
 }: FilterBarProps) => {
   const Pill = <T extends string>({ value, active, onClick, label }: { value: T; active: boolean; onClick: (v: T) => void; label: string }) => (
@@ -236,12 +233,6 @@ const FilterBar = ({
   return (
     <div className="sticky top-0 z-20 -mx-6 px-6 py-3 bg-background/95 backdrop-blur border-b border-black/10">
       <div className="flex flex-wrap items-center gap-4">
-        <div className="flex items-center gap-1 border border-black/10">
-          <Pill value="30d" active={dateRange === '30d'} onClick={setDateRange} label="30D" />
-          <Pill value="90d" active={dateRange === '90d'} onClick={setDateRange} label="90D" />
-          <Pill value="12mo" active={dateRange === '12mo'} onClick={setDateRange} label="12MO" />
-          <Pill value="all" active={dateRange === 'all'} onClick={setDateRange} label="All Time" />
-        </div>
         <div className="flex items-center gap-1 border border-black/10">
           <Pill value="all" active={network === 'all'} onClick={setNetwork} label="All" />
           <Pill value="Instagram" active={network === 'Instagram'} onClick={setNetwork} label="Instagram" />
@@ -317,7 +308,7 @@ const NetworkBadge = ({ network }: { network: string }) => {
 
 // ---------- main tab ----------
 const InfluencerIntelligenceTab = () => {
-  const { activeClientId, refreshKey } = useWeek();
+  const { activeClientId, refreshKey, isAllTime, effectiveFrom, effectiveTo } = useWeek();
   const { clientColor, isAdmin } = useAdmin();
   const accent = clientColor || ROYAL;
 
@@ -328,7 +319,6 @@ const InfluencerIntelligenceTab = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  const [dateRange, setDateRange] = useState<DateRangeKey>('12mo');
   const [network, setNetwork] = useState<NetworkKey>('all');
   const [selectedCampaigns, setSelectedCampaigns] = useState<string[]>([]);
   const [chartSeries, setChartSeries] = useState<'emv' | 'posts' | 'engagements'>('emv');
@@ -347,9 +337,10 @@ const InfluencerIntelligenceTab = () => {
     setTablePage(1);
   }, [tableSearch, tableSort]);
 
-  // Fetch all data (no row caps)
+  // Fetch data scoped to the global WeekContext (posted_at / month_start / partnership overlap).
   useEffect(() => {
     if (!activeClientId) return;
+    if (!isAllTime && (!effectiveFrom || !effectiveTo)) return;
     let cancelled = false;
     (async () => {
       setLoading(true);
@@ -359,10 +350,14 @@ const InfluencerIntelligenceTab = () => {
       let from = 0;
       // eslint-disable-next-line no-constant-condition
       while (true) {
-        const { data, error: err } = await supabase
+        let q = supabase
           .from('lefty_posts')
           .select('id, campaign_name, network, author_name, followers, impressions, reach, emv, engagement_rate, post_link, posted_at, likes, comments, views, shares, meta_id, caption_excerpt')
-          .eq('client_id', activeClientId)
+          .eq('client_id', activeClientId);
+        if (!isAllTime) {
+          q = q.gte('posted_at', effectiveFrom).lte('posted_at', `${effectiveTo}T23:59:59.999Z`);
+        }
+        const { data, error: err } = await q
           .order('posted_at', { ascending: false })
           .range(from, from + PAGE - 1);
         if (cancelled) return;
@@ -373,24 +368,32 @@ const InfluencerIntelligenceTab = () => {
         from += PAGE;
         if (from > 100000) break;
       }
-      const { data: pData } = await supabase
+
+      let pq = supabase
         .from('partnerships')
         .select('id, partner_name, type, status, description, emv_generated, start_date, end_date, notes')
-        .eq('client_id', activeClientId)
-        .order('created_at', { ascending: false });
+        .eq('client_id', activeClientId);
+      if (!isAllTime) {
+        pq = pq
+          .or(`start_date.is.null,start_date.lte.${effectiveTo}`)
+          .or(`end_date.is.null,end_date.gte.${effectiveFrom}`);
+      }
+      const { data: pData } = await pq.order('created_at', { ascending: false });
 
-      // Lefty monthly rollup (may not exist for every client — silent fallback)
-      const { data: mpData } = await supabase
+      // Lefty monthly rollup — filter by month_start within window.
+      let mq = supabase
         .from('lefty_monthly_perf')
         .select('client_id, month_start, active_influencers, posts, impressions, engagements, est_reach, eng_rate, emv')
-        .eq('client_id', activeClientId)
-        .order('month_start', { ascending: true });
+        .eq('client_id', activeClientId);
+      if (!isAllTime) {
+        mq = mq.gte('month_start', effectiveFrom).lte('month_start', effectiveTo);
+      }
+      const { data: mpData } = await mq.order('month_start', { ascending: true });
 
       // Influencer profiles keyed by meta_id
       const metaIds = Array.from(new Set(all.map(p => p.meta_id).filter((x): x is string => !!x)));
       let profiles: LeftyInfluencer[] = [];
       if (metaIds.length > 0) {
-        // Chunk to avoid URL length issues
         const CHUNK = 200;
         for (let i = 0; i < metaIds.length; i += CHUNK) {
           const slice = metaIds.slice(i, i + CHUNK);
@@ -412,7 +415,7 @@ const InfluencerIntelligenceTab = () => {
       setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [activeClientId, refreshKey]);
+  }, [activeClientId, refreshKey, isAllTime, effectiveFrom, effectiveTo]);
 
 
   // Distinct campaigns from posts
@@ -422,31 +425,16 @@ const InfluencerIntelligenceTab = () => {
     return Array.from(set).sort();
   }, [posts]);
 
-  // Filtered posts (current period)
-  const { filteredPosts, priorPosts } = useMemo(() => {
-    const now = new Date();
-    let fromIso = '';
-    let priorFromIso = '';
-    let priorToIso = '';
-    if (dateRange !== 'all') {
-      const days = dateRange === '30d' ? 30 : dateRange === '90d' ? 90 : 365;
-      fromIso = daysAgoIso(days);
-      priorFromIso = daysAgoIso(days * 2);
-      priorToIso = fromIso;
-    }
-    const matches = (p: LeftyPost, from: string, to?: string) => {
-      if (!p.posted_at) return false;
-      const iso = p.posted_at.slice(0, 10);
-      if (from && iso < from) return false;
-      if (to && iso >= to) return false;
+  // Filtered posts (server already scoped by date; only apply network/campaign here).
+  const filteredPosts = useMemo(() => {
+    return posts.filter(p => {
       if (network !== 'all' && normalizeNetwork(p.network) !== network) return false;
       if (selectedCampaigns.length > 0 && (!p.campaign_name || !selectedCampaigns.includes(p.campaign_name))) return false;
       return true;
-    };
-    const cur = posts.filter(p => matches(p, fromIso));
-    const prev = dateRange === 'all' ? [] : posts.filter(p => matches(p, priorFromIso, priorToIso));
-    return { filteredPosts: cur, priorPosts: prev };
-  }, [posts, dateRange, network, selectedCampaigns]);
+    });
+  }, [posts, network, selectedCampaigns]);
+  // No client-side prior-period comparison — global week selector drives the window.
+  const priorPosts: LeftyPost[] = [];
 
   // Monthly aggregates over the last 6 months (for KPI sparklines) — from all posts
   const sixMonthKeys = useMemo(() => {
@@ -524,14 +512,13 @@ const InfluencerIntelligenceTab = () => {
   // Prefers lefty_monthly_perf when neutral filters, otherwise computes from posts.
   const filteredMonthly = useMemo(() => {
     const neutralFilters = network === 'all' && selectedCampaigns.length === 0;
-    const fromIso = dateRange === 'all' ? '' :
-      daysAgoIso(dateRange === '30d' ? 30 : dateRange === '90d' ? 90 : 365);
+    const fromIso = isAllTime ? '' : effectiveFrom;
+    const toIso = isAllTime ? '' : effectiveTo;
 
     let rows: { key: string; posts: number; reach: number; emv: number; engagements: number }[] = [];
 
     if (neutralFilters && monthlyPerf.length > 0) {
-      const inWindow = monthlyPerf.filter(m => !fromIso || (m.month_start ?? '') >= fromIso.slice(0, 7));
-      rows = inWindow.map(m => ({
+      rows = monthlyPerf.map(m => ({
         key: monthKey(m.month_start ?? ''),
         posts: m.posts ?? 0,
         reach: m.est_reach ?? 0,
@@ -558,14 +545,17 @@ const InfluencerIntelligenceTab = () => {
 
     // Fill missing months with zeros so the axis is continuous.
     const startKey = fromIso ? fromIso.slice(0, 7) : rows[0].key;
-    const endKey = monthKey(new Date().toISOString().slice(0, 10));
-    const allKeys = monthRange(startKey < rows[0].key ? startKey : rows[0].key, endKey > rows[rows.length - 1].key ? endKey : rows[rows.length - 1].key);
+    const endKey = toIso ? toIso.slice(0, 7) : rows[rows.length - 1].key;
+    const allKeys = monthRange(
+      startKey < rows[0].key ? startKey : rows[0].key,
+      endKey > rows[rows.length - 1].key ? endKey : rows[rows.length - 1].key,
+    );
     const byKey = new Map(rows.map(r => [r.key, r]));
     return allKeys.map(k => {
       const r = byKey.get(k) ?? { key: k, posts: 0, reach: 0, emv: 0, engagements: 0 };
       return { month: monthLabel(k), key: k, ...r };
     });
-  }, [filteredPosts, monthlyPerf, network, selectedCampaigns, dateRange]);
+  }, [filteredPosts, monthlyPerf, network, selectedCampaigns, isAllTime, effectiveFrom, effectiveTo]);
 
   // Campaign aggregates (from filtered posts)
   const campaignAgg = useMemo(() => {
@@ -707,7 +697,6 @@ const InfluencerIntelligenceTab = () => {
 
             {/* 2. Filter bar (sticky) */}
             <FilterBar
-              dateRange={dateRange} setDateRange={setDateRange}
               network={network} setNetwork={setNetwork}
               campaigns={campaignList}
               selectedCampaigns={selectedCampaigns} setSelectedCampaigns={setSelectedCampaigns}
