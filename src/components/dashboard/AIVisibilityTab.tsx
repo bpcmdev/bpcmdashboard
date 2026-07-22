@@ -3079,7 +3079,7 @@ const PullQuotesSection = ({
 
 // ---------- Main ----------
 const AIVisibilityTab = () => {
-  const { activeClientId, refreshKey } = useWeek();
+  const { activeClientId, refreshKey, effectiveTo, isAllTime } = useWeek();
   const { clientName: ownClientName, isAdmin, allClients, clientColor } = useAdmin();
   const activeClientName = useMemo(() => {
     const match = allClients.find(c => c.id === activeClientId);
@@ -3090,7 +3090,10 @@ const AIVisibilityTab = () => {
   const [custom, setCustom] = useState<{ from?: Date; to?: Date }>({});
   const [platform, setPlatform] = useState<Platform>('all');
 
-  const { p_start, p_end } = useMemo(() => periodToRange(period, custom), [period, custom]);
+  const { p_start, p_end } = useMemo(
+    () => periodToRange(period, custom, effectiveTo, isAllTime),
+    [period, custom, effectiveTo, isAllTime],
+  );
   const p_platform = platform === 'all' ? null : platform;
 
   // State
