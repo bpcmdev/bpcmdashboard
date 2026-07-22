@@ -184,9 +184,25 @@ const PLATFORMS: { value: Platform; label: string }[] = [
 
 const isoDate = (d: Date) => d.toISOString().slice(0, 10);
 
-function periodToRange(period: PeriodKey, custom: { from?: Date; to?: Date }) {
-  const today = new Date();
-  const end = isoDate(today);
+/**
+ * Anchor the local Day/Week/Month lookback to the header's selected week.
+ *  - anchorIso = WeekContext.effectiveTo (end of the selected week/YTD/range)
+ *  - When the header is All Time (no anchor), fall back to today.
+ *  - Custom mode always uses the explicit user-picked dates.
+ * The window is `daysBack` days ending inclusive at the anchor, so the RPC's
+ * implicit "previous window" (same length, immediately before p_start) also
+ * shifts with the anchor — no separate delta math needed on the client.
+ */
+function periodToRange(
+  period: PeriodKey,
+  custom: { from?: Date; to?: Date },
+  anchorIso: string,
+  isAllTime: boolean,
+) {
+  const anchorDate = !isAllTime && anchorIso
+    ? new Date(anchorIso + 'T00:00:00')
+    : new Date();
+  const end = isoDate(anchorDate);
   if (period === 'custom') {
     return {
       p_start: custom.from ? isoDate(custom.from) : end,
@@ -194,7 +210,7 @@ function periodToRange(period: PeriodKey, custom: { from?: Date; to?: Date }) {
     };
   }
   const daysBack = period === 'day' ? 1 : period === 'week' ? 7 : 30;
-  const start = new Date(today);
+  const start = new Date(anchorDate);
   start.setDate(start.getDate() - (daysBack - 1));
   return { p_start: isoDate(start), p_end: end };
 }
@@ -3063,7 +3079,7 @@ const PullQuotesSection = ({
 
 // ---------- Main ----------
 const AIVisibilityTab = () => {
-  const { activeClientId, refreshKey } = useWeek();
+  const { activeClientId, refreshKey, effectiveTo, isAllTime } = useWeek();
   const { clientName: ownClientName, isAdmin, allClients, clientColor } = useAdmin();
   const activeClientName = useMemo(() => {
     const match = allClients.find(c => c.id === activeClientId);
@@ -3074,7 +3090,10 @@ const AIVisibilityTab = () => {
   const [custom, setCustom] = useState<{ from?: Date; to?: Date }>({});
   const [platform, setPlatform] = useState<Platform>('all');
 
-  const { p_start, p_end } = useMemo(() => periodToRange(period, custom), [period, custom]);
+  const { p_start, p_end } = useMemo(
+    () => periodToRange(period, custom, effectiveTo, isAllTime),
+    [period, custom, effectiveTo, isAllTime],
+  );
   const p_platform = platform === 'all' ? null : platform;
 
   // State
