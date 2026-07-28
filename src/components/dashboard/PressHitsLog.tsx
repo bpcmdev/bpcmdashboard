@@ -396,7 +396,7 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
         {/* Header */}
         <div className="flex items-center justify-between">
           <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground">
-            All Press Hits — Running Log
+            {corporateOnly ? 'Corporate & Executive Coverage' : 'All Press Hits — Running Log'}
           </h3>
           <div className="flex items-center gap-3">
             {isAdmin && (
