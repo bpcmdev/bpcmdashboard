@@ -57,6 +57,7 @@ const PlacementVolumeChart = ({ corporateOnly = false }: { corporateOnly?: boole
         query = query.gte('published_at', from).lte('published_at', to);
       }
       if (activeClientId) query = query.eq('client_id', activeClientId);
+      if (corporateOnly) query = query.in('placement_type', ['corporate', 'newswire']);
 
       const { data, error } = await query;
       if (error) {
