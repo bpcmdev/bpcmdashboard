@@ -236,7 +236,7 @@ const EarnedMediaTab = () => {
       </div>
 
       {/* All Press Hits Running Log */}
-      <PressHitsLog />
+      <PressHitsLog corporateOnly={corporateOnly} />
     </div>
   );
 };
