@@ -230,7 +230,7 @@ function formToPayload(v: ReturnType<typeof defaultFormValues>) {
 }
 
 /* ─── Main Component ─── */
-const PressHitsLog = () => {
+const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {}) => {
   const { selectedWeek, refreshKey, activeClientId, effectiveFrom, effectiveTo, rangeMode, isAllTime } = useWeek();
   const { isAdmin } = useAdmin();
   const [placements, setPlacements] = useState<Placement[]>([]);
