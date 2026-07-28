@@ -29,7 +29,7 @@ const SECTIONS: { id: string; label: string; Component: React.ComponentType }[] 
   { id: 'product_launches', label: 'Product Launches', Component: ProductLaunchesTab },
   { id: 'earned_media', label: 'Earned Media', Component: EarnedMediaTab },
   { id: 'influencer_social', label: 'Influencer & Social', Component: InfluencerSocialTab },
-  { id: 'corporate_comms', label: 'Corporate Comms', Component: CorporateCommsTab },
+
   { id: 'ai_visibility', label: 'AI Visibility', Component: AIVisibilityTab },
   
   { id: 'partnerships', label: 'Partnerships', Component: PartnershipsTab },
