@@ -271,6 +271,10 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
       query = query.eq('client_id', activeClientId);
     }
 
+    if (corporateOnly) {
+      query = query.in('placement_type', ['corporate', 'newswire']);
+    }
+
     const { data } = await query;
     setPlacements(data ?? []);
     setLoading(false);
