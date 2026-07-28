@@ -82,7 +82,7 @@ function DashboardContent() {
         'EARNED MEDIA': 'earned_media',
         'INFLUENCER INTELLIGENCE': 'influencer_social',
         'INFLUENCER & SOCIAL': 'influencer_social',
-        'CORPORATE COMMS': 'corporate_comms',
+
         'AI VISIBILITY': 'ai_visibility',
         'PARTNERSHIPS': 'partnerships',
         'WHOLESALE / RETAIL': 'wholesale_retail',
