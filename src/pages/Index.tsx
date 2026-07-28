@@ -32,7 +32,7 @@ const TAB_MAP: Record<string, React.ComponentType> = {
   'EARNED MEDIA': EarnedMediaTab,
   'INFLUENCER INTELLIGENCE': InfluencerIntelligenceTab,
   'INFLUENCER & SOCIAL': InfluencerIntelligenceTab,
-  'CORPORATE COMMS': CorporateCommsTab,
+
   'AI VISIBILITY': AIVisibilityTab,
   'PARTNERSHIPS': InfluencerIntelligenceTab,
   'WHOLESALE / RETAIL': WholesaleRetailTab,
