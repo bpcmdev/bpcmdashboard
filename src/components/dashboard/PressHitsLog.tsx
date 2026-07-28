@@ -427,7 +427,11 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
             ))}
           </div>
         ) : displayList.length === 0 ? (
-          <p className="text-xs text-muted-foreground text-center py-6">No placements for this week.</p>
+          <p className="text-xs text-muted-foreground text-center py-6">
+            {corporateOnly
+              ? 'No corporate or executive placements in this window yet. Launchmetrics feed lands mid-August.'
+              : 'No placements for this week.'}
+          </p>
         ) : (
           <div className="space-y-1.5">
             {displayList.map((p) => {
