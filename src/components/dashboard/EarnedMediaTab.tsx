@@ -27,6 +27,7 @@ const EarnedMediaTab = () => {
   const [tierFilter, setTierFilter] = useState('all');
   const [sentimentFilter, setSentimentFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [corporateOnly, setCorporateOnly] = useState(false);
 
   const {
     rangeMode, setRangeMode, rangeFrom, rangeTo, setRangeFrom, setRangeTo,
