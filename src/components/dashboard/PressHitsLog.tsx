@@ -282,7 +282,7 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
 
   useEffect(() => {
     fetchPlacements();
-  }, [effectiveFrom, effectiveTo, isAllTime, refreshKey, activeClientId, rangeMode]);
+  }, [effectiveFrom, effectiveTo, isAllTime, refreshKey, activeClientId, rangeMode, corporateOnly]);
 
   const visible = useMemo(
     () => placements.filter((p) => !p.dismissed),
