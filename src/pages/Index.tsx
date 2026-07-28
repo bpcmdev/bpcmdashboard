@@ -11,7 +11,7 @@ import KeyWinsTab from '@/components/dashboard/KeyWinsTab';
 import ProductLaunchesTab from '@/components/dashboard/ProductLaunchesTab';
 import PipelineMomentsTab from '@/components/dashboard/PipelineMomentsTab';
 import InfluencerIntelligenceTab from '@/components/dashboard/InfluencerIntelligenceTab';
-import CorporateCommsTab from '@/components/dashboard/CorporateCommsTab';
+
 import AIVisibilityTab from '@/components/dashboard/AIVisibilityTab';
 
 import TikTokShopTab from '@/components/dashboard/TikTokShopTab';
