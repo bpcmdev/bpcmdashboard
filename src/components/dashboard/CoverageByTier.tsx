@@ -10,7 +10,7 @@ interface TierData {
   color: string;
 }
 
-const CoverageByTier = () => {
+const CoverageByTier = ({ corporateOnly = false }: { corporateOnly?: boolean }) => {
   const [data, setData] = useState<TierData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -29,6 +29,7 @@ const CoverageByTier = () => {
         query = query.gte('published_at', effectiveFrom).lte('published_at', effectiveTo);
       }
       if (activeClientId) query = query.eq('client_id', activeClientId);
+      if (corporateOnly) query = query.in('placement_type', ['corporate', 'newswire']);
 
       const { data: placements, error: err } = await query;
 
@@ -63,7 +64,7 @@ const CoverageByTier = () => {
       setLoading(false);
     };
     fetchTiers();
-  }, [effectiveFrom, effectiveTo, isAllTime, refreshKey, activeClientId]);
+  }, [effectiveFrom, effectiveTo, isAllTime, refreshKey, activeClientId, corporateOnly]);
 
   if (error) {
     return <p className="text-sm text-destructive text-center py-8">Unable to load data. Please try refreshing.</p>;

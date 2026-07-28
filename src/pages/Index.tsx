@@ -11,7 +11,7 @@ import KeyWinsTab from '@/components/dashboard/KeyWinsTab';
 import ProductLaunchesTab from '@/components/dashboard/ProductLaunchesTab';
 import PipelineMomentsTab from '@/components/dashboard/PipelineMomentsTab';
 import InfluencerIntelligenceTab from '@/components/dashboard/InfluencerIntelligenceTab';
-import CorporateCommsTab from '@/components/dashboard/CorporateCommsTab';
+
 import AIVisibilityTab from '@/components/dashboard/AIVisibilityTab';
 
 import TikTokShopTab from '@/components/dashboard/TikTokShopTab';
@@ -32,7 +32,7 @@ const TAB_MAP: Record<string, React.ComponentType> = {
   'EARNED MEDIA': EarnedMediaTab,
   'INFLUENCER INTELLIGENCE': InfluencerIntelligenceTab,
   'INFLUENCER & SOCIAL': InfluencerIntelligenceTab,
-  'CORPORATE COMMS': CorporateCommsTab,
+
   'AI VISIBILITY': AIVisibilityTab,
   'PARTNERSHIPS': InfluencerIntelligenceTab,
   'WHOLESALE / RETAIL': WholesaleRetailTab,
@@ -82,7 +82,7 @@ function DashboardContent() {
         'EARNED MEDIA': 'earned_media',
         'INFLUENCER INTELLIGENCE': 'influencer_social',
         'INFLUENCER & SOCIAL': 'influencer_social',
-        'CORPORATE COMMS': 'corporate_comms',
+
         'AI VISIBILITY': 'ai_visibility',
         'PARTNERSHIPS': 'partnerships',
         'WHOLESALE / RETAIL': 'wholesale_retail',

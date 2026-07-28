@@ -230,7 +230,7 @@ function formToPayload(v: ReturnType<typeof defaultFormValues>) {
 }
 
 /* ─── Main Component ─── */
-const PressHitsLog = () => {
+const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {}) => {
   const { selectedWeek, refreshKey, activeClientId, effectiveFrom, effectiveTo, rangeMode, isAllTime } = useWeek();
   const { isAdmin } = useAdmin();
   const [placements, setPlacements] = useState<Placement[]>([]);
@@ -271,6 +271,10 @@ const PressHitsLog = () => {
       query = query.eq('client_id', activeClientId);
     }
 
+    if (corporateOnly) {
+      query = query.in('placement_type', ['corporate', 'newswire']);
+    }
+
     const { data } = await query;
     setPlacements(data ?? []);
     setLoading(false);
@@ -278,7 +282,7 @@ const PressHitsLog = () => {
 
   useEffect(() => {
     fetchPlacements();
-  }, [effectiveFrom, effectiveTo, isAllTime, refreshKey, activeClientId, rangeMode]);
+  }, [effectiveFrom, effectiveTo, isAllTime, refreshKey, activeClientId, rangeMode, corporateOnly]);
 
   const visible = useMemo(
     () => placements.filter((p) => !p.dismissed),
@@ -392,7 +396,7 @@ const PressHitsLog = () => {
         {/* Header */}
         <div className="flex items-center justify-between">
           <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground">
-            All Press Hits — Running Log
+            {corporateOnly ? 'Corporate & Executive Coverage' : 'All Press Hits — Running Log'}
           </h3>
           <div className="flex items-center gap-3">
             {isAdmin && (
@@ -423,7 +427,11 @@ const PressHitsLog = () => {
             ))}
           </div>
         ) : displayList.length === 0 ? (
-          <p className="text-xs text-muted-foreground text-center py-6">No placements for this week.</p>
+          <p className="text-xs text-muted-foreground text-center py-6">
+            {corporateOnly
+              ? 'No corporate or executive placements in this window yet. Launchmetrics feed lands mid-August.'
+              : 'No placements for this week.'}
+          </p>
         ) : (
           <div className="space-y-1.5">
             {displayList.map((p) => {

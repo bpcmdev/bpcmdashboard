@@ -27,6 +27,7 @@ const EarnedMediaTab = () => {
   const [tierFilter, setTierFilter] = useState('all');
   const [sentimentFilter, setSentimentFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [corporateOnly, setCorporateOnly] = useState(false);
 
   const {
     rangeMode, setRangeMode, rangeFrom, rangeTo, setRangeFrom, setRangeTo,
@@ -129,11 +130,32 @@ const EarnedMediaTab = () => {
             )}
           </>
         )}
+
+        <div className="inline-flex border border-border bg-card ml-auto">
+          <button
+            onClick={() => setCorporateOnly(false)}
+            className={cn(
+              'text-[10px] font-bold tracking-[0.15em] uppercase px-3 py-1.5 transition-colors',
+              !corporateOnly ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            All Coverage
+          </button>
+          <button
+            onClick={() => setCorporateOnly(true)}
+            className={cn(
+              'text-[10px] font-bold tracking-[0.15em] uppercase px-3 py-1.5 transition-colors border-l border-border',
+              corporateOnly ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            Corporate & Executive
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-6">
         <div className="md:col-span-3 bg-card p-4 md:p-5 border border-border">
-          <PlacementVolumeChart />
+          <PlacementVolumeChart corporateOnly={corporateOnly} />
         </div>
         <div className="md:col-span-2 bg-card p-4 md:p-5 border border-border">
           <ShareOfVoiceTable />
@@ -144,7 +166,7 @@ const EarnedMediaTab = () => {
           <SentimentBreakdown />
         </div>
         <div className="md:col-span-2 bg-card p-4 md:p-5 border border-border">
-          <CoverageByTier />
+          <CoverageByTier corporateOnly={corporateOnly} />
         </div>
       </div>
 
@@ -214,7 +236,7 @@ const EarnedMediaTab = () => {
       </div>
 
       {/* All Press Hits Running Log */}
-      <PressHitsLog />
+      <PressHitsLog corporateOnly={corporateOnly} />
     </div>
   );
 };

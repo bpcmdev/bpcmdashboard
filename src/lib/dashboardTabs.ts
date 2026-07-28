@@ -13,7 +13,7 @@ export const ALL_TABS: TabDef[] = [
   { id: 'product_launches',    label: 'PRODUCT LAUNCHES' },
   { id: 'earned_media',        label: 'EARNED MEDIA' },
   { id: 'influencer_social',   label: 'INFLUENCER INTELLIGENCE' },
-  { id: 'corporate_comms',     label: 'CORPORATE COMMS' },
+  
   { id: 'ai_visibility',       label: 'AI VISIBILITY' },
   { id: 'wholesale_retail',    label: 'WHOLESALE / RETAIL' },
   { id: 'tiktok_shop',         label: 'TIKTOK SHOP' },

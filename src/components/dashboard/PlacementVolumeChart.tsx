@@ -22,7 +22,7 @@ function fmtShort(d: Date): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-const PlacementVolumeChart = () => {
+const PlacementVolumeChart = ({ corporateOnly = false }: { corporateOnly?: boolean }) => {
   const { activeClientId, refreshKey, rangeMode, effectiveFrom, effectiveTo, selectedWeek, isAllTime } = useWeek();
   const [buckets, setBuckets] = useState<Bucket[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,6 +57,7 @@ const PlacementVolumeChart = () => {
         query = query.gte('published_at', from).lte('published_at', to);
       }
       if (activeClientId) query = query.eq('client_id', activeClientId);
+      if (corporateOnly) query = query.in('placement_type', ['corporate', 'newswire']);
 
       const { data, error } = await query;
       if (error) {
@@ -118,7 +119,7 @@ const PlacementVolumeChart = () => {
     };
 
     fetch();
-  }, [activeClientId, refreshKey, rangeMode, effectiveFrom, effectiveTo, selectedWeek, isAllTime]);
+  }, [activeClientId, refreshKey, rangeMode, effectiveFrom, effectiveTo, selectedWeek, isAllTime, corporateOnly]);
 
   const yMax = Math.max(10, ...buckets.map(b => b.placements));
 
