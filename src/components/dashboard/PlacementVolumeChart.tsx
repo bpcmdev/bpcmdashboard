@@ -22,7 +22,7 @@ function fmtShort(d: Date): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-const PlacementVolumeChart = () => {
+const PlacementVolumeChart = ({ corporateOnly = false }: { corporateOnly?: boolean }) => {
   const { activeClientId, refreshKey, rangeMode, effectiveFrom, effectiveTo, selectedWeek, isAllTime } = useWeek();
   const [buckets, setBuckets] = useState<Bucket[]>([]);
   const [loading, setLoading] = useState(true);
