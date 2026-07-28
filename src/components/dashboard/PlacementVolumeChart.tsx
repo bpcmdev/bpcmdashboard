@@ -119,7 +119,7 @@ const PlacementVolumeChart = ({ corporateOnly = false }: { corporateOnly?: boole
     };
 
     fetch();
-  }, [activeClientId, refreshKey, rangeMode, effectiveFrom, effectiveTo, selectedWeek, isAllTime]);
+  }, [activeClientId, refreshKey, rangeMode, effectiveFrom, effectiveTo, selectedWeek, isAllTime, corporateOnly]);
 
   const yMax = Math.max(10, ...buckets.map(b => b.placements));
 
