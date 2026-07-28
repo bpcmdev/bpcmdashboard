@@ -13,7 +13,7 @@ import ProductLaunchesTab from '@/components/dashboard/ProductLaunchesTab';
 import PipelineMomentsTab from '@/components/dashboard/PipelineMomentsTab';
 import EarnedMediaTab from '@/components/dashboard/EarnedMediaTab';
 import InfluencerSocialTab from '@/components/dashboard/InfluencerSocialTab';
-import CorporateCommsTab from '@/components/dashboard/CorporateCommsTab';
+
 import AIVisibilityTab from '@/components/dashboard/AIVisibilityTab';
 
 import PartnershipsTab from '@/components/dashboard/PartnershipsTab';
