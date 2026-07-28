@@ -2963,6 +2963,12 @@ const PullQuotesSection = ({
 }: { clientId: string; p_start: string; p_end: string; clientName: string | null }) => {
   const [quotes, setQuotes] = useState<PullQuote[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 8;
+
+  useEffect(() => {
+    setPage(1);
+  }, [clientId, p_start, p_end]);
 
   useEffect(() => {
     let cancelled = false;
@@ -2974,7 +2980,7 @@ const PullQuotesSection = ({
           p_start, p_end,
           p_only_mentioned: true,
           p_platform: 'all',
-          p_limit: 40,
+          p_limit: 200,
           p_offset: 0,
         });
         if (cancelled) return;
@@ -2998,9 +3004,7 @@ const PullQuotesSection = ({
               date: r.date,
               sentiment: brandEntry?.sentiment ?? null,
             });
-            if (collected.length >= 8) break;
           }
-          if (collected.length >= 8) break;
         }
         setQuotes(collected);
       } catch (err) {
@@ -3019,6 +3023,10 @@ const PullQuotesSection = ({
     if (s < -0.15) return 'border-l-red-500';
     return 'border-l-slate-300';
   };
+
+  const totalPages = Math.max(1, Math.ceil(quotes.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageQuotes = quotes.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   return (
     <section className="bg-card border border-border rounded-sm p-6">
@@ -3040,35 +3048,61 @@ const PullQuotesSection = ({
           No brand mentions to quote in this period yet.
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {quotes.map((q, i) => {
-            const d = safeDate(q.date);
-            return (
-              <figure
-                key={i}
-                className={cn(
-                  'bg-background border border-border border-l-4 p-5 flex flex-col gap-4 min-h-[180px]',
-                  sentimentEdge(q.sentiment),
-                )}
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {pageQuotes.map((q, i) => {
+              const d = safeDate(q.date);
+              return (
+                <figure
+                  key={`${currentPage}-${i}`}
+                  className={cn(
+                    'bg-background border border-border border-l-4 p-5 flex flex-col gap-4 min-h-[180px]',
+                    sentimentEdge(q.sentiment),
+                  )}
+                >
+                  <blockquote className="font-display italic text-[15px] leading-relaxed text-foreground/90 relative">
+                    <span className="text-3xl leading-none text-muted-foreground mr-1 align-top">“</span>
+                    <span className="line-clamp-3 inline">{q.text}</span>
+                    <span className="text-2xl leading-none text-muted-foreground ml-0.5">”</span>
+                  </blockquote>
+                  <figcaption className="flex items-center justify-between mt-auto pt-2 border-t border-border">
+                    <span className={cn('px-2 py-0.5 text-[10px] font-bold tracking-[0.1em] uppercase', platformPillCls(q.platform))}>
+                      {platformLabel(q.platform)}
+                    </span>
+                    <span className="text-[10px] font-mono tracking-[0.1em] uppercase text-muted-foreground">
+                      {d ? format(d, 'MMM d, yyyy') : ''}
+                    </span>
+                  </figcaption>
+                </figure>
+              );
+            })}
+          </div>
+          {totalPages > 1 && (
+            <div className="mt-5 flex items-center justify-between">
+              <button
+                type="button"
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={currentPage <= 1}
+                className="px-3 py-1.5 text-[11px] font-mono tracking-[0.1em] uppercase border border-border bg-background hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <blockquote className="font-display italic text-[15px] leading-relaxed text-foreground/90 relative">
-                  <span className="text-3xl leading-none text-muted-foreground mr-1 align-top">“</span>
-                  <span className="line-clamp-3 inline">{q.text}</span>
-                  <span className="text-2xl leading-none text-muted-foreground ml-0.5">”</span>
-                </blockquote>
-                <figcaption className="flex items-center justify-between mt-auto pt-2 border-t border-border">
-                  <span className={cn('px-2 py-0.5 text-[10px] font-bold tracking-[0.1em] uppercase', platformPillCls(q.platform))}>
-                    {platformLabel(q.platform)}
-                  </span>
-                  <span className="text-[10px] font-mono tracking-[0.1em] uppercase text-muted-foreground">
-                    {d ? format(d, 'MMM d, yyyy') : ''}
-                  </span>
-                </figcaption>
-              </figure>
-            );
-          })}
-        </div>
+                ← Prev
+              </button>
+              <span className="text-[11px] font-mono tracking-[0.1em] uppercase text-muted-foreground">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage >= totalPages}
+                className="px-3 py-1.5 text-[11px] font-mono tracking-[0.1em] uppercase border border-border bg-background hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Next →
+              </button>
+            </div>
+          )}
+        </>
       )}
+
     </section>
   );
 };
