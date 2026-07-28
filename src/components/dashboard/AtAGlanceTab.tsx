@@ -354,13 +354,22 @@ const AtAGlanceTab = () => {
       setLoading(true);
       setError(false);
       try {
-        const glancePromise = supabase
-          .from('glance_cards')
-          .select('*')
-          .eq('client_id', clientId)
-          .order('week_start', { ascending: false })
-          .order('sort_order', { ascending: true })
-          .limit(3);
+        const glancePromise = (async () => {
+          const { data: latest } = await supabase
+            .from('glance_cards')
+            .select('week_start')
+            .eq('client_id', clientId)
+            .order('week_start', { ascending: false })
+            .limit(1)
+            .single();
+          if (!latest?.week_start) return { data: [], error: null };
+          return supabase
+            .from('glance_cards')
+            .select('*')
+            .eq('client_id', clientId)
+            .eq('week_start', latest.week_start)
+            .order('sort_order', { ascending: true });
+        })();
         const assetsPromise   = supabase.from('asset_tracker').select('*').eq('client_id', clientId);
         const momentsPromise  = supabase.from('pipeline_moments').select('*').eq('client_id', clientId).order('event_date', { ascending: true });
         const productsPromise = supabase.from('product_pipeline').select('*').eq('client_id', clientId).order('launch_date', { ascending: true });
