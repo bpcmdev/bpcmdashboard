@@ -3205,6 +3205,13 @@ const AIVisibilityTab = () => {
         accent={clientColor || '#1B2B8A'}
         isAdmin={isAdmin}
       />
+      {activeClientId && (
+        <BrandPerceptionSection
+          clientId={activeClientId}
+          clientName={clientName}
+          accent={clientColor || '#1B2B8A'}
+        />
+      )}
       <PlatformScoreCards
         rows={platformScores}
         loading={loading.platformScores}
