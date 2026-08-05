@@ -393,6 +393,244 @@ const BrandPerceptionSection = ({
         )}
       </div>
 
+      {/* Block 1 — Brand comparison heatmap */}
+      <div className="bg-card border border-border/60 p-5">
+        <div className="flex items-start gap-1.5">
+          <h4 className="font-display text-lg font-semibold tracking-tight">Brand comparison by attribute</h4>
+          <TooltipProvider>
+            <UiTooltip>
+              <TooltipTrigger asChild>
+                <button type="button" aria-label="About brand comparison" className="mt-1.5">
+                  <Info className="h-3 w-3 text-muted-foreground/70" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-[260px] text-[11px] leading-relaxed">
+                The association scores above are what AI says when asked about this brand. This table shows how each
+                brand places when AI discusses the whole category.
+              </TooltipContent>
+            </UiTooltip>
+          </TooltipProvider>
+        </div>
+        <p className="text-[12px] text-muted-foreground mt-0.5 mb-4 max-w-2xl">
+          How each brand places when AI is asked about the industry, not about one brand. A higher score means the brand
+          tends to be named earlier.
+        </p>
+
+        {matrixAttrs.length === 0 || matrixBrands.length === 0 ? (
+          <p className="text-[12px] text-muted-foreground py-6 text-center">No comparison data yet.</p>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-[12px]">
+                <thead>
+                  <tr>
+                    <th className="sticky left-0 z-10 bg-card text-left font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground pb-2 pr-3 min-w-[160px]">
+                      Attribute
+                    </th>
+                    {matrixBrands.map(b => (
+                      <th key={b.brand} className="pb-2 px-1.5 min-w-[86px]">
+                        <button
+                          type="button"
+                          onClick={() => setSortBrand(prev => (prev === b.brand ? null : b.brand))}
+                          className="w-full flex items-center justify-center gap-1 font-mono-ui text-[9px] tracking-[0.12em] uppercase text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <span className="truncate max-w-[70px]">{b.brand}</span>
+                          {b.is_own && (
+                            <span
+                              className="text-[8px] px-1 py-[1px] rounded-sm"
+                              style={{ backgroundColor: `${accent}1A`, color: accent }}
+                            >
+                              You
+                            </span>
+                          )}
+                        </button>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedMatrixAttrs.map(attr => (
+                    <tr key={attr}>
+                      <td className="sticky left-0 z-10 bg-card py-1 pr-3 font-medium truncate max-w-[220px]">
+                        {attr}
+                      </td>
+                      {matrixBrands.map(b => {
+                        const score = matrixMap.get(`${attr}||${b.brand}`);
+                        if (score == null) {
+                          return (
+                            <td key={b.brand} className="py-1 px-1.5 text-center text-muted-foreground/60">–</td>
+                          );
+                        }
+                        const band = bandIndex(score);
+                        return (
+                          <td key={b.brand} className="py-1 px-1.5 text-center">
+                            <span
+                              className="inline-flex items-center justify-center min-w-[34px] px-2 py-1 rounded-full font-mono-ui text-[11px]"
+                              style={{
+                                backgroundColor: BLUE_RAMP[band],
+                                color: band >= BLUE_RAMP.length - 3 ? '#FFFFFF' : 'hsl(0 0% 12%)',
+                              }}
+                            >
+                              {score}
+                            </span>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 mt-4">
+              <span className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground">
+                Market prominence
+              </span>
+              {BLUE_RAMP.map((c, i) => (
+                <span key={c} className="inline-flex items-center gap-1">
+                  <span className="h-3 w-5 rounded-sm" style={{ backgroundColor: c }} />
+                  <span className="font-mono-ui text-[9px] text-muted-foreground">{BAND_LABELS[i]}</span>
+                </span>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Block 2 — Attributes & sources */}
+      <div className="bg-card border border-border/60 p-5">
+        <h4 className="font-display text-lg font-semibold tracking-tight">Attributes &amp; sources</h4>
+        <p className="text-[12px] text-muted-foreground mt-0.5 mb-4">
+          Where your brand places for each attribute, and what feeds it.
+        </p>
+        <input
+          value={attrSearch}
+          onChange={(e) => setAttrSearch(e.target.value)}
+          placeholder="Search attributes…"
+          className="w-full sm:w-72 mb-4 border border-border/60 bg-background px-3 py-2 text-[12px] outline-none focus:border-foreground/40 transition-colors"
+        />
+        {filteredRankRows.length === 0 ? (
+          <p className="text-[12px] text-muted-foreground py-6 text-center">No attributes match your search.</p>
+        ) : (
+          <div className="divide-y divide-border/50">
+            <div className="flex items-center gap-3 pb-2 font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground">
+              <span className="flex-1">Attribute</span>
+              <span className="w-24 text-right">Ranking</span>
+              <span className="w-28 text-right">Competitors</span>
+            </div>
+            {filteredRankRows.map(row => {
+              const expanded = expandedAttr === row.name;
+              const competitors = toArr<{ name: string; domain: string | null }>(row.competitors);
+              const members = toArr<string>(attrMembers.get(row.name));
+              return (
+                <div key={row.name}>
+                  <button
+                    type="button"
+                    onClick={() => setExpandedAttr(expanded ? null : row.name)}
+                    className="w-full flex items-center gap-3 py-2.5 text-left hover:bg-muted/30 transition-colors"
+                  >
+                    <span className="flex-1 flex items-center gap-1.5 text-[12.5px] font-medium truncate">
+                      {expanded ? <ChevronUp className="h-3.5 w-3.5 shrink-0" /> : <ChevronDown className="h-3.5 w-3.5 shrink-0" />}
+                      <span className="truncate">{row.name}</span>
+                    </span>
+                    <span className="w-24 text-right font-mono-ui text-[11px]">
+                      {row.ranking != null ? (
+                        `#${row.ranking}`
+                      ) : (
+                        <TooltipProvider>
+                          <UiTooltip>
+                            <TooltipTrigger asChild>
+                              <span className="text-muted-foreground">Not yet ranked</span>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-[240px] text-[11px] leading-relaxed">
+                              This attribute has not surfaced prominently enough in AI answers to be ranked yet.
+                            </TooltipContent>
+                          </UiTooltip>
+                        </TooltipProvider>
+                      )}
+                    </span>
+                    <span className="w-28 flex justify-end">
+                      {competitors.length === 0 ? (
+                        <span className="text-[11px] text-muted-foreground">—</span>
+                      ) : (
+                        <TooltipProvider>
+                          <UiTooltip>
+                            <TooltipTrigger asChild>
+                              <span className="flex items-center -space-x-1.5">
+                                {competitors.slice(0, 3).map((c, i) => (
+                                  <span
+                                    key={`${c.name}-${i}`}
+                                    className="h-5 w-5 rounded-full bg-muted border border-border/60 flex items-center justify-center font-mono-ui text-[9px] uppercase"
+                                  >
+                                    {(c.name || '?').charAt(0)}
+                                  </span>
+                                ))}
+                                {competitors.length > 3 && (
+                                  <span className="pl-2.5 font-mono-ui text-[10px] text-muted-foreground">
+                                    +{competitors.length - 3}
+                                  </span>
+                                )}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-[240px] text-[11px] leading-relaxed">
+                              {competitors.map(c => c.name).join(', ')}
+                            </TooltipContent>
+                          </UiTooltip>
+                        </TooltipProvider>
+                      )}
+                    </span>
+                  </button>
+                  {expanded && (
+                    <div className="pb-4 pl-5 space-y-4">
+                      <div>
+                        <p className="font-mono-ui text-[10px] tracking-[0.18em] uppercase text-muted-foreground mb-2">
+                          Phrases AI actually used
+                        </p>
+                        {members.length === 0 ? (
+                          <p className="text-[12px] text-muted-foreground">No phrases captured.</p>
+                        ) : (
+                          <div className="flex flex-wrap gap-1.5">
+                            {members.map((m, i) => (
+                              <span
+                                key={`${m}-${i}`}
+                                className="text-[11px] px-2 py-1 rounded-full"
+                                style={{ backgroundColor: `${accent}12`, color: accent, border: `1px solid ${accent}33` }}
+                              >
+                                {m}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-mono-ui text-[10px] tracking-[0.18em] uppercase text-muted-foreground mb-2">
+                          {row.ranking != null && row.ranking > 1
+                            ? 'Brands AI names ahead of you'
+                            : 'Brands AI names alongside you'}
+                        </p>
+                        {competitors.length === 0 ? (
+                          <p className="text-[12px] text-muted-foreground">No competing brands named.</p>
+                        ) : (
+                          <div className="flex flex-wrap gap-1.5">
+                            {competitors.map((c, i) => (
+                              <span
+                                key={`${c.name}-${i}`}
+                                className="text-[11px] px-2 py-1 rounded-full border border-border/60 bg-muted/40"
+                              >
+                                {c.name}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       {/* Attribute detail sheet */}
       <Sheet open={!!selectedAttr} onOpenChange={(o) => { if (!o) setSelectedAttr(null); }}>
         <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
