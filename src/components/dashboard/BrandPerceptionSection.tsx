@@ -69,6 +69,10 @@ const BrandPerceptionSection = ({
   const [showAllAttrs, setShowAllAttrs] = useState(false);
   const [selectedAttr, setSelectedAttr] = useState<AttributeEntry | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [matrix, setMatrix] = useState<MatrixRow[]>([]);
+  const [sortBrand, setSortBrand] = useState<string | null>(null);
+  const [attrSearch, setAttrSearch] = useState('');
+  const [expandedAttr, setExpandedAttr] = useState<string | null>(null);
 
   const label = clientName || 'your brand';
 
