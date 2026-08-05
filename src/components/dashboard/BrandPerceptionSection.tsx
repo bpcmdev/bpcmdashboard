@@ -220,7 +220,7 @@ const BrandPerceptionSection = ({
     const idx = radarBrands.findIndex(b => b.brand === brand);
     if (radarBrands[idx]?.is_own) return accent;
     const competitorIdx = radarBrands.slice(0, idx).filter(b => !b.is_own).length;
-    return MUTED_GREYS[competitorIdx % MUTED_GREYS.length];
+    return COMPETITOR_COLORS[competitorIdx % COMPETITOR_COLORS.length];
   };
 
   const radarData = useMemo(() => {
