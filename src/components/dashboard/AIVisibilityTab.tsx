@@ -16,6 +16,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { LinkPreviewTrigger } from './LinkPreviewDrawer';
 import PaginationControls from './PaginationControls';
+import BrandPerceptionSection from './BrandPerceptionSection';
 import { format, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -3205,6 +3206,13 @@ const AIVisibilityTab = () => {
         accent={clientColor || '#1B2B8A'}
         isAdmin={isAdmin}
       />
+      {activeClientId && (
+        <BrandPerceptionSection
+          clientId={activeClientId}
+          clientName={clientName}
+          accent={clientColor || '#1B2B8A'}
+        />
+      )}
       <PlatformScoreCards
         rows={platformScores}
         loading={loading.platformScores}
