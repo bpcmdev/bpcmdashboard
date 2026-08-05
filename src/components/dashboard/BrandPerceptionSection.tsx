@@ -57,7 +57,7 @@ interface MatrixRow {
   brand_order: number;
 }
 
-const MUTED_GREYS = ['#6B7280', '#9CA3AF', '#C4C4C4'];
+const COMPETITOR_COLORS = ['#D14D4D', '#3E8E7E', '#C98A2C', '#5B6FD1', '#A15BB5', '#4A9BC9'];
 
 // Single-hue blue ramp: 0, 1–2, 3–4, ... 19–20, 21+
 const BLUE_RAMP = [
@@ -220,7 +220,7 @@ const BrandPerceptionSection = ({
     const idx = radarBrands.findIndex(b => b.brand === brand);
     if (radarBrands[idx]?.is_own) return accent;
     const competitorIdx = radarBrands.slice(0, idx).filter(b => !b.is_own).length;
-    return MUTED_GREYS[competitorIdx % MUTED_GREYS.length];
+    return COMPETITOR_COLORS[competitorIdx % COMPETITOR_COLORS.length];
   };
 
   const radarData = useMemo(() => {
@@ -413,7 +413,7 @@ const BrandPerceptionSection = ({
                         stroke={color}
                         strokeWidth={isOwn ? 2.5 : 1.25}
                         fill={color}
-                        fillOpacity={isOwn ? 0.28 : 0.08}
+                        fillOpacity={isOwn ? 0.28 : 0.14}
                       />
                     );
                   })}
