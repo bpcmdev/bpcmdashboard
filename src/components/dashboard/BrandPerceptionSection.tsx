@@ -112,8 +112,70 @@ const BrandPerceptionSection = ({
     return () => { cancelled = true; };
   }, [clientId, overview?.has_radar]);
 
+  useEffect(() => {
+    let cancelled = false;
+    setMatrix([]);
+    setSortBrand(null);
+    setAttrSearch('');
+    setExpandedAttr(null);
+    (async () => {
+      const { data } = await supabase.rpc('peec_perception_matrix', { p_client_id: clientId, p_brand_limit: 7 });
+      if (!cancelled) setMatrix(toArr<MatrixRow>(data));
+    })();
+    return () => { cancelled = true; };
+  }, [clientId]);
+
   const attributes = useMemo(() => toArr<AttributeEntry>(overview?.attributes), [overview]);
   const rankings = useMemo(() => toArr<RankingEntry>(overview?.rankings), [overview]);
+
+  // ---- heatmap derivations ----
+  const matrixBrands = useMemo(() => {
+    const map = new Map<string, { brand: string; is_own: boolean; order: number }>();
+    matrix.forEach(r => {
+      if (!map.has(r.brand)) map.set(r.brand, { brand: r.brand, is_own: !!r.is_own, order: Number(r.brand_order) || 0 });
+    });
+    return Array.from(map.values()).sort(
+      (a, b) => Number(b.is_own) - Number(a.is_own) || a.order - b.order,
+    );
+  }, [matrix]);
+
+  const matrixAttrs = useMemo(() => {
+    const map = new Map<string, number>();
+    matrix.forEach(r => { if (!map.has(r.attribute)) map.set(r.attribute, Number(r.attr_order) || 0); });
+    return Array.from(map.entries()).sort((a, b) => a[1] - b[1]).map(([name]) => name);
+  }, [matrix]);
+
+  const matrixMap = useMemo(() => {
+    const m = new Map<string, number | null>();
+    matrix.forEach(r => m.set(`${r.attribute}||${r.brand}`, r.score == null ? null : Number(r.score)));
+    return m;
+  }, [matrix]);
+
+  const sortedMatrixAttrs = useMemo(() => {
+    if (!sortBrand) return matrixAttrs;
+    return [...matrixAttrs].sort((a, b) => {
+      const sa = matrixMap.get(`${a}||${sortBrand}`);
+      const sb = matrixMap.get(`${b}||${sortBrand}`);
+      if (sa == null && sb == null) return 0;
+      if (sa == null) return 1;
+      if (sb == null) return -1;
+      return sb - sa;
+    });
+  }, [matrixAttrs, matrixMap, sortBrand]);
+
+  // ---- attributes & sources derivations ----
+  const attrMembers = useMemo(() => {
+    const m = new Map<string, string[] | null>();
+    attributes.forEach(a => m.set(a.name, a.members ?? null));
+    return m;
+  }, [attributes]);
+
+  const filteredRankRows = useMemo(() => {
+    const q = attrSearch.trim().toLowerCase();
+    if (!q) return rankings;
+    return rankings.filter(r => (r.name || '').toLowerCase().includes(q));
+  }, [rankings, attrSearch]);
+
   const maxScore = useMemo(
     () => attributes.reduce((m, a) => Math.max(m, Number(a.score) || 0), 0) || 1,
     [attributes],
