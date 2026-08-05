@@ -57,7 +57,7 @@ interface MatrixRow {
   brand_order: number;
 }
 
-const MUTED_GREYS = ['#6B7280', '#9CA3AF', '#C4C4C4'];
+const COMPETITOR_COLORS = ['#D14D4D', '#3E8E7E', '#C98A2C', '#5B6FD1', '#A15BB5', '#4A9BC9'];
 
 // Single-hue blue ramp: 0, 1–2, 3–4, ... 19–20, 21+
 const BLUE_RAMP = [
