@@ -413,7 +413,7 @@ const BrandPerceptionSection = ({
                         stroke={color}
                         strokeWidth={isOwn ? 2.5 : 1.25}
                         fill={color}
-                        fillOpacity={isOwn ? 0.28 : 0.08}
+                        fillOpacity={isOwn ? 0.28 : 0.14}
                       />
                     );
                   })}
