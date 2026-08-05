@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Plus, Info, Loader2 } from 'lucide-react';
+import { Plus, Info, Loader2, ChevronUp, ChevronDown } from 'lucide-react';
 import {
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, Tooltip, ResponsiveContainer,
 } from 'recharts';
