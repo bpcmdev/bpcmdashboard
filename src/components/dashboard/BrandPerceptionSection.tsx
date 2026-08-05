@@ -48,7 +48,28 @@ interface BrandOption {
   is_own: boolean;
 }
 
+interface MatrixRow {
+  attribute: string;
+  brand: string;
+  score: number | null;
+  is_own: boolean;
+  attr_order: number;
+  brand_order: number;
+}
+
 const MUTED_GREYS = ['#6B7280', '#9CA3AF', '#C4C4C4'];
+
+// Single-hue blue ramp: 0, 1–2, 3–4, ... 19–20, 21+
+const BLUE_RAMP = [
+  '#EFF4FC', '#DCE7F8', '#C4D6F2', '#A8C2EB', '#8AACE2',
+  '#6B94D8', '#4E7CCB', '#3663B4', '#254C95', '#1B3A75', '#122A57',
+];
+const BAND_LABELS = ['0', '1–2', '3–4', '5–6', '7–8', '9–10', '11–12', '13–14', '15–16', '17–18', '19+'];
+
+const bandIndex = (score: number) => {
+  if (score <= 0) return 0;
+  return Math.min(BLUE_RAMP.length - 1, Math.ceil(score / 2));
+};
 
 const toArr = <T,>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : []);
 
