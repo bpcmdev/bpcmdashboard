@@ -3201,6 +3201,16 @@ const AIVisibilityTab = () => {
         custom={custom} setCustom={setCustom}
         platform={platform} setPlatform={setPlatform}
       />
+      <PlatformScoreCards
+        rows={platformScores}
+        loading={loading.platformScores}
+        clientId={activeClientId}
+        pStart={p_start}
+        pEnd={p_end}
+        clientName={clientName}
+
+        onApplyPlatformFilter={(p) => setPlatform(p as Platform)}
+      />
       <ExecutiveSummarySection
         clientId={activeClientId}
         accent={clientColor || '#1B2B8A'}
@@ -3213,16 +3223,6 @@ const AIVisibilityTab = () => {
           accent={clientColor || '#1B2B8A'}
         />
       )}
-      <PlatformScoreCards
-        rows={platformScores}
-        loading={loading.platformScores}
-        clientId={activeClientId}
-        pStart={p_start}
-        pEnd={p_end}
-        clientName={clientName}
-
-        onApplyPlatformFilter={(p) => setPlatform(p as Platform)}
-      />
       <BrandAttributesSection clientId={activeClientId} accent={clientColor || '#1B2B8A'} clientName={clientName || 'your brand'} />
       <KpiCards rows={kpis} loading={loading.kpis} />
       {isAdmin && (
