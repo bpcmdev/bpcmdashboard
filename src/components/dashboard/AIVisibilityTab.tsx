@@ -2604,88 +2604,10 @@ const AiShoppingVisibilitySection = ({ clientId, accent }: { clientId: string | 
 
       <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
         <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
-          {selected && (() => {
-            const vis = Math.round((selected.visibility ?? 0) * 100);
-            const initial = (selected.name?.trim()?.[0] ?? '?').toUpperCase();
-            return (
-              <div className="space-y-6">
-                <SheetHeader>
-                  <div className="text-[10px] font-bold tracking-[0.15em] uppercase text-muted-foreground">AI Shopping</div>
-                  <SheetTitle className="text-xl leading-tight">{selected.name}</SheetTitle>
-                  {selected.brand && (
-                    <div className="text-sm text-muted-foreground">{selected.brand}</div>
-                  )}
-                </SheetHeader>
-
-                {selected.image_url ? (
-                  <img src={selected.image_url} alt="" className="w-full h-56 rounded object-cover bg-muted" />
-                ) : (
-                  <div className="w-full h-56 rounded bg-muted flex items-center justify-center text-5xl font-semibold text-muted-foreground">
-                    {initial}
-                  </div>
-                )}
-
-                {(() => {
-                  const wins = selected.win_count ?? 0;
-                  const mentions = selected.mention_count ?? 0;
-                  const avg = selected.avg_position;
-                  const winsValue = wins === 0
-                    ? 'Emerging'
-                    : wins <= 2
-                      ? `Rising · ${wins} time${wins === 1 ? '' : 's'}`
-                      : `Leading · ${wins} time${wins === 1 ? '' : 's'}`;
-                  const winsNote = wins === 0 ? 'Not yet ranked #1 — building presence' : null;
-                  return (
-                    <div className="grid grid-cols-2 gap-px bg-border border border-border">
-                      {[
-                        { label: 'Visibility', value: `${vis}%`, note: null as string | null },
-                        { label: 'Avg Position', value: positionTierDetail(avg), note: null as string | null },
-                        { label: 'Mentions', value: mentions.toLocaleString(), note: null as string | null },
-                        { label: 'AI Top Picks', value: winsValue, note: winsNote },
-                      ].map((s) => (
-                        <div key={s.label} className="bg-card p-3">
-                          <div className="text-[10px] font-bold tracking-[0.15em] uppercase text-muted-foreground">{s.label}</div>
-                          <div className="text-base font-semibold text-foreground mt-1 tabular-nums">{s.value}</div>
-                          {s.note && <div className="text-[11px] text-muted-foreground mt-1 leading-snug">{s.note}</div>}
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()}
-
-                {selected.categories && selected.categories.length > 0 && (
-                  <div>
-                    <div className="text-[10px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-2">Categories</div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {selected.categories.map((c) => (
-                        <span key={c} className="text-[11px] px-2 py-0.5 border border-border rounded-sm text-foreground">{c}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {(() => {
-                  const wins = selected.win_count ?? 0;
-                  const mentions = selected.mention_count ?? 0;
-                  const avg = selected.avg_position;
-                  if (mentions === 0) return null;
-                  const s = mentions === 1 ? '' : 's';
-                  let sentence: string;
-                  if (wins > 0 && avg != null) {
-                    const winS = wins === 1 ? '' : 's';
-                    sentence = `${selected.name} was recommended by AI assistants ${mentions} time${s} this period, ranking in the top ${Math.ceil(avg)} on average — and placed #1 ${wins} time${winS}.`;
-                  } else if (avg != null && avg <= 3) {
-                    sentence = `${selected.name} appeared in ${mentions} AI shopping response${s} this period, consistently placed in the top 3 — a strong signal of growing AI presence.`;
-                  } else {
-                    sentence = `${selected.name} was featured in ${mentions} AI shopping response${s} this period, building its presence across AI recommendations.`;
-                  }
-                  return <p className="text-sm text-muted-foreground leading-relaxed">{sentence}</p>;
-                })()}
-              </div>
-            );
-          })()}
+          {selected && <ProductDetailSheetBody product={selected} clientId={clientId} accent={accent} />}
         </SheetContent>
       </Sheet>
+
     </section>
   );
 };
