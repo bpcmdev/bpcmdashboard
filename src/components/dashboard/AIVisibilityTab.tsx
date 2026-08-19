@@ -2485,10 +2485,51 @@ interface ProductDetail {
   categories?: (ProductCategory | string)[] | null;
 }
 interface ProductTrendRow {
-  captured_date: string;
+  point_date: string;
   visibility?: number | null;
   win_rate?: number | null;
+  avg_position?: number | null;
+  sov?: number | null;
+  has_data?: boolean | null;
 }
+interface ProductMerchantRow {
+  merchant_id?: string | null;
+  name?: string | null;
+  domain?: string | null;
+  mention_count?: number | null;
+  share_of_voice?: number | null;
+  win_rate?: number | null;
+  avg_position?: number | null;
+  avg_rating?: number | null;
+}
+interface ProductQueryRow {
+  query_text?: string | null;
+  distinct_chat_count?: number | null;
+  distinct_chat_count_previous?: number | null;
+}
+interface ProductTermRow {
+  term?: string | null;
+  distinct_chat_count?: number | null;
+  distinct_chat_count_previous?: number | null;
+}
+
+type TrendBucket = 'day' | 'week' | 'month';
+
+const deltaOf = (cur?: number | null, prev?: number | null): number | null => {
+  if (prev == null) return null;
+  return Number(cur ?? 0) - Number(prev);
+};
+
+const StarRating = ({ value }: { value: number }) => {
+  const rounded = Math.round(value);
+  return (
+    <span className="text-[11px] text-amber-500 tracking-tight" title={`${value.toFixed(1)} / 5`}>
+      {'★'.repeat(Math.max(0, Math.min(5, rounded)))}
+      <span className="text-muted-foreground">{'★'.repeat(Math.max(0, 5 - Math.max(0, Math.min(5, rounded))))}</span>
+    </span>
+  );
+};
+
 
 const DeltaText = ({ value, unit, invert = false }: { value: number | null | undefined; unit?: string; invert?: boolean }) => {
   if (value == null || !Number.isFinite(Number(value))) return null;
