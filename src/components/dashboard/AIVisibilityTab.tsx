@@ -2485,10 +2485,51 @@ interface ProductDetail {
   categories?: (ProductCategory | string)[] | null;
 }
 interface ProductTrendRow {
-  captured_date: string;
+  point_date: string;
   visibility?: number | null;
   win_rate?: number | null;
+  avg_position?: number | null;
+  sov?: number | null;
+  has_data?: boolean | null;
 }
+interface ProductMerchantRow {
+  merchant_id?: string | null;
+  name?: string | null;
+  domain?: string | null;
+  mention_count?: number | null;
+  share_of_voice?: number | null;
+  win_rate?: number | null;
+  avg_position?: number | null;
+  avg_rating?: number | null;
+}
+interface ProductQueryRow {
+  query_text?: string | null;
+  distinct_chat_count?: number | null;
+  distinct_chat_count_previous?: number | null;
+}
+interface ProductTermRow {
+  term?: string | null;
+  distinct_chat_count?: number | null;
+  distinct_chat_count_previous?: number | null;
+}
+
+type TrendBucket = 'day' | 'week' | 'month';
+
+const deltaOf = (cur?: number | null, prev?: number | null): number | null => {
+  if (prev == null) return null;
+  return Number(cur ?? 0) - Number(prev);
+};
+
+const StarRating = ({ value }: { value: number }) => {
+  const rounded = Math.round(value);
+  return (
+    <span className="text-[11px] text-amber-500 tracking-tight" title={`${value.toFixed(1)} / 5`}>
+      {'★'.repeat(Math.max(0, Math.min(5, rounded)))}
+      <span className="text-muted-foreground">{'★'.repeat(Math.max(0, 5 - Math.max(0, Math.min(5, rounded))))}</span>
+    </span>
+  );
+};
+
 
 const DeltaText = ({ value, unit, invert = false }: { value: number | null | undefined; unit?: string; invert?: boolean }) => {
   if (value == null || !Number.isFinite(Number(value))) return null;
@@ -2507,28 +2548,56 @@ const ProductDetailSheetBody = ({
 }: { product: ShoppingProductRow; clientId: string | null; accent: string }) => {
   const [detail, setDetail] = useState<ProductDetail | null>(null);
   const [trend, setTrend] = useState<ProductTrendRow[]>([]);
+  const [bucket, setBucket] = useState<TrendBucket>('week');
+  const [merchants, setMerchants] = useState<ProductMerchantRow[]>([]);
+  const [queries, setQueries] = useState<ProductQueryRow[]>([]);
+  const [terms, setTerms] = useState<ProductTermRow[]>([]);
 
   useEffect(() => {
     if (!clientId || !product?.product_id) return;
     let cancelled = false;
     setDetail(null);
-    setTrend([]);
+    setMerchants([]);
+    setQueries([]);
+    setTerms([]);
     (async () => {
       try {
-        const [d, t] = await Promise.all([
+        const [d, m, q, tm] = await Promise.all([
           supabase.rpc('peec_product_detail', { p_client_id: clientId, p_product_id: product.product_id }),
-          supabase.rpc('peec_product_trend', { p_client_id: clientId, p_product_id: product.product_id, p_days: 60 }),
+          supabase.rpc('peec_product_merchants', { p_client_id: clientId, p_product_id: product.product_id }),
+          supabase.rpc('peec_product_shopping_queries', { p_client_id: clientId, p_product_id: product.product_id, p_limit: 10 }),
+          supabase.rpc('peec_product_query_terms', { p_client_id: clientId, p_product_id: product.product_id, p_limit: 12 }),
         ]);
         if (cancelled) return;
         const dRow = Array.isArray(d.data) ? d.data[0] : d.data;
         setDetail((dRow as ProductDetail) ?? null);
-        setTrend(Array.isArray(t.data) ? (t.data as ProductTrendRow[]) : []);
+        setMerchants(Array.isArray(m.data) ? (m.data as ProductMerchantRow[]) : []);
+        setQueries(Array.isArray(q.data) ? (q.data as ProductQueryRow[]) : []);
+        setTerms(Array.isArray(tm.data) ? (tm.data as ProductTermRow[]) : []);
       } catch (e) {
         console.error('[ProductDetail] load failed', e);
       }
     })();
     return () => { cancelled = true; };
   }, [clientId, product?.product_id]);
+
+  useEffect(() => {
+    if (!clientId || !product?.product_id) return;
+    let cancelled = false;
+    setTrend([]);
+    (async () => {
+      try {
+        const { data } = await supabase.rpc('peec_product_trend_v2', {
+          p_client_id: clientId, p_product_id: product.product_id, p_bucket: bucket,
+        });
+        if (!cancelled) setTrend(Array.isArray(data) ? (data as ProductTrendRow[]) : []);
+      } catch (e) {
+        console.error('[ProductTrend] load failed', e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [clientId, product?.product_id, bucket]);
+
 
   const name = detail?.name || product.name;
   const brand = detail?.brand ?? product.brand;
@@ -2560,12 +2629,16 @@ const ProductDetailSheetBody = ({
     .filter((c) => c && c.name);
 
   const chartData = trend
-    .filter((r) => r.captured_date)
-    .map((r) => ({
-      captured_date: r.captured_date,
-      visibility: r.visibility != null ? Number(r.visibility) * 100 : null,
-      win_rate: r.win_rate != null ? Number(r.win_rate) : null,
-    }));
+    .filter((r) => r.point_date)
+    .map((r) => {
+      const hasData = r.has_data !== false;
+      return {
+        point_date: r.point_date,
+        visibility: hasData && r.visibility != null ? Number(r.visibility) * 100 : null,
+        win_rate: hasData && r.win_rate != null ? Number(r.win_rate) : null,
+      };
+    });
+
 
   return (
     <div className="space-y-6">
@@ -2624,13 +2697,31 @@ const ProductDetailSheetBody = ({
 
       {chartData.length >= 3 && (
         <div>
-          <div className="text-[10px] font-bold tracking-[0.15em] uppercase text-muted-foreground">Visibility &amp; win rate</div>
-          <div className="text-[11px] text-muted-foreground mt-1 mb-2">30-day rolling average, tracked daily</div>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-[10px] font-bold tracking-[0.15em] uppercase text-muted-foreground">Visibility &amp; win rate</div>
+              <div className="text-[11px] text-muted-foreground mt-1 mb-2">Discrete {bucket} buckets, tracked over time</div>
+            </div>
+            <div className="flex gap-1 shrink-0">
+              {([['day', 'D'], ['week', 'W'], ['month', 'M']] as [TrendBucket, string][]).map(([b, label]) => (
+                <button
+                  key={b}
+                  onClick={() => setBucket(b)}
+                  className={`text-[10px] font-bold w-6 h-6 rounded-full border transition-colors ${
+                    bucket === b ? 'text-white border-transparent' : 'text-muted-foreground border-border hover:text-foreground'
+                  }`}
+                  style={bucket === b ? { background: accent } : undefined}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={chartData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
               <CartesianGrid strokeDasharray="2 4" stroke="hsl(var(--border))" vertical={false} />
               <XAxis
-                dataKey="captured_date"
+                dataKey="point_date"
                 tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
                 tickFormatter={(v) => { try { return format(parseISO(String(v)), 'MMM d'); } catch { return String(v); } }}
                 stroke="hsl(var(--border))"
@@ -2640,12 +2731,79 @@ const ProductDetailSheetBody = ({
                 contentStyle={{ fontSize: 11, borderRadius: 2, border: '1px solid hsl(var(--border))', background: 'hsl(var(--card))' }}
                 formatter={(v: number, n: string) => [`${Number(v).toFixed(1)}%`, n === 'visibility' ? 'Visibility' : 'Win rate']}
               />
-              <Line type="monotone" dataKey="visibility" stroke={accent} strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="win_rate" stroke="hsl(var(--muted-foreground))" strokeWidth={1.5} dot={false} />
+              <Line type="monotone" dataKey="visibility" stroke={accent} strokeWidth={2} dot={false} connectNulls={false} />
+              <Line type="monotone" dataKey="win_rate" stroke="hsl(var(--muted-foreground))" strokeWidth={1.5} dot={false} connectNulls={false} />
             </LineChart>
           </ResponsiveContainer>
         </div>
       )}
+
+      {merchants.length > 0 && (
+        <div>
+          <div className="text-[10px] font-bold tracking-[0.15em] uppercase text-muted-foreground">Merchants</div>
+          <div className="text-[11px] text-muted-foreground mt-1 mb-2">Where AI is sending shoppers for this product</div>
+          <div className="divide-y divide-border border border-border">
+            {merchants.map((m, i) => (
+              <div key={m.merchant_id ?? `${m.name}-${i}`} className="flex items-center justify-between gap-3 px-3 py-2">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-foreground truncate">{m.name || m.domain || '—'}</span>
+                    {m.avg_rating != null && <StarRating value={Number(m.avg_rating)} />}
+                  </div>
+                  {m.domain && <div className="text-[11px] text-muted-foreground truncate">{m.domain}</div>}
+                </div>
+                <div className="text-sm font-mono tabular-nums text-foreground shrink-0">
+                  {m.share_of_voice != null ? `${Math.round(Number(m.share_of_voice) * (Number(m.share_of_voice) <= 1 ? 100 : 1))}%` : '—'}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {queries.length > 0 && (
+        <div>
+          <div className="text-[10px] font-bold tracking-[0.15em] uppercase text-muted-foreground">Query fanouts</div>
+          <div className="text-[11px] text-muted-foreground mt-1 mb-2">Additional queries AI ran to gather context for this product</div>
+          <div className="divide-y divide-border border border-border">
+            {queries.map((q, i) => {
+              const d = deltaOf(q.distinct_chat_count, q.distinct_chat_count_previous);
+              return (
+                <div key={`${q.query_text}-${i}`} className="flex items-center gap-3 px-3 py-2">
+                  <div className="flex-1 min-w-0 text-sm text-foreground truncate" title={q.query_text || undefined}>{q.query_text || '—'}</div>
+                  <div className="text-sm font-mono tabular-nums text-foreground shrink-0">{Number(q.distinct_chat_count ?? 0).toLocaleString()}</div>
+                  <div className="w-10 text-right text-[11px] font-mono shrink-0">
+                    {d == null || d === 0
+                      ? <span className="text-muted-foreground">—</span>
+                      : d > 0
+                        ? <span className="text-emerald-600">↑{d}</span>
+                        : <span className="text-red-600">↓{Math.abs(d)}</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {terms.length > 0 && (
+            <div className="mt-4">
+              <div className="text-[10px] font-semibold tracking-[0.1em] uppercase text-muted-foreground mb-2">Common terms</div>
+              <div className="flex flex-wrap gap-1.5">
+                {terms.map((t, i) => {
+                  const d = deltaOf(t.distinct_chat_count, t.distinct_chat_count_previous);
+                  const dot = d == null || d === 0 ? 'bg-muted-foreground/40' : d > 0 ? 'bg-emerald-600' : 'bg-red-600';
+                  return (
+                    <span key={`${t.term}-${i}`} className="inline-flex items-center gap-1.5 text-[11px] px-2 py-0.5 border border-border rounded-full text-foreground">
+                      <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />
+                      {t.term} ({Number(t.distinct_chat_count ?? 0).toLocaleString()})
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
 
       {Number(mentions) > 0 && (() => {
         const m = Number(mentions);
