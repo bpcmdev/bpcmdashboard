@@ -2629,12 +2629,16 @@ const ProductDetailSheetBody = ({
     .filter((c) => c && c.name);
 
   const chartData = trend
-    .filter((r) => r.captured_date)
-    .map((r) => ({
-      captured_date: r.captured_date,
-      visibility: r.visibility != null ? Number(r.visibility) * 100 : null,
-      win_rate: r.win_rate != null ? Number(r.win_rate) : null,
-    }));
+    .filter((r) => r.point_date)
+    .map((r) => {
+      const hasData = r.has_data !== false;
+      return {
+        point_date: r.point_date,
+        visibility: hasData && r.visibility != null ? Number(r.visibility) * 100 : null,
+        win_rate: hasData && r.win_rate != null ? Number(r.win_rate) : null,
+      };
+    });
+
 
   return (
     <div className="space-y-6">
