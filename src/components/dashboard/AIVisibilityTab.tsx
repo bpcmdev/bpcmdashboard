@@ -2466,7 +2466,207 @@ const rankTier = (idx: number, expanded: boolean): { label: string; tone: 'top' 
   return { label: 'Active', tone: 'active' };
 };
 
+interface ProductCategory { id?: string | null; name?: string | null; path?: string | null }
+interface ProductDetail {
+  name?: string | null;
+  brand?: string | null;
+  image_url?: string | null;
+  price_min?: number | null;
+  price_max?: number | null;
+  visibility?: number | null;
+  visibility_delta?: number | null;
+  win_rate?: number | null;
+  win_count?: number | null;
+  avg_position?: number | null;
+  position_delta?: number | null;
+  mention_count?: number | null;
+  mentions_delta?: number | null;
+  compared_to?: string | null;
+  categories?: (ProductCategory | string)[] | null;
+}
+interface ProductTrendRow {
+  captured_date: string;
+  visibility?: number | null;
+  win_rate?: number | null;
+}
+
+const DeltaText = ({ value, unit, invert = false }: { value: number | null | undefined; unit?: string; invert?: boolean }) => {
+  if (value == null || !Number.isFinite(Number(value))) return null;
+  const n = Number(value);
+  if (n === 0) return <div className="text-[11px] font-mono text-muted-foreground mt-0.5">0{unit ?? ''}</div>;
+  const good = invert ? n < 0 : n > 0;
+  return (
+    <div className={`text-[11px] font-mono mt-0.5 ${good ? 'text-emerald-600' : 'text-red-600'}`}>
+      {n > 0 ? '+' : ''}{n.toFixed(2)}{unit ?? ''}
+    </div>
+  );
+};
+
+const ProductDetailSheetBody = ({
+  product, clientId, accent,
+}: { product: ShoppingProductRow; clientId: string | null; accent: string }) => {
+  const [detail, setDetail] = useState<ProductDetail | null>(null);
+  const [trend, setTrend] = useState<ProductTrendRow[]>([]);
+
+  useEffect(() => {
+    if (!clientId || !product?.product_id) return;
+    let cancelled = false;
+    setDetail(null);
+    setTrend([]);
+    (async () => {
+      try {
+        const [d, t] = await Promise.all([
+          supabase.rpc('peec_product_detail', { p_client_id: clientId, p_product_id: product.product_id }),
+          supabase.rpc('peec_product_trend', { p_client_id: clientId, p_product_id: product.product_id, p_days: 60 }),
+        ]);
+        if (cancelled) return;
+        const dRow = Array.isArray(d.data) ? d.data[0] : d.data;
+        setDetail((dRow as ProductDetail) ?? null);
+        setTrend(Array.isArray(t.data) ? (t.data as ProductTrendRow[]) : []);
+      } catch (e) {
+        console.error('[ProductDetail] load failed', e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [clientId, product?.product_id]);
+
+  const name = detail?.name || product.name;
+  const brand = detail?.brand ?? product.brand;
+  const image = detail?.image_url ?? product.image_url;
+  const initial = (name?.trim()?.[0] ?? '?').toUpperCase();
+
+  const visibility = detail?.visibility ?? product.visibility ?? null;
+  const visPct = visibility != null ? (Number(visibility) * 100).toFixed(1) : '—';
+  const winRate = detail?.win_rate;
+  const avg = detail?.avg_position ?? product.avg_position;
+  const mentions = detail?.mention_count ?? product.mention_count ?? 0;
+  const wins = detail?.win_count ?? product.win_count ?? 0;
+  const winsValue = wins === 0
+    ? 'Emerging'
+    : wins <= 2
+      ? `Rising · ${wins} time${wins === 1 ? '' : 's'}`
+      : `Leading · ${wins} time${wins === 1 ? '' : 's'}`;
+
+  const priceMin = detail?.price_min;
+  const priceMax = detail?.price_max;
+  const priceLabel = priceMin != null
+    ? (priceMax == null || priceMax === priceMin
+        ? `$${Math.round(Number(priceMin)).toLocaleString()}`
+        : `$${Math.round(Number(priceMin)).toLocaleString()}–$${Math.round(Number(priceMax)).toLocaleString()}`)
+    : fmtPriceRange(product.price_range);
+
+  const cats: ProductCategory[] = (detail?.categories ?? product.categories ?? [])
+    .map((c) => (typeof c === 'string' ? { name: c } : c))
+    .filter((c) => c && c.name);
+
+  const chartData = trend
+    .filter((r) => r.captured_date)
+    .map((r) => ({
+      captured_date: r.captured_date,
+      visibility: r.visibility != null ? Number(r.visibility) * 100 : null,
+      win_rate: r.win_rate != null ? Number(r.win_rate) : null,
+    }));
+
+  return (
+    <div className="space-y-6">
+      <SheetHeader>
+        <div className="text-[10px] font-bold tracking-[0.15em] uppercase text-muted-foreground">AI Shopping</div>
+        <SheetTitle className="text-xl leading-tight">{name}</SheetTitle>
+        {brand && <div className="text-sm text-muted-foreground">{brand}</div>}
+        {priceLabel && <div className="text-sm font-mono tabular-nums text-foreground">{priceLabel}</div>}
+      </SheetHeader>
+
+      {image ? (
+        <img src={image} alt="" className="w-full h-[200px] rounded object-contain bg-muted" />
+      ) : (
+        <div className="w-full h-[200px] rounded bg-muted flex items-center justify-center text-5xl font-semibold text-muted-foreground">
+          {initial}
+        </div>
+      )}
+
+      <div>
+        <div className="grid grid-cols-5 gap-px bg-border border border-border">
+          {[
+            { label: 'Visibility', value: `${visPct}${visibility != null ? '%' : ''}`, delta: <DeltaText value={detail?.visibility_delta} unit=" pts" /> },
+            { label: 'Win Rate', value: winRate != null ? `${Number(winRate).toFixed(1)}%` : '—', delta: null },
+            { label: 'Avg Position', value: positionTierDetail(avg), delta: <DeltaText value={detail?.position_delta} invert /> },
+            { label: 'Mentions', value: Number(mentions).toLocaleString(), delta: <DeltaText value={detail?.mentions_delta} /> },
+            { label: 'AI Top Picks', value: winsValue, delta: null },
+          ].map((s) => (
+            <div key={s.label} className="bg-card p-2.5">
+              <div className="text-[9px] font-bold tracking-[0.12em] uppercase text-muted-foreground leading-tight">{s.label}</div>
+              <div className="text-sm font-semibold text-foreground mt-1 tabular-nums leading-tight">{s.value}</div>
+              {s.delta}
+            </div>
+          ))}
+        </div>
+        {detail?.compared_to && (
+          <div className="text-[11px] text-muted-foreground mt-2">Compared to {detail.compared_to}</div>
+        )}
+      </div>
+
+      {cats.length > 0 && (
+        <div>
+          <div className="text-[10px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-2">Categories</div>
+          <div className="flex flex-wrap gap-1.5">
+            {cats.map((c, i) => (
+              <span
+                key={`${c.name}-${i}`}
+                title={c.path || c.name || undefined}
+                className="text-[11px] px-2 py-0.5 border border-border rounded-sm text-foreground"
+              >
+                {c.name}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {chartData.length >= 3 && (
+        <div>
+          <div className="text-[10px] font-bold tracking-[0.15em] uppercase text-muted-foreground">Visibility &amp; win rate</div>
+          <div className="text-[11px] text-muted-foreground mt-1 mb-2">30-day rolling average, tracked daily</div>
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={chartData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="2 4" stroke="hsl(var(--border))" vertical={false} />
+              <XAxis
+                dataKey="captured_date"
+                tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                tickFormatter={(v) => { try { return format(parseISO(String(v)), 'MMM d'); } catch { return String(v); } }}
+                stroke="hsl(var(--border))"
+              />
+              <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} stroke="hsl(var(--border))" />
+              <Tooltip
+                contentStyle={{ fontSize: 11, borderRadius: 2, border: '1px solid hsl(var(--border))', background: 'hsl(var(--card))' }}
+                formatter={(v: number, n: string) => [`${Number(v).toFixed(1)}%`, n === 'visibility' ? 'Visibility' : 'Win rate']}
+              />
+              <Line type="monotone" dataKey="visibility" stroke={accent} strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="win_rate" stroke="hsl(var(--muted-foreground))" strokeWidth={1.5} dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {Number(mentions) > 0 && (() => {
+        const m = Number(mentions);
+        const s = m === 1 ? '' : 's';
+        let sentence: string;
+        if (wins > 0 && avg != null) {
+          const winS = wins === 1 ? '' : 's';
+          sentence = `${name} was recommended by AI assistants ${m} time${s} this period, ranking in the top ${Math.ceil(avg)} on average — and placed #1 ${wins} time${winS}.`;
+        } else if (avg != null && avg <= 3) {
+          sentence = `${name} appeared in ${m} AI shopping response${s} this period, consistently placed in the top 3 — a strong signal of growing AI presence.`;
+        } else {
+          sentence = `${name} was featured in ${m} AI shopping response${s} this period, building its presence across AI recommendations.`;
+        }
+        return <p className="text-sm text-muted-foreground leading-relaxed">{sentence}</p>;
+      })()}
+    </div>
+  );
+};
+
 const AiShoppingVisibilitySection = ({ clientId, accent }: { clientId: string | null; accent: string }) => {
+
   const [rows, setRows] = useState<ShoppingProductRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
