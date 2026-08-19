@@ -2548,28 +2548,56 @@ const ProductDetailSheetBody = ({
 }: { product: ShoppingProductRow; clientId: string | null; accent: string }) => {
   const [detail, setDetail] = useState<ProductDetail | null>(null);
   const [trend, setTrend] = useState<ProductTrendRow[]>([]);
+  const [bucket, setBucket] = useState<TrendBucket>('week');
+  const [merchants, setMerchants] = useState<ProductMerchantRow[]>([]);
+  const [queries, setQueries] = useState<ProductQueryRow[]>([]);
+  const [terms, setTerms] = useState<ProductTermRow[]>([]);
 
   useEffect(() => {
     if (!clientId || !product?.product_id) return;
     let cancelled = false;
     setDetail(null);
-    setTrend([]);
+    setMerchants([]);
+    setQueries([]);
+    setTerms([]);
     (async () => {
       try {
-        const [d, t] = await Promise.all([
+        const [d, m, q, tm] = await Promise.all([
           supabase.rpc('peec_product_detail', { p_client_id: clientId, p_product_id: product.product_id }),
-          supabase.rpc('peec_product_trend', { p_client_id: clientId, p_product_id: product.product_id, p_days: 60 }),
+          supabase.rpc('peec_product_merchants', { p_client_id: clientId, p_product_id: product.product_id }),
+          supabase.rpc('peec_product_shopping_queries', { p_client_id: clientId, p_product_id: product.product_id, p_limit: 10 }),
+          supabase.rpc('peec_product_query_terms', { p_client_id: clientId, p_product_id: product.product_id, p_limit: 12 }),
         ]);
         if (cancelled) return;
         const dRow = Array.isArray(d.data) ? d.data[0] : d.data;
         setDetail((dRow as ProductDetail) ?? null);
-        setTrend(Array.isArray(t.data) ? (t.data as ProductTrendRow[]) : []);
+        setMerchants(Array.isArray(m.data) ? (m.data as ProductMerchantRow[]) : []);
+        setQueries(Array.isArray(q.data) ? (q.data as ProductQueryRow[]) : []);
+        setTerms(Array.isArray(tm.data) ? (tm.data as ProductTermRow[]) : []);
       } catch (e) {
         console.error('[ProductDetail] load failed', e);
       }
     })();
     return () => { cancelled = true; };
   }, [clientId, product?.product_id]);
+
+  useEffect(() => {
+    if (!clientId || !product?.product_id) return;
+    let cancelled = false;
+    setTrend([]);
+    (async () => {
+      try {
+        const { data } = await supabase.rpc('peec_product_trend_v2', {
+          p_client_id: clientId, p_product_id: product.product_id, p_bucket: bucket,
+        });
+        if (!cancelled) setTrend(Array.isArray(data) ? (data as ProductTrendRow[]) : []);
+      } catch (e) {
+        console.error('[ProductTrend] load failed', e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [clientId, product?.product_id, bucket]);
+
 
   const name = detail?.name || product.name;
   const brand = detail?.brand ?? product.brand;
