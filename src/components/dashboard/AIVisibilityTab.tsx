@@ -2512,6 +2512,15 @@ interface ProductTermRow {
   distinct_chat_count?: number | null;
   distinct_chat_count_previous?: number | null;
 }
+interface ProductCompetitorRow {
+  competitor_product_id: string;
+  name?: string | null;
+  brand?: string | null;
+  image_url?: string | null;
+  visibility?: number | null;
+  mention_count?: number | null;
+  avg_position?: number | null;
+}
 
 type TrendBucket = 'day' | 'week' | 'month';
 
