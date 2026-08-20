@@ -2824,7 +2824,6 @@ const ProductDetailSheetBody = ({
           <div className="flex gap-3 overflow-x-auto pb-2">
             {competitors.map((c, i) => {
               const cvis = c.visibility != null ? `${Math.round(Number(c.visibility) * 100)}%` : '—';
-              const cinitial = (c.name?.trim()?.[0] ?? '?').toUpperCase();
               return (
                 <div
                   key={c.competitor_product_id ?? `${c.name}-${i}`}
