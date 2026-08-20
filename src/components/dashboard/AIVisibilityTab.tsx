@@ -2834,7 +2834,7 @@ const ProductDetailSheetBody = ({
                     {c.image_url ? (
                       <img src={c.image_url} alt="" className="w-full h-full object-contain" />
                     ) : (
-                      <span className="text-2xl font-semibold text-muted-foreground">{cinitial}</span>
+                      <ImageIcon className="w-5 h-5 text-muted-foreground" />
                     )}
                   </div>
                   <div className="mt-auto">
