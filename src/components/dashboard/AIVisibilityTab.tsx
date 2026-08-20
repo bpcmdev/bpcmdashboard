@@ -2821,13 +2821,13 @@ const ProductDetailSheetBody = ({
         <div>
           <div className="text-[10px] font-bold tracking-[0.15em] uppercase text-muted-foreground">Competing products</div>
           <div className="text-[11px] text-muted-foreground mt-1 mb-3">Products that appear in the same AI searches as this one</div>
-          <div className="flex gap-3 overflow-x-auto pb-2">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {competitors.map((c, i) => {
               const cvis = c.visibility != null ? `${Math.round(Number(c.visibility) * 100)}%` : '—';
               return (
                 <div
                   key={c.competitor_product_id ?? `${c.name}-${i}`}
-                  className="min-w-[140px] max-w-[160px] border border-border bg-card p-3 flex flex-col"
+                  className="border border-border bg-card p-3 flex flex-col"
                 >
                   <div className="w-full h-[80px] rounded bg-muted flex items-center justify-center mb-3 overflow-hidden">
                     {c.image_url ? (
@@ -3010,7 +3010,7 @@ const AiShoppingVisibilitySection = ({ clientId, accent }: { clientId: string | 
       )}
 
       <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
-        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+        <SheetContent side="right" className="w-screen sm:max-w-3xl overflow-y-auto">
           {selected && <ProductDetailSheetBody product={selected} clientId={clientId} accent={accent} />}
         </SheetContent>
       </Sheet>
