@@ -2817,6 +2817,43 @@ const ProductDetailSheetBody = ({
         </div>
       )}
 
+      {competitors.length > 0 && (
+        <div>
+          <div className="text-[10px] font-bold tracking-[0.15em] uppercase text-muted-foreground">Competing products</div>
+          <div className="text-[11px] text-muted-foreground mt-1 mb-3">Products that appear in the same AI searches as this one</div>
+          <div className="flex gap-3 overflow-x-auto pb-2">
+            {competitors.map((c, i) => {
+              const cvis = c.visibility != null ? `${Math.round(Number(c.visibility) * 100)}%` : '—';
+              const cinitial = (c.name?.trim()?.[0] ?? '?').toUpperCase();
+              return (
+                <div
+                  key={c.competitor_product_id ?? `${c.name}-${i}`}
+                  className="min-w-[140px] max-w-[160px] border border-border bg-card p-3 flex flex-col"
+                >
+                  <div className="w-full h-[80px] rounded bg-muted flex items-center justify-center mb-3 overflow-hidden">
+                    {c.image_url ? (
+                      <img src={c.image_url} alt="" className="w-full h-full object-contain" />
+                    ) : (
+                      <span className="text-2xl font-semibold text-muted-foreground">{cinitial}</span>
+                    )}
+                  </div>
+                  <div className="mt-auto">
+                    <div className="text-xs font-semibold text-foreground line-clamp-2 leading-tight" title={c.name || undefined}>
+                      {c.name || '—'}
+                    </div>
+                    {c.brand && <div className="text-[11px] text-muted-foreground truncate mt-1">{c.brand}</div>}
+                  </div>
+                  <div className="mt-2 flex justify-end">
+                    <span className="text-[10px] font-mono font-semibold tabular-nums text-foreground bg-muted px-1.5 py-0.5 rounded">
+                      {cvis}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {Number(mentions) > 0 && (() => {
         const m = Number(mentions);
