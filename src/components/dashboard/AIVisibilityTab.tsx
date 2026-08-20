@@ -2561,6 +2561,7 @@ const ProductDetailSheetBody = ({
   const [merchants, setMerchants] = useState<ProductMerchantRow[]>([]);
   const [queries, setQueries] = useState<ProductQueryRow[]>([]);
   const [terms, setTerms] = useState<ProductTermRow[]>([]);
+  const [competitors, setCompetitors] = useState<ProductCompetitorRow[]>([]);
 
   useEffect(() => {
     if (!clientId || !product?.product_id) return;
@@ -2569,13 +2570,15 @@ const ProductDetailSheetBody = ({
     setMerchants([]);
     setQueries([]);
     setTerms([]);
+    setCompetitors([]);
     (async () => {
       try {
-        const [d, m, q, tm] = await Promise.all([
+        const [d, m, q, tm, cm] = await Promise.all([
           supabase.rpc('peec_product_detail', { p_client_id: clientId, p_product_id: product.product_id }),
           supabase.rpc('peec_product_merchants', { p_client_id: clientId, p_product_id: product.product_id }),
           supabase.rpc('peec_product_shopping_queries', { p_client_id: clientId, p_product_id: product.product_id, p_limit: 10 }),
           supabase.rpc('peec_product_query_terms', { p_client_id: clientId, p_product_id: product.product_id, p_limit: 12 }),
+          supabase.rpc('peec_product_competitors', { p_client_id: clientId, p_product_id: product.product_id, p_limit: 8 }),
         ]);
         if (cancelled) return;
         const dRow = Array.isArray(d.data) ? d.data[0] : d.data;
@@ -2583,6 +2586,7 @@ const ProductDetailSheetBody = ({
         setMerchants(Array.isArray(m.data) ? (m.data as ProductMerchantRow[]) : []);
         setQueries(Array.isArray(q.data) ? (q.data as ProductQueryRow[]) : []);
         setTerms(Array.isArray(tm.data) ? (tm.data as ProductTermRow[]) : []);
+        setCompetitors(Array.isArray(cm.data) ? (cm.data as ProductCompetitorRow[]) : []);
       } catch (e) {
         console.error('[ProductDetail] load failed', e);
       }
