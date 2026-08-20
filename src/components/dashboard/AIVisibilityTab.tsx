@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Search, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, X, ExternalLink } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, X, ExternalLink, ImageIcon } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
@@ -2512,6 +2512,15 @@ interface ProductTermRow {
   distinct_chat_count?: number | null;
   distinct_chat_count_previous?: number | null;
 }
+interface ProductCompetitorRow {
+  competitor_product_id: string;
+  name?: string | null;
+  brand?: string | null;
+  image_url?: string | null;
+  visibility?: number | null;
+  mention_count?: number | null;
+  avg_position?: number | null;
+}
 
 type TrendBucket = 'day' | 'week' | 'month';
 
@@ -2552,6 +2561,7 @@ const ProductDetailSheetBody = ({
   const [merchants, setMerchants] = useState<ProductMerchantRow[]>([]);
   const [queries, setQueries] = useState<ProductQueryRow[]>([]);
   const [terms, setTerms] = useState<ProductTermRow[]>([]);
+  const [competitors, setCompetitors] = useState<ProductCompetitorRow[]>([]);
 
   useEffect(() => {
     if (!clientId || !product?.product_id) return;
@@ -2560,13 +2570,15 @@ const ProductDetailSheetBody = ({
     setMerchants([]);
     setQueries([]);
     setTerms([]);
+    setCompetitors([]);
     (async () => {
       try {
-        const [d, m, q, tm] = await Promise.all([
+        const [d, m, q, tm, cm] = await Promise.all([
           supabase.rpc('peec_product_detail', { p_client_id: clientId, p_product_id: product.product_id }),
           supabase.rpc('peec_product_merchants', { p_client_id: clientId, p_product_id: product.product_id }),
           supabase.rpc('peec_product_shopping_queries', { p_client_id: clientId, p_product_id: product.product_id, p_limit: 10 }),
           supabase.rpc('peec_product_query_terms', { p_client_id: clientId, p_product_id: product.product_id, p_limit: 12 }),
+          supabase.rpc('peec_product_competitors', { p_client_id: clientId, p_product_id: product.product_id, p_limit: 8 }),
         ]);
         if (cancelled) return;
         const dRow = Array.isArray(d.data) ? d.data[0] : d.data;
@@ -2574,6 +2586,7 @@ const ProductDetailSheetBody = ({
         setMerchants(Array.isArray(m.data) ? (m.data as ProductMerchantRow[]) : []);
         setQueries(Array.isArray(q.data) ? (q.data as ProductQueryRow[]) : []);
         setTerms(Array.isArray(tm.data) ? (tm.data as ProductTermRow[]) : []);
+        setCompetitors(Array.isArray(cm.data) ? (cm.data as ProductCompetitorRow[]) : []);
       } catch (e) {
         console.error('[ProductDetail] load failed', e);
       }
@@ -2804,6 +2817,42 @@ const ProductDetailSheetBody = ({
         </div>
       )}
 
+      {competitors.length > 0 && (
+        <div>
+          <div className="text-[10px] font-bold tracking-[0.15em] uppercase text-muted-foreground">Competing products</div>
+          <div className="text-[11px] text-muted-foreground mt-1 mb-3">Products that appear in the same AI searches as this one</div>
+          <div className="flex gap-3 overflow-x-auto pb-2">
+            {competitors.map((c, i) => {
+              const cvis = c.visibility != null ? `${Math.round(Number(c.visibility) * 100)}%` : '—';
+              return (
+                <div
+                  key={c.competitor_product_id ?? `${c.name}-${i}`}
+                  className="min-w-[140px] max-w-[160px] border border-border bg-card p-3 flex flex-col"
+                >
+                  <div className="w-full h-[80px] rounded bg-muted flex items-center justify-center mb-3 overflow-hidden">
+                    {c.image_url ? (
+                      <img src={c.image_url} alt="" className="w-full h-full object-contain" />
+                    ) : (
+                      <ImageIcon className="w-5 h-5 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="mt-auto">
+                    <div className="text-xs font-semibold text-foreground line-clamp-2 leading-tight" title={c.name || undefined}>
+                      {c.name || '—'}
+                    </div>
+                    {c.brand && <div className="text-[11px] text-muted-foreground truncate mt-1">{c.brand}</div>}
+                  </div>
+                  <div className="mt-2 flex justify-end">
+                    <span className="text-[10px] font-mono font-semibold tabular-nums text-foreground bg-muted px-1.5 py-0.5 rounded">
+                      {cvis}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {Number(mentions) > 0 && (() => {
         const m = Number(mentions);
