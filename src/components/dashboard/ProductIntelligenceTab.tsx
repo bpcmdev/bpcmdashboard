@@ -468,11 +468,12 @@ const ProductDetailSheetBody = ({
 
 // ---------- GEO summary ----------
 interface GeoSummaryStat { label: string; value: string; detail: string }
+interface GeoSummaryRecommendation { title: string; action: string; rationale: string }
 interface GeoSummaryRow {
   headline: string | null;
   key_stats: GeoSummaryStat[] | null;
   narrative: string | null;
-  action: string | null;
+  recommendations: GeoSummaryRecommendation[] | null;
   generated_at: string | null;
 }
 
