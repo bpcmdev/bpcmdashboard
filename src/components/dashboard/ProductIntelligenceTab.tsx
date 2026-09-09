@@ -468,11 +468,12 @@ const ProductDetailSheetBody = ({
 
 // ---------- GEO summary ----------
 interface GeoSummaryStat { label: string; value: string; detail: string }
+interface GeoSummaryRecommendation { title: string; action: string; rationale: string }
 interface GeoSummaryRow {
   headline: string | null;
   key_stats: GeoSummaryStat[] | null;
   narrative: string | null;
-  action: string | null;
+  recommendations: GeoSummaryRecommendation[] | null;
   generated_at: string | null;
 }
 
@@ -575,15 +576,39 @@ const GeoSummaryCard = ({ clientId }: { clientId: string | null }) => {
             </p>
           )}
 
-          {row.action && (
-            <div
-              className="border-l-4 p-4 rounded-r-sm"
-              style={{ borderLeftColor: 'hsl(var(--accent))', backgroundColor: 'hsl(var(--accent)/0.08)' }}
-            >
-              <p className="text-sm text-foreground leading-snug">
-                <span className="font-bold text-[11px] tracking-[0.08em] uppercase mr-1">NEXT STEP:</span>
-                {row.action}
-              </p>
+          {Array.isArray(row.recommendations) && row.recommendations.length > 0 && (
+            <div className="space-y-3">
+              <div className="text-[11px] font-bold tracking-[0.12em] uppercase text-muted-foreground">
+                Recommendations
+              </div>
+              <div className="space-y-3">
+                {row.recommendations.map((rec, i) => {
+                  const accentColors = [
+                    { border: 'hsl(225,70%,35%)', bg: 'hsla(225,70%,35%,0.08)' },
+                    { border: 'hsl(150,60%,35%)', bg: 'hsla(150,60%,35%,0.08)' },
+                    { border: 'hsl(35,80%,40%)', bg: 'hsla(35,80%,40%,0.08)' },
+                  ];
+                  const color = accentColors[i % accentColors.length];
+                  return (
+                    <div
+                      key={i}
+                      className="border-l-4 p-4 rounded-r-sm"
+                      style={{ borderLeftColor: color.border, backgroundColor: color.bg }}
+                    >
+                      <div className="flex items-start gap-2">
+                        <span className="text-sm font-bold text-foreground min-w-[1.5em]">{i + 1}.</span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-foreground leading-snug">{rec.title}</p>
+                          <p className="text-sm text-foreground leading-snug mt-0.5">{rec.action}</p>
+                          {rec.rationale && (
+                            <p className="text-xs text-muted-foreground leading-snug mt-1.5">{rec.rationale}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
 
