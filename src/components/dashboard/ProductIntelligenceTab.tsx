@@ -510,8 +510,6 @@ const GeoSummaryCard = ({ clientId }: { clientId: string | null }) => {
 
   if (loading) return null;
   if (!row?.summary_text && !isAdmin) return null;
-  if (!row?.summary_text && !regenerating && !isAdmin) return null;
-  if (!row?.summary_text && !isAdmin) return null;
 
   const generated = row?.generated_at ? new Date(row.generated_at) : null;
 
@@ -767,7 +765,7 @@ const ProductIntelligenceTab = () => {
   const accent = clientColor || '#1B2B8A';
 
   return (
-    <div className="max-w-[1400px] mx-auto px-6 py-8 space-y-6">
+    <div className="px-6 py-8 space-y-6 bg-background">
       <AiShoppingVisibilitySection clientId={activeClientId} accent={accent} />
       <GeoSummaryCard clientId={activeClientId} />
     </div>
