@@ -577,7 +577,7 @@ const GeoSummaryCard = ({ clientId }: { clientId: string | null }) => {
 
           {row.action && (
             <div
-              className="border-l-4 border-[hsl(var(--accent))] bg-[hsl(var(--accent)/0.08)] p-4 rounded-r-sm"
+              className="border-l-4 p-4 rounded-r-sm"
               style={{ borderLeftColor: 'hsl(var(--accent))', backgroundColor: 'hsl(var(--accent)/0.08)' }}
             >
               <p className="text-sm text-foreground leading-snug">
