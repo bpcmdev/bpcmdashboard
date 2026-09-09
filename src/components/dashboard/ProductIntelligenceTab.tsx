@@ -467,7 +467,14 @@ const ProductDetailSheetBody = ({
 };
 
 // ---------- GEO summary ----------
-interface GeoSummaryRow { summary_text: string | null; generated_at: string | null }
+interface GeoSummaryStat { label: string; value: string; detail: string }
+interface GeoSummaryRow {
+  headline: string | null;
+  key_stats: GeoSummaryStat[] | null;
+  narrative: string | null;
+  action: string | null;
+  generated_at: string | null;
+}
 
 const GeoSummaryCard = ({ clientId }: { clientId: string | null }) => {
   const { isAdmin } = useAdmin();
@@ -509,13 +516,14 @@ const GeoSummaryCard = ({ clientId }: { clientId: string | null }) => {
   };
 
   if (loading) return null;
-  if (!row?.summary_text && !isAdmin) return null;
+  if (!row && !isAdmin) return null;
 
   const generated = row?.generated_at ? new Date(row.generated_at) : null;
+  const stats = row?.key_stats ?? [];
 
   return (
     <section className="border border-border bg-card p-6">
-      <div className="flex items-center justify-between gap-3 mb-3">
+      <div className="flex items-center justify-between gap-3 mb-4">
         <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground">GEO Summary</h3>
         {isAdmin && (
           <button
@@ -527,26 +535,71 @@ const GeoSummaryCard = ({ clientId }: { clientId: string | null }) => {
               'disabled:opacity-50 disabled:cursor-not-allowed'
             )}
           >
-            {regenerating ? 'Analyzing…' : row?.summary_text ? 'Regenerate' : 'Generate'}
+            {regenerating ? 'Analyzing…' : row?.headline ? 'Regenerate' : 'Generate'}
           </button>
         )}
       </div>
-      {errorMsg && <p className="text-sm text-destructive mb-2">{errorMsg}</p>}
-      {row?.summary_text ? (
-        <>
-          <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">{row.summary_text}</p>
+
+      {errorMsg && <p className="text-sm text-destructive mb-4">{errorMsg}</p>}
+
+      {row?.headline ? (
+        <div className="space-y-5">
+          <h2 className="font-display text-2xl font-bold text-foreground leading-tight">
+            {row.headline}
+          </h2>
+
+          {stats.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border border-y border-border">
+              {stats.slice(0, 3).map((s, i) => (
+                <div
+                  key={`${s.label}-${i}`}
+                  className="p-4 text-center bg-muted/30 first:bg-muted/20 last:bg-muted/20"
+                >
+                  <div className="text-[10px] font-bold tracking-[0.12em] uppercase text-muted-foreground">
+                    {s.label}
+                  </div>
+                  <div className="text-xl font-semibold text-foreground mt-1.5 tabular-nums leading-tight">
+                    {s.value}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground mt-1.5 leading-snug">
+                    {s.detail}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {row.narrative && (
+            <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+              {row.narrative}
+            </p>
+          )}
+
+          {row.action && (
+            <div
+              className="border-l-4 border-[hsl(var(--accent))] bg-[hsl(var(--accent)/0.08)] p-4 rounded-r-sm"
+              style={{ borderLeftColor: 'hsl(var(--accent))', backgroundColor: 'hsl(var(--accent)/0.08)' }}
+            >
+              <p className="text-sm text-foreground leading-snug">
+                <span className="font-bold text-[11px] tracking-[0.08em] uppercase mr-1">NEXT STEP:</span>
+                {row.action}
+              </p>
+            </div>
+          )}
+
           {generated && !isNaN(generated.getTime()) && (
-            <div className="text-[11px] text-muted-foreground mt-3">
+            <div className="text-[11px] text-muted-foreground pt-1">
               Generated {format(generated, 'MMM d, yyyy · h:mm a')}
             </div>
           )}
-        </>
+        </div>
       ) : (
         <p className="text-sm text-muted-foreground">No summary generated yet.</p>
       )}
     </section>
   );
 };
+
 
 // ---------- Leaderboard ----------
 interface CategoryOption { category_id: string; name: string }
