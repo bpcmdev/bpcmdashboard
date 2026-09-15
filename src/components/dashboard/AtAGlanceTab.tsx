@@ -1,6 +1,8 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
+import { useAdmin } from '@/hooks/useAdmin';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import DataStateWrapper from './DataStateWrapper';
 import PlaceholderCard from './PlaceholderCard';
 
@@ -18,6 +20,12 @@ interface GlanceCard {
   week_start: string | null;
 }
 
+interface TagRow {
+  id: string;
+  name: string;
+  color: string | null;
+}
+
 interface AssetRow {
   id: string;
   launch: string;
@@ -25,6 +33,9 @@ interface AssetRow {
   status: 'received' | 'due_soon' | 'urgent' | string;
   assets_needed: string | null;
   notes: string | null;
+  owner_name: string | null;
+  tags: TagRow[] | null;
+  updated_at?: string | null;
 }
 
 interface PipelineMoment {
@@ -43,6 +54,15 @@ interface ProductRow {
   launch_date: string | null;
   launch_type: string | null;
   description: string | null;
+}
+
+interface AgentIntelRow {
+  category: string;
+  headline: string;
+  body: string | null;
+  stat_line: string | null;
+  confidence: string | null;
+  generated_at: string | null;
 }
 
 const toArray = (v: unknown): string[] => {
@@ -112,20 +132,107 @@ function GlanceCardTile({ card }: { card: GlanceCard }) {
 /* ─────────────────────────────────────────────────────────────────
    Asset Tracker
    ───────────────────────────────────────────────────────────────── */
-type SortKey = 'launch' | 'target_date' | 'status';
+type SortKey = 'launch' | 'target_date' | 'status' | 'owner_name';
 const statusOrder: Record<string, number> = { urgent: 0, due_soon: 1, received: 2 };
 
+const STATUS_OPTIONS = ['urgent', 'due_soon', 'received'] as const;
+
+const statusMap: Record<string, { label: string; cls: string }> = {
+  received: { label: 'Received',   cls: 'bg-[hsl(145_63%_42%/0.15)] text-[hsl(145_63%_28%)] border border-[hsl(145_63%_42%/0.35)]' },
+  due_soon: { label: 'Due soon',   cls: 'bg-[hsl(42_85%_50%/0.18)]  text-[hsl(36_75%_30%)] border border-[hsl(42_85%_50%/0.4)]' },
+  urgent:   { label: 'Urgent',     cls: 'bg-[hsl(0_75%_55%/0.15)]   text-[hsl(0_75%_38%)]  border border-[hsl(0_75%_55%/0.35)]' },
+};
+
 function StatusChip({ status }: { status: string }) {
-  const map: Record<string, { label: string; cls: string }> = {
-    received: { label: 'Received',   cls: 'bg-[hsl(145_63%_42%/0.15)] text-[hsl(145_63%_28%)] border border-[hsl(145_63%_42%/0.35)]' },
-    due_soon: { label: 'Due soon',   cls: 'bg-[hsl(42_85%_50%/0.18)]  text-[hsl(36_75%_30%)] border border-[hsl(42_85%_50%/0.4)]' },
-    urgent:   { label: 'Urgent',     cls: 'bg-[hsl(0_75%_55%/0.15)]   text-[hsl(0_75%_38%)]  border border-[hsl(0_75%_55%/0.35)]' },
-  };
-  const m = map[status] ?? { label: status, cls: 'bg-muted text-muted-foreground border border-border' };
+  const m = statusMap[status] ?? { label: status, cls: 'bg-muted text-muted-foreground border border-border' };
   return <span className={`inline-block px-2 py-0.5 text-[10px] font-mono-ui tracking-wider uppercase rounded-full ${m.cls}`}>{m.label}</span>;
 }
 
-function AssetTracker({ rows }: { rows: AssetRow[] }) {
+function StatusEditor({ row, onChange }: { row: AssetRow; onChange: (status: string) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button className="focus:outline-none hover:opacity-80 transition-opacity">
+          <StatusChip status={row.status} />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-40 p-1">
+        {STATUS_OPTIONS.map(s => (
+          <button
+            key={s}
+            onClick={() => { setOpen(false); if (s !== row.status) onChange(s); }}
+            className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-black/5 text-left"
+          >
+            <StatusChip status={s} />
+          </button>
+        ))}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function TagPill({ tag }: { tag: TagRow }) {
+  const color = tag.color || '#6b7280';
+  return (
+    <span
+      className="inline-block px-2 py-0.5 text-[10px] font-mono-ui tracking-wider uppercase rounded-full border"
+      style={{ backgroundColor: `${color}22`, borderColor: `${color}55`, color }}
+    >
+      {tag.name}
+    </span>
+  );
+}
+
+function TagEditor({
+  row,
+  availableTags,
+  onToggle,
+}: { row: AssetRow; availableTags: TagRow[]; onToggle: (tag: TagRow, active: boolean) => void }) {
+  const active = new Set((row.tags ?? []).map(t => t.id));
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button className="font-mono-ui text-[10px] tracking-[0.14em] uppercase text-muted-foreground hover:text-foreground">
+          Edit
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-56 p-2">
+        <div className="font-mono-ui text-[10px] tracking-[0.14em] uppercase text-muted-foreground mb-2">Tags</div>
+        {availableTags.length === 0 ? (
+          <p className="text-[12px] text-muted-foreground">No tags configured.</p>
+        ) : (
+          <div className="space-y-1">
+            {availableTags.map(t => (
+              <button
+                key={t.id}
+                onClick={() => onToggle(t, active.has(t.id))}
+                className="w-full flex items-center justify-between gap-2 px-1.5 py-1 rounded hover:bg-black/5"
+              >
+                <TagPill tag={t} />
+                <span className="text-[11px] text-muted-foreground">{active.has(t.id) ? '✓' : '+'}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function AssetTracker({
+  rows,
+  isAdmin,
+  availableTags,
+  onStatusChange,
+  onTagToggle,
+}: {
+  rows: AssetRow[];
+  isAdmin: boolean;
+  availableTags: TagRow[];
+  onStatusChange: (row: AssetRow, status: string) => void;
+  onTagToggle: (row: AssetRow, tag: TagRow, active: boolean) => void;
+}) {
   const [sortKey, setSortKey] = useState<SortKey>('target_date');
   const [asc, setAsc] = useState(true);
 
@@ -137,6 +244,7 @@ function AssetTracker({ rows }: { rows: AssetRow[] }) {
       if (sortKey === 'launch')      { av = a.launch ?? ''; bv = b.launch ?? ''; }
       if (sortKey === 'target_date') { av = a.target_date ?? '9999-12-31'; bv = b.target_date ?? '9999-12-31'; }
       if (sortKey === 'status')      { av = statusOrder[a.status] ?? 99; bv = statusOrder[b.status] ?? 99; }
+      if (sortKey === 'owner_name')  { av = (a.owner_name ?? 'zzz').toLowerCase(); bv = (b.owner_name ?? 'zzz').toLowerCase(); }
       if (av < bv) return asc ? -1 : 1;
       if (av > bv) return asc ? 1 : -1;
       return 0;
@@ -169,8 +277,11 @@ function AssetTracker({ rows }: { rows: AssetRow[] }) {
               <Th k="launch">Launch</Th>
               <Th k="target_date">Target Date</Th>
               <Th k="status">Status</Th>
+              <Th k="owner_name">Owner</Th>
+              <Th>Tags</Th>
               <Th>Assets Needed</Th>
               <Th>Notes</Th>
+              {isAdmin && <Th className="text-right" />}
             </tr>
           </thead>
           <tbody>
@@ -180,9 +291,28 @@ function AssetTracker({ rows }: { rows: AssetRow[] }) {
                 <td className="px-4 py-3 font-mono-ui text-[12px] tracking-wider text-foreground/80">
                   {r.target_date ? new Date(r.target_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
                 </td>
-                <td className="px-4 py-3"><StatusChip status={r.status} /></td>
+                <td className="px-4 py-3">
+                  {isAdmin
+                    ? <StatusEditor row={r} onChange={s => onStatusChange(r, s)} />
+                    : <StatusChip status={r.status} />}
+                </td>
+                <td className="px-4 py-3 text-foreground/80">
+                  {r.owner_name || <span className="text-muted-foreground">Unassigned</span>}
+                </td>
+                <td className="px-4 py-3">
+                  {(r.tags ?? []).length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {(r.tags ?? []).map(t => <TagPill key={t.id} tag={t} />)}
+                    </div>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-foreground/80">{r.assets_needed || '—'}</td>
                 <td className="px-4 py-3 text-foreground/60 text-[13px]">{r.notes || '—'}</td>
+                {isAdmin && (
+                  <td className="px-4 py-3 text-right">
+                    <TagEditor row={r} availableTags={availableTags} onToggle={(t, a) => onTagToggle(r, t, a)} />
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -193,34 +323,143 @@ function AssetTracker({ rows }: { rows: AssetRow[] }) {
 }
 
 /* ─────────────────────────────────────────────────────────────────
-   Agent Intelligence — pipeline_moments cards
+   Agent Intelligence — AI-generated category cards
    ───────────────────────────────────────────────────────────────── */
-const priorityBorder: Record<string, string> = {
-  active:   'hsl(0 75% 50%)',
-  watch:    'hsl(42 85% 50%)',
-  upcoming: 'rgba(0,0,0,0.25)',
+const AGENT_CATEGORY_ORDER = ['trend', 'global', 'active', 'prepare', 'watch', 'sov'] as const;
+
+const AGENT_CATEGORY_COLOR: Record<string, string> = {
+  trend:   'hsl(217 75% 50%)',   // blue
+  global:  'hsl(178 60% 38%)',   // teal
+  active:  'hsl(145 63% 38%)',   // green
+  prepare: 'hsl(42 85% 48%)',    // amber
+  watch:   'hsl(0 75% 50%)',     // red
+  sov:     'hsl(272 55% 50%)',   // purple
 };
 
-function AgentCard({ m }: { m: PipelineMoment }) {
-  const border = priorityBorder[m.priority ?? 'upcoming'] ?? priorityBorder.upcoming;
-  const monitors = toArray(m.monitor_strings);
+function AgentIntelCard({ row }: { row: AgentIntelRow }) {
+  const accent = AGENT_CATEGORY_COLOR[row.category] ?? 'rgba(0,0,0,0.25)';
+  const limited = row.confidence === 'limited';
   return (
     <div
       className="bg-white border border-black/10 rounded-lg p-5 transition-all hover:-translate-y-0.5"
-      style={{ borderLeft: `4px solid ${border}` }}
+      style={{ borderLeft: `4px solid ${accent}`, borderLeftColor: accent, opacity: limited ? 0.85 : 1 }}
     >
-      <h3 className="font-display text-[18px] leading-snug mb-1.5 text-foreground">{m.title}</h3>
-      {m.description && <p className="text-[13px] leading-relaxed text-foreground/75 mb-3">{m.description}</p>}
-      {monitors.length > 0 && (
-        <div className="text-[12px] text-foreground/70 mb-3">
-          <span className="font-semibold text-foreground/80">Monitor:</span>{' '}
-          <span className="font-mono-ui text-[11px] tracking-wide">{monitors.join(' / ')}</span>
+      <div className="flex items-center gap-2 mb-2">
+        <span
+          className="font-mono-ui text-[10px] tracking-[0.18em] uppercase"
+          style={{ color: accent, opacity: limited ? 0.5 : 1 }}
+        >
+          {row.category}
+        </span>
+        {limited && (
+          <span className="px-1.5 py-0.5 rounded-full bg-black/5 font-mono-ui text-[9px] tracking-[0.14em] uppercase text-muted-foreground">
+            Limited data
+          </span>
+        )}
+      </div>
+      <h3 className={`font-display text-[18px] leading-snug mb-1.5 ${limited ? 'text-foreground/60' : 'text-foreground'}`}>
+        {row.headline}
+      </h3>
+      {row.body && (
+        <p className={`text-[13px] leading-relaxed ${limited ? 'text-foreground/50' : 'text-foreground/75'} ${row.stat_line ? 'mb-3' : ''}`}>
+          {row.body}
+        </p>
+      )}
+      {row.stat_line && (
+        <div className={`pt-3 border-t border-black/10 font-mono-ui text-[10px] tracking-[0.18em] uppercase ${limited ? 'text-muted-foreground/70' : 'text-muted-foreground'}`}>
+          {row.stat_line}
         </div>
       )}
-      <div className="pt-3 border-t border-black/10 font-mono-ui text-[10px] tracking-[0.18em] uppercase text-muted-foreground">
-        {m.event_type}
-      </div>
     </div>
+  );
+}
+
+function AgentIntelligenceSection({ clientId }: { clientId: string | null }) {
+  const { isAdmin } = useAdmin();
+  const [rows, setRows] = useState<AgentIntelRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [regenerating, setRegenerating] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    if (!clientId) { setRows([]); setLoading(false); return; }
+    const { data, error } = await supabase.rpc('agent_intelligence_latest', { p_client_id: clientId });
+    if (error) console.error('[AgentIntelligence] load failed', error);
+    setRows(((data as AgentIntelRow[]) ?? []));
+    setLoading(false);
+  }, [clientId]);
+
+  useEffect(() => { setLoading(true); load(); }, [load]);
+
+  const ordered = useMemo(() => {
+    const idx = (c: string) => {
+      const i = AGENT_CATEGORY_ORDER.indexOf(c as typeof AGENT_CATEGORY_ORDER[number]);
+      return i === -1 ? 99 : i;
+    };
+    return [...rows].sort((a, b) => idx(a.category) - idx(b.category));
+  }, [rows]);
+
+  const newest = useMemo(() => {
+    const ts = rows.map(r => r.generated_at).filter(Boolean) as string[];
+    if (!ts.length) return null;
+    return new Date(ts.sort().reverse()[0]);
+  }, [rows]);
+
+  const handleRegenerate = async () => {
+    setRegenerating(true);
+    setErrorMsg(null);
+    const { data, error } = await supabase.functions.invoke('agent-intelligence', {
+      body: { client_id: clientId },
+    });
+    if (error || (data && (data as { error?: string }).error)) {
+      setErrorMsg((data as { error?: string })?.error || error?.message || 'Failed to regenerate.');
+      setRegenerating(false);
+      return;
+    }
+    await load();
+    setRegenerating(false);
+  };
+
+  if (loading) return null;
+  if (!ordered.length && !isAdmin) return null;
+  if (!ordered.length && !isAdmin) return null;
+
+  return (
+    <section>
+      <div className="flex items-end justify-between gap-3 mb-5">
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="h-px w-6 bg-foreground/40" />
+            <span className="font-mono-ui text-[10px] tracking-[0.18em] uppercase text-muted-foreground">Agent Intelligence</span>
+          </div>
+          <h2 className="font-display text-[28px] md:text-[34px] leading-tight tracking-tight text-foreground">What we're watching</h2>
+        </div>
+        {isAdmin && (
+          <button
+            onClick={handleRegenerate}
+            disabled={regenerating}
+            className="px-3 py-1.5 font-mono-ui text-[10px] font-semibold tracking-[0.1em] uppercase border border-foreground/30 text-foreground/80 hover:bg-foreground hover:text-background transition-colors rounded disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {regenerating ? 'Analyzing…' : ordered.length ? 'Regenerate' : 'Generate'}
+          </button>
+        )}
+      </div>
+
+      {errorMsg && <p className="text-sm text-destructive mb-4">{errorMsg}</p>}
+
+      {ordered.length > 0 && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {ordered.map(r => <AgentIntelCard key={r.category} row={r} />)}
+          </div>
+          {newest && (
+            <div className="mt-3 font-mono-ui text-[10px] tracking-[0.14em] uppercase text-muted-foreground">
+              Generated {newest.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </div>
+          )}
+        </>
+      )}
+    </section>
   );
 }
 
@@ -339,13 +578,47 @@ function MarketingCalendar({
    ───────────────────────────────────────────────────────────────── */
 const AtAGlanceTab = () => {
   const { activeClientId: clientId, selectedWeek, isAllTime, isYTD, ytdFrom, refreshKey } = useWeek();
+  const { isAdmin } = useAdmin();
 
   const [cards, setCards]       = useState<GlanceCard[]>([]);
   const [assets, setAssets]     = useState<AssetRow[]>([]);
+  const [clientTags, setClientTags] = useState<TagRow[]>([]);
   const [moments, setMoments]   = useState<PipelineMoment[]>([]);
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState(false);
+  const [assetKey, setAssetKey] = useState(0);
+
+  const reloadAssets = useCallback(async () => {
+    if (!clientId) return;
+    const { data, error: err } = await supabase.rpc('assets_list', { p_client_id: clientId });
+    if (err) { console.error('[AtAGlance] assets_list failed', err); return; }
+    setAssets((data as AssetRow[]) ?? []);
+  }, [clientId]);
+
+  const handleStatusChange = useCallback(async (row: AssetRow, status: string) => {
+    const { error: err } = await supabase.from('asset_tracker').update({ status }).eq('id', row.id);
+    if (err) { console.error('[AtAGlance] status update failed', err); return; }
+    await reloadAssets();
+  }, [reloadAssets]);
+
+  const handleTagToggle = useCallback(async (row: AssetRow, tag: TagRow, active: boolean) => {
+    if (active) {
+      const { error: err } = await supabase
+        .from('entity_tags')
+        .delete()
+        .eq('entity_type', 'asset')
+        .eq('entity_id', row.id)
+        .eq('tag_id', tag.id);
+      if (err) { console.error('[AtAGlance] tag remove failed', err); return; }
+    } else {
+      const { error: err } = await supabase
+        .from('entity_tags')
+        .insert({ entity_type: 'asset', entity_id: row.id, tag_id: tag.id, client_id: clientId });
+      if (err) { console.error('[AtAGlance] tag add failed', err); return; }
+    }
+    await reloadAssets();
+  }, [clientId, reloadAssets]);
 
   useEffect(() => {
     if (!clientId) return;
@@ -370,11 +643,12 @@ const AtAGlanceTab = () => {
             .eq('week_start', latest.week_start)
             .order('sort_order', { ascending: true });
         })();
-        const assetsPromise   = supabase.from('asset_tracker').select('*').eq('client_id', clientId);
+        const assetsPromise   = supabase.rpc('assets_list', { p_client_id: clientId });
+        const tagsPromise     = supabase.from('client_tags').select('id, name, color').eq('client_id', clientId);
         const momentsPromise  = supabase.from('pipeline_moments').select('*').eq('client_id', clientId).order('event_date', { ascending: true });
         const productsPromise = supabase.from('product_pipeline').select('*').eq('client_id', clientId).order('launch_date', { ascending: true });
 
-        const [g, a, m, p] = await Promise.all([glancePromise, assetsPromise, momentsPromise, productsPromise]);
+        const [g, a, t, m, p] = await Promise.all([glancePromise, assetsPromise, tagsPromise, momentsPromise, productsPromise]);
         if (cancelled) return;
         if (g.error || a.error || m.error || p.error) {
           console.error('[AtAGlance] load error', { g: g.error, a: a.error, m: m.error, p: p.error });
@@ -382,6 +656,7 @@ const AtAGlanceTab = () => {
         } else {
           setCards((g.data ?? []) as GlanceCard[]);
           setAssets((a.data ?? []) as AssetRow[]);
+          setClientTags((t.data ?? []) as TagRow[]);
           setMoments((m.data ?? []) as PipelineMoment[]);
           setProducts((p.data ?? []) as ProductRow[]);
         }
@@ -393,7 +668,7 @@ const AtAGlanceTab = () => {
     };
     load();
     return () => { cancelled = true; };
-  }, [clientId, selectedWeek, isAllTime, isYTD, ytdFrom, refreshKey]);
+  }, [clientId, selectedWeek, isAllTime, isYTD, ytdFrom, refreshKey, assetKey]);
 
   const sortedCards = useMemo(
     () => [...cards].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)),
@@ -420,22 +695,17 @@ const AtAGlanceTab = () => {
         {/* Asset Tracker */}
         <section>
           <SectionHeader eyebrow="02 — Awaiting from Client" title="Asset Tracker" />
-          <AssetTracker rows={assets} />
+          <AssetTracker
+            rows={assets}
+            isAdmin={isAdmin}
+            availableTags={clientTags}
+            onStatusChange={handleStatusChange}
+            onTagToggle={handleTagToggle}
+          />
         </section>
 
         {/* Agent Intelligence */}
-        <section>
-          <SectionHeader eyebrow="03 — Agent Intelligence" title="What we're watching" />
-          {moments.length === 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <PlaceholderCard /><PlaceholderCard />
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {moments.map(m => <AgentCard key={m.id} m={m} />)}
-            </div>
-          )}
-        </section>
+        <AgentIntelligenceSection clientId={clientId} />
 
         {/* Marketing Calendar */}
         <section>
