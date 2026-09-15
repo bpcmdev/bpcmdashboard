@@ -57,6 +57,66 @@ interface MatrixRow {
   brand_order: number;
 }
 
+interface AttributionSourceRow {
+  url: string;
+  title: string | null;
+  domain: string | null;
+  url_classification: string | null;
+  domain_classification: string | null;
+  occurrences: number | string | null;
+  retrievals: number | string | null;
+  citation_rate: number | string | null;
+}
+
+// Same color convention as the Top Domains ClassificationTag.
+const SOURCE_CLASS_STYLES: Record<string, { backgroundColor: string; color: string }> = {
+  EDITORIAL: { backgroundColor: 'hsl(225 70% 35%)', color: '#FFFFFF' },
+  CORPORATE: { backgroundColor: 'hsl(0 0% 93%)', color: 'hsl(0 0% 40%)' },
+  UGC: { backgroundColor: 'hsl(42 64% 45% / 0.16)', color: 'hsl(42 64% 26%)' },
+  INSTITUTIONAL: { backgroundColor: 'hsl(0 0% 0% / 0.07)', color: 'hsl(0 0% 18%)' },
+  REFERENCE: { backgroundColor: 'hsl(150 45% 35% / 0.12)', color: 'hsl(150 45% 20%)' },
+};
+
+const SourceClassBadge = ({ value }: { value: string | null }) => {
+  const v = (value || 'OTHER').toUpperCase();
+  const style = SOURCE_CLASS_STYLES[v] || SOURCE_CLASS_STYLES.CORPORATE;
+  return (
+    <span
+      className="inline-block shrink-0 text-[9px] font-bold tracking-[0.1em] uppercase px-1.5 py-0.5"
+      style={style}
+    >
+      {v}
+    </span>
+  );
+};
+
+const SourceFavicon = ({ domain }: { domain: string | null }) => {
+  const [failed, setFailed] = useState(false);
+  const letter = (domain || '?').replace(/^www\./, '').charAt(0).toUpperCase();
+  if (!domain || failed) {
+    return (
+      <span className="h-8 w-8 shrink-0 rounded-sm border border-border/60 bg-muted/50 flex items-center justify-center font-mono-ui text-[12px] uppercase text-muted-foreground">
+        {letter}
+      </span>
+    );
+  }
+  return (
+    <img
+      src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`}
+      onError={() => setFailed(true)}
+      alt=""
+      loading="lazy"
+      className="h-8 w-8 shrink-0 rounded-sm border border-border/60 bg-card object-contain p-1"
+    />
+  );
+};
+
+const formatCitationRate = (v: number | string | null): string => {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return '—';
+  return `${n.toFixed(2)}x`;
+};
+
 const COMPETITOR_COLORS = ['#D14D4D', '#3E8E7E', '#C98A2C', '#5B6FD1', '#A15BB5', '#4A9BC9'];
 
 // Single-hue blue ramp: 0, 1–2, 3–4, ... 19–20, 21+
@@ -149,6 +209,57 @@ const BrandPerceptionSection = ({
     })();
     return () => { cancelled = true; };
   }, [clientId]);
+
+  // ---- attribution sources ----
+  const [sourceOptions, setSourceOptions] = useState<string[]>([]);
+  const [sourceOptionsLoading, setSourceOptionsLoading] = useState(true);
+  const [sourceAttr, setSourceAttr] = useState<string | null>(null);
+  const [sourceRows, setSourceRows] = useState<AttributionSourceRow[]>([]);
+  const [sourceRowsLoading, setSourceRowsLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setSourceOptions([]);
+    setSourceOptionsLoading(true);
+    setSourceAttr(null);
+    setSourceRows([]);
+    (async () => {
+      const { data } = await supabase.rpc('peec_perception_attributes_with_sources', { p_client_id: clientId });
+      if (cancelled) return;
+      const list = toArr<unknown>(data)
+        .map((r) =>
+          typeof r === 'string'
+            ? r
+            : ((r as Record<string, unknown>)?.attribute ??
+               (r as Record<string, unknown>)?.name ??
+               (r as Record<string, unknown>)?.attribute_name ??
+               null),
+        )
+        .filter((s): s is string => typeof s === 'string' && s.length > 0);
+      if (!cancelled) {
+        setSourceOptions(Array.from(new Set(list)));
+        setSourceOptionsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [clientId]);
+
+  useEffect(() => {
+    if (!sourceAttr) { setSourceRows([]); setSourceRowsLoading(false); return; }
+    let cancelled = false;
+    setSourceRowsLoading(true);
+    (async () => {
+      const { data } = await supabase.rpc('peec_perception_attribute_sources', {
+        p_client_id: clientId,
+        p_attribute: sourceAttr,
+        p_limit: 10,
+      });
+      if (cancelled) return;
+      setSourceRows(toArr<AttributionSourceRow>(data));
+      setSourceRowsLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [clientId, sourceAttr]);
 
   const attributes = useMemo(() => toArr<AttributeEntry>(overview?.attributes), [overview]);
   const rankings = useMemo(() => toArr<RankingEntry>(overview?.rankings), [overview]);
@@ -352,7 +463,10 @@ const BrandPerceptionSection = ({
                   <button
                     key={attr.name}
                     type="button"
-                    onClick={() => setSelectedAttr(attr)}
+                    onClick={() => {
+                      setSelectedAttr(attr);
+                      setSourceAttr(attr.name);
+                    }}
                     className="w-full text-left group"
                   >
                     <div className="flex items-baseline justify-between gap-3 mb-1">
@@ -612,7 +726,10 @@ const BrandPerceptionSection = ({
                 <div key={row.name}>
                   <button
                     type="button"
-                    onClick={() => setExpandedAttr(expanded ? null : row.name)}
+                    onClick={() => {
+                      setExpandedAttr(expanded ? null : row.name);
+                      setSourceAttr(row.name);
+                    }}
                     className="w-full flex items-center gap-3 py-2.5 text-left hover:bg-muted/30 transition-colors"
                   >
                     <span className="flex-1 flex items-center gap-1.5 text-[12.5px] font-medium truncate">
@@ -717,6 +834,87 @@ const BrandPerceptionSection = ({
           </div>
         )}
       </div>
+
+      {/* Block 3 — Attribution sources */}
+      {(!sourceOptionsLoading || sourceOptions.length > 0 || !!sourceAttr) && (
+        <div className="bg-card border border-border/60 p-5">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+            <div>
+              <h4 className="font-display text-lg font-semibold tracking-tight">Attribution sources</h4>
+              <p className="text-[12px] text-muted-foreground mt-0.5">
+                {sourceAttr
+                  ? <>The pages AI cites most when describing {label} as “{sourceAttr}”.</>
+                  : 'Pick an attribute to see the pages behind it.'}
+              </p>
+            </div>
+            {sourceOptions.length > 0 && (
+              <select
+                value={sourceAttr ?? ''}
+                onChange={(e) => setSourceAttr(e.target.value || null)}
+                className="shrink-0 border border-border/60 bg-background text-[11px] px-2 py-1.5 focus:outline-none focus:border-foreground/40 transition-colors max-w-[240px]"
+              >
+                <option value="">Select attribute…</option>
+                {sourceOptions.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          {sourceRowsLoading ? (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : !sourceAttr ? (
+            <p className="text-[12px] text-muted-foreground py-6 text-center">
+              Select an attribute above, or click an attribute elsewhere in this section.
+            </p>
+          ) : sourceRows.length === 0 ? (
+            <p className="text-[12px] text-muted-foreground py-6 text-center">
+              No sources recorded for this attribute.
+            </p>
+          ) : (
+            <div className="divide-y divide-border/50">
+              {sourceRows.map((row, i) => {
+                const domain = row.domain || (() => {
+                  try { return new URL(row.url).hostname; } catch { return null; }
+                })();
+                const occurrences = Number(row.occurrences);
+                return (
+                  <div key={`${row.url}-${i}`} className="flex items-center gap-3 py-3">
+                    <SourceFavicon domain={domain} />
+                    <div className="flex-1 min-w-0">
+                      <a
+                        href={row.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block text-[12.5px] font-medium truncate hover:underline"
+                      >
+                        {row.title || domain || row.url}
+                      </a>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[11px] text-muted-foreground truncate">{domain || row.url}</span>
+                        <SourceClassBadge value={row.domain_classification || row.url_classification} />
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="font-mono-ui text-[14px] font-medium">
+                        {Number.isFinite(occurrences) ? occurrences.toLocaleString() : '—'}
+                      </p>
+                      <p className="font-mono-ui text-[9px] text-muted-foreground mt-0.5">
+                        {row.retrievals != null && Number.isFinite(Number(row.retrievals))
+                          ? `${Number(row.retrievals).toLocaleString()} retrievals · `
+                          : ''}
+                        {formatCitationRate(row.citation_rate)}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Attribute detail sheet */}
       <Sheet open={!!selectedAttr} onOpenChange={(o) => { if (!o) setSelectedAttr(null); }}>
