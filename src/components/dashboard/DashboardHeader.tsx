@@ -7,6 +7,7 @@ import { useAdmin } from '@/hooks/useAdmin';
 import { useIsMobile } from '@/hooks/use-mobile';
 import AdminPanel from '@/components/dashboard/AdminPanel';
 import ExplainMonthDrawer from '@/components/dashboard/ExplainMonthDrawer';
+import NotificationBell from '@/components/dashboard/NotificationBell';
 import {
   DropdownMenu,
   DropdownMenuTrigger,

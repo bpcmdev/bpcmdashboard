@@ -18,6 +18,7 @@ export const ALL_TABS: TabDef[] = [
   { id: 'wholesale_retail',    label: 'WHOLESALE / RETAIL' },
   { id: 'tiktok_shop',         label: 'TIKTOK SHOP' },
   { id: 'resource_management', label: 'RESOURCE MANAGEMENT' },
+  { id: 'document_bank',       label: 'DOCUMENT BANK' },
 ];
 
 export const ALL_TAB_IDS = ALL_TABS.map(t => t.id);

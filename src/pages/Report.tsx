@@ -20,6 +20,7 @@ import PartnershipsTab from '@/components/dashboard/PartnershipsTab';
 import WholesaleRetailTab from '@/components/dashboard/WholesaleRetailTab';
 import TikTokShopTab from '@/components/dashboard/TikTokShopTab';
 import ResourceManagementTab from '@/components/dashboard/ResourceManagementTab';
+import DocumentBankTab from '@/components/dashboard/DocumentBankTab';
 
 const SECTIONS: { id: string; label: string; Component: React.ComponentType }[] = [
   { id: 'at_a_glance', label: 'At a Glance', Component: AtAGlanceTab },
@@ -36,6 +37,7 @@ const SECTIONS: { id: string; label: string; Component: React.ComponentType }[] 
   { id: 'wholesale_retail', label: 'Wholesale / Retail', Component: WholesaleRetailTab },
   { id: 'tiktok_shop', label: 'TikTok Shop', Component: TikTokShopTab },
   { id: 'resource_management', label: 'Resource Management', Component: ResourceManagementTab },
+  { id: 'document_bank', label: 'Document Bank', Component: DocumentBankTab },
 ];
 
 const PRINT_CSS = `
