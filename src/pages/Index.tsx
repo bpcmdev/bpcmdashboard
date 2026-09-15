@@ -18,6 +18,7 @@ import TikTokShopTab from '@/components/dashboard/TikTokShopTab';
 import ResourceManagementTab from '@/components/dashboard/ResourceManagementTab';
 import AtAGlanceTab from '@/components/dashboard/AtAGlanceTab';
 import ProductIntelligenceTab from '@/components/dashboard/ProductIntelligenceTab';
+import DocumentBankTab from '@/components/dashboard/DocumentBankTab';
 import WholesaleRetailTab from '@/components/dashboard/WholesaleRetailTab';
 import { SetupBanner, useIsNewClient } from '@/components/dashboard/GettingStarted';
 import NotableThisWeek from '@/components/dashboard/NotableThisWeek';
@@ -38,6 +39,7 @@ const TAB_MAP: Record<string, React.ComponentType> = {
   'WHOLESALE / RETAIL': WholesaleRetailTab,
   'TIKTOK SHOP': TikTokShopTab,
   'RESOURCE MANAGEMENT': ResourceManagementTab,
+  'DOCUMENT BANK': DocumentBankTab,
 };
 
 /** Inner component that can access WeekContext */
@@ -88,6 +90,7 @@ function DashboardContent() {
         'WHOLESALE / RETAIL': 'wholesale_retail',
         'TIKTOK SHOP': 'tiktok_shop',
         'RESOURCE MANAGEMENT': 'resource_management',
+        'DOCUMENT BANK': 'document_bank',
       };
       return enabledTabs.includes(idMap[label]);
     });

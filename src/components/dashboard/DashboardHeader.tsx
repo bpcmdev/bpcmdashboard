@@ -7,6 +7,7 @@ import { useAdmin } from '@/hooks/useAdmin';
 import { useIsMobile } from '@/hooks/use-mobile';
 import AdminPanel from '@/components/dashboard/AdminPanel';
 import ExplainMonthDrawer from '@/components/dashboard/ExplainMonthDrawer';
+import NotificationBell from '@/components/dashboard/NotificationBell';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -179,6 +180,7 @@ const DashboardHeader = () => {
               </span>
             )}
           </div>
+          <NotificationBell />
           <button
             className="header-chip"
             onClick={openPrintReport}
@@ -228,9 +230,12 @@ const DashboardHeader = () => {
 
         {/* Mobile hamburger */}
         {isMobile && (
-          <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-1.5">
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-1.5">
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
         )}
       </div>
 
