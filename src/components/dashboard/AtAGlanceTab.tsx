@@ -422,7 +422,6 @@ function AgentIntelligenceSection({ clientId }: { clientId: string | null }) {
 
   if (loading) return null;
   if (!ordered.length && !isAdmin) return null;
-  if (!ordered.length && !isAdmin) return null;
 
   return (
     <section>
