@@ -281,7 +281,7 @@ function AssetTracker({
               <Th>Tags</Th>
               <Th>Assets Needed</Th>
               <Th>Notes</Th>
-              {isAdmin && <Th className="text-right" />}
+              {isAdmin && <Th className="text-right"> </Th>}
             </tr>
           </thead>
           <tbody>
