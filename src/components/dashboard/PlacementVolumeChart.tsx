@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts';
 import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
-import { Skeleton } from '@/components/ui/skeleton';
 
 interface Bucket {
   label: string;

@@ -289,7 +289,11 @@ function AssetTracker({
           </thead>
           <tbody>
             {sorted.map((r, i) => (
-              <tr key={r.id} className={i % 2 ? 'bg-black/[0.015]' : ''}>
+              <tr
+                key={r.id}
+                className={`stagger-in transition-colors hover:bg-black/[0.035] ${i % 2 ? 'bg-black/[0.015]' : ''}`}
+                style={{ '--stagger-delay': `${Math.min(i * 40, 400)}ms` } as React.CSSProperties}
+              >
                 <td className="px-4 py-3 font-medium text-foreground">{r.launch}</td>
                 <td className="px-4 py-3 font-mono-ui text-[12px] tracking-wider text-foreground/80">
                   {r.target_date ? new Date(r.target_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}

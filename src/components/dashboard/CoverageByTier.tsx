@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Sector } from 'recharts';
 import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
-import { Skeleton } from '@/components/ui/skeleton';
 
 interface TierData {
   name: string;
