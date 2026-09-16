@@ -80,9 +80,27 @@ const CoverageByTier = ({ corporateOnly = false }: { corporateOnly?: boolean }) 
     );
   }
 
+  if (total === 0) {
+    return (
+      <div>
+        <h3 className="section-label mb-4">Coverage by Outlet Tier</h3>
+        <p className="text-xs text-muted-foreground leading-relaxed py-8">
+          {corporateOnly
+            ? 'No placements classified as Corporate or Newswire yet. Classification is set manually per placement in the press log.'
+            : 'No placements in the selected range.'}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div>
       <h3 className="section-label mb-4">Coverage by Outlet Tier</h3>
+      {unrated > 0 && (
+        <p className="text-[10px] text-muted-foreground mb-3">
+          {unrated} of {total} placement{total !== 1 ? 's' : ''} have no outlet tier recorded.
+        </p>
+      )}
       <div className="flex items-center gap-6">
         <ResponsiveContainer width={160} height={160}>
           <PieChart>
