@@ -12,6 +12,8 @@ interface TierData {
 
 const CoverageByTier = ({ corporateOnly = false }: { corporateOnly?: boolean }) => {
   const [data, setData] = useState<TierData[]>([]);
+  const [unrated, setUnrated] = useState(0);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const { refreshKey, activeClientId, effectiveFrom, effectiveTo, isAllTime } = useWeek();
