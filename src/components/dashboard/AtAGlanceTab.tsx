@@ -90,17 +90,20 @@ const SectionHeader = ({ eyebrow, title }: { eyebrow: string; title: string }) =
 /* ─────────────────────────────────────────────────────────────────
    Brand Momentum Snapshot
    ───────────────────────────────────────────────────────────────── */
-function GlanceCardTile({ card }: { card: GlanceCard }) {
+function GlanceCardTile({ card, index = 0 }: { card: GlanceCard; index?: number }) {
   const isDark = !!card.featured;
   return (
     <div
       className={[
-        'rounded-lg p-5 transition-all hover:-translate-y-0.5',
+        'stagger-in rounded-lg p-6 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_26px_rgba(0,0,0,0.08)]',
         isDark
           ? 'bg-foreground text-background border border-foreground'
-          : 'bg-white text-foreground border border-black/10',
+          : 'section-card text-foreground border',
       ].join(' ')}
-      style={isDark ? { boxShadow: '0 1px 0 rgba(0,0,0,0.04)' } : undefined}
+      style={{
+        '--stagger-delay': `${Math.min(index * 40, 400)}ms`,
+        ...(isDark ? { boxShadow: '0 1px 0 rgba(0,0,0,0.04)' } : {}),
+      } as React.CSSProperties}
     >
       {card.category && (
         <span
@@ -341,8 +344,13 @@ function AgentIntelCard({ row }: { row: AgentIntelRow }) {
   const limited = row.confidence === 'limited';
   return (
     <div
-      className="bg-white border border-black/10 rounded-lg p-5 transition-all hover:-translate-y-0.5"
-      style={{ borderLeft: `4px solid ${accent}`, borderLeftColor: accent, opacity: limited ? 0.85 : 1 }}
+      className="stagger-in section-card border rounded-lg p-6 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_26px_rgba(0,0,0,0.08)]"
+      style={{
+        borderLeft: `4px solid ${accent}`,
+        borderLeftColor: accent,
+        opacity: limited ? 0.85 : 1,
+        '--stagger-delay': `${Math.min(index * 40, 400)}ms`,
+      } as React.CSSProperties}
     >
       <div className="flex items-center gap-2 mb-2">
         <span
