@@ -163,12 +163,17 @@ const TopPlacements = ({ searchText = '', tierFilter = 'all', sentimentFilter = 
     );
   }
 
-  if (filtered.length === 0) {
+  const hasActiveFilters = !!searchText || tierFilter !== 'all' || sentimentFilter !== 'all' || typeFilter !== 'all';
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const from = (currentPage - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+
+  if (rawPlacements.length === 0) {
     return (
       <div>
         <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-3">Top Placements This Week</h3>
         <p className="text-xs text-muted-foreground text-center py-8">
-          {rawPlacements.length > 0 ? 'No placements match your filters.' : 'No placements for this week.'}
+          {hasActiveFilters ? 'No placements match your filters.' : 'No placements for this week.'}
         </p>
       </div>
     );
@@ -178,12 +183,9 @@ const TopPlacements = ({ searchText = '', tierFilter = 'all', sentimentFilter = 
     <div>
       <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-3">
         Top Placements This Week
-        {filtered.length !== rawPlacements.length && (
-          <span className="ml-2 text-muted-foreground font-normal">({filtered.length} of {rawPlacements.length})</span>
-        )}
       </h3>
       <div className="divide-y divide-white/[0.07]">
-        {filtered.map((p) => {
+        {rawPlacements.map((p) => {
           const tier = formatTier(p.outlet_tier, p.placement_type, p.headline);
           return (
             <div key={p.id} className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 py-3">
