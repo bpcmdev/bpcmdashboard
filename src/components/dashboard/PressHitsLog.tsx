@@ -257,6 +257,7 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
   const [dismissedPlacements, setDismissedPlacements] = useState<Placement[]>([]);
   const [loading, setLoading] = useState(true);
   const [previewItem, setPreviewItem] = useState<Placement | null>(null);
+  const [clipping, setClipping] = useState<{ url: string; cover: string | null; title: string } | null>(null);
   const [activePage, setActivePage] = useState(1);
   const [dismissedPage, setDismissedPage] = useState(1);
   const [activeCount, setActiveCount] = useState(0);
@@ -467,7 +468,21 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
         onClick={() => setPreviewItem(p)}
       >
         <span className="text-[13px] font-bold w-28 md:w-36 shrink-0 truncate text-foreground">{p.outlet_name}</span>
-        <span className="text-xs text-primary flex-1 text-left truncate">{p.headline}</span>
+        <span className="text-xs text-primary flex-1 text-left truncate">
+          {p.url ? (
+            <a
+              href={p.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="hover:underline"
+            >
+              {p.headline}
+            </a>
+          ) : (
+            p.headline
+          )}
+        </span>
         <span className="text-[11px] text-muted-foreground shrink-0 hidden md:inline">
           {p.published_at ? formatDate(p.published_at) : ''}
         </span>
@@ -475,17 +490,15 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
           {formatReach(p.outlet_umv)}
         </span>
         {p.print_clipping_url && (
-          <a
-            href={ensureHttps(p.print_clipping_url)}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setClipping({ url: p.print_clipping_url!, cover: p.print_cover_url ?? null, title: p.headline }); }}
             className="shrink-0 hidden md:inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground underline underline-offset-2"
             title="View scanned print clipping"
           >
             <ImageIcon className="w-3 h-3" />
             View clipping
-          </a>
+          </button>
         )}
         {isAdmin ? (
           <div className="shrink-0 hidden md:block w-28" onClick={(e) => e.stopPropagation()}>
