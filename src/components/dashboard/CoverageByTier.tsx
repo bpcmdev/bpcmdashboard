@@ -45,24 +45,22 @@ const CoverageByTier = ({ corporateOnly = false }: { corporateOnly?: boolean }) 
       const tier1Color = 'hsl(225 70% 35%)';
       const tier2Color = 'hsl(42 64% 45%)';
       const tier3Color = 'hsl(0 0% 60%)';
-      if (placements && placements.length > 0) {
-        const counts: Record<number, number> = {};
-        placements.forEach((p: any) => {
-          const tier = p.outlet_tier ?? 3;
-          counts[tier] = (counts[tier] || 0) + 1;
-        });
-        setData([
-          { name: 'Tier 1', value: counts[1] || 0, color: tier1Color },
-          { name: 'Tier 2', value: counts[2] || 0, color: tier2Color },
-          { name: 'Tier 3', value: counts[3] || 0, color: tier3Color },
-        ]);
-      } else {
-        setData([
-          { name: 'Tier 1', value: 0, color: tier1Color },
-          { name: 'Tier 2', value: 0, color: tier2Color },
-          { name: 'Tier 3', value: 0, color: tier3Color },
-        ]);
-      }
+      const unratedColor = 'hsl(0 0% 82%)';
+      const rows = placements ?? [];
+      const counts: Record<number, number> = {};
+      let noTier = 0;
+      rows.forEach((p: any) => {
+        if (p.outlet_tier == null) { noTier += 1; return; }
+        counts[p.outlet_tier] = (counts[p.outlet_tier] || 0) + 1;
+      });
+      setUnrated(noTier);
+      setTotal(rows.length);
+      setData([
+        { name: 'Tier 1', value: counts[1] || 0, color: tier1Color },
+        { name: 'Tier 2', value: counts[2] || 0, color: tier2Color },
+        { name: 'Tier 3', value: counts[3] || 0, color: tier3Color },
+        ...(noTier > 0 ? [{ name: 'Unrated', value: noTier, color: unratedColor }] : []),
+      ]);
       setLoading(false);
     };
     fetchTiers();
