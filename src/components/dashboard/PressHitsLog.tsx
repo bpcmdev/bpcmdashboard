@@ -292,7 +292,7 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
       const from = (page - 1) * PAGE_SIZE;
       let q = supabase
         .from('placements')
-        .select('id, headline, url, outlet_name, outlet_tier, outlet_umv, author_name, published_at, placement_type, placed_by, sentiment, ad_value, impressions, tags, dismissed, category, product_name, print_clipping_url, holding_company', { count: 'exact' })
+        .select('id, headline, url, outlet_name, outlet_tier, outlet_umv, author_name, published_at, placement_type, placed_by, sentiment, ad_value, impressions, tags, dismissed, category, product_name, print_clipping_url, print_cover_url, holding_company', { count: 'exact' })
         .order('published_at', { ascending: false })
         .eq('dismissed', dismissedFlag)
         .range(from, from + PAGE_SIZE - 1);
