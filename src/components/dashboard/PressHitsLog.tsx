@@ -172,7 +172,7 @@ function PlacementForm({ values, onChange }: PlacementFormProps) {
         </Field>
         <Field label="Placement Type">
           <Select value={values.placementType} onValueChange={v => onChange('placementType', v)}>
-            <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="text-xs"><SelectValue placeholder="Unclassified" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="placed">BPCM Placed</SelectItem>
               <SelectItem value="organic">Organic</SelectItem>
