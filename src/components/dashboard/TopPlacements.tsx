@@ -75,6 +75,7 @@ const TopPlacements = ({ searchText = '', tierFilter = 'all', sentimentFilter = 
   const [error, setError] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [clipping, setClipping] = useState<{ url: string; cover: string | null; title: string } | null>(null);
   const { refreshKey, activeClientId, effectiveFrom, effectiveTo, isAllTime } = useWeek();
   const { isAdmin } = useAdmin();
 
@@ -196,7 +197,26 @@ const TopPlacements = ({ searchText = '', tierFilter = 'all', sentimentFilter = 
           return (
             <div key={p.id} className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 py-3">
               <span className="text-sm font-bold md:w-36 shrink-0">{p.outlet_name}</span>
-              <span className="text-sm flex-1 text-foreground/80">{p.headline}</span>
+              <span className="text-sm flex-1 text-foreground/80">
+                {p.url ? (
+                  <a href={p.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                    {p.headline}
+                  </a>
+                ) : (
+                  p.headline
+                )}
+                {p.print_clipping_url && (
+                  <button
+                    type="button"
+                    onClick={() => setClipping({ url: p.print_clipping_url!, cover: p.print_cover_url, title: p.headline })}
+                    className="ml-2 inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground underline underline-offset-2 align-middle"
+                    title="View scanned print clipping"
+                  >
+                    <ImageIcon className="w-3 h-3" />
+                    View clipping
+                  </button>
+                )}
+              </span>
               <div className="flex flex-wrap items-center gap-2 shrink-0 text-[11px] text-muted-foreground">
                 <span>{p.published_at ? formatDate(p.published_at) : ''}</span>
                 <span className="hidden md:inline">·</span>
