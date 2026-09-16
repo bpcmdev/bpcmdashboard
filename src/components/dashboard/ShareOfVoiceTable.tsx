@@ -88,10 +88,29 @@ const ShareOfVoiceTable = () => {
   if (loading) {
     return (
       <div className="space-y-3">
-        <Skeleton className="h-4 w-48" />
+        <div className="shimmer h-3 w-48" />
         {Array.from({ length: 5 }).map((_, i) => (
-          <Skeleton key={i} className="h-5 w-full" />
+          <div key={i} className="flex items-center gap-3">
+            <div className="shimmer h-2.5 w-4" />
+            <div className="shimmer h-2.5 w-24" />
+            <div className="shimmer h-4 flex-1" />
+            <div className="shimmer h-2.5 w-8" />
+          </div>
         ))}
+      </div>
+    );
+  }
+
+  if (sovData.length === 0) {
+    return (
+      <div>
+        <h3 className="section-label mb-4">Share of Voice — Competitive Set</h3>
+        <div className="py-8">
+          <p className="text-xs text-foreground/80 leading-relaxed">Competitive set not yet configured.</p>
+          <p className="text-[11px] text-muted-foreground leading-relaxed mt-2">
+            Add the brands to benchmark against and share of voice will appear here.
+          </p>
+        </div>
       </div>
     );
   }
@@ -100,12 +119,13 @@ const ShareOfVoiceTable = () => {
     <div>
       <h3 className="section-label mb-4">Share of Voice — Competitive Set</h3>
       <div className="space-y-1">
-        {sovData.map((row) => (
+        {sovData.map((row, i) => (
           <div
             key={row.brand}
-            className={`flex items-center gap-3 px-2 py-1.5 rounded-sm ${
+            className={`stagger-in list-row flex items-center gap-3 px-2 py-1.5 rounded-sm ${
               row.highlight ? 'bg-[hsl(42_64%_45%/0.12)]' : ''
             }`}
+            style={{ '--stagger-delay': `${Math.min(i * 40, 400)}ms` } as React.CSSProperties}
           >
             <span className={`text-[10px] w-4 text-right ${row.highlight ? 'text-[hsl(42_64%_38%)] font-bold' : 'text-muted-foreground'}`}>
               #{row.rank}
@@ -115,7 +135,7 @@ const ShareOfVoiceTable = () => {
             </span>
             <div className="flex-1 h-4 bg-black/[0.06] relative rounded-sm overflow-hidden">
               <div
-                className="h-full"
+                className="h-full transition-[width] duration-700 ease-out"
                 style={{
                   width: `${(row.pct / 25) * 100}%`,
                   backgroundColor: row.highlight ? 'hsl(225 70% 35%)' : 'hsl(0 0% 0% / 0.18)',
