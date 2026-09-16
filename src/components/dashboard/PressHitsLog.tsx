@@ -341,21 +341,23 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
   const dismissedTotalPages = Math.max(1, Math.ceil(dismissedCount / PAGE_SIZE));
 
   const dismiss = async (id: string) => {
-    setPlacements((prev) => prev.map((p) => (p.id === id ? { ...p, dismissed: true } : p)));
     const { error } = await supabase.from('placements').update({ dismissed: true }).eq('id', id);
     if (error) {
       toast.error('Failed to dismiss placement.');
-      setPlacements((prev) => prev.map((p) => (p.id === id ? { ...p, dismissed: false } : p)));
+      return;
     }
+    await fetchPlacements();
   };
 
   const classify = async (id: string, value: string) => {
-    const prev = placements.find((p) => p.id === id)?.placement_type ?? null;
-    setPlacements((list) => list.map((p) => (p.id === id ? { ...p, placement_type: value } : p)));
+    const prev = placements.find((p) => p.id === id)?.placement_type
+      ?? dismissedPlacements.find((p) => p.id === id)?.placement_type
+      ?? null;
+    patchRow(id, { placement_type: value });
     const { error } = await supabase.from('placements').update({ placement_type: value }).eq('id', id);
     if (error) {
       toast.error('Failed to save classification.');
-      setPlacements((list) => list.map((p) => (p.id === id ? { ...p, placement_type: prev } : p)));
+      patchRow(id, { placement_type: prev });
       return;
     }
     toast.success(`Classified as ${placementLabel(value)}.`);
@@ -363,12 +365,12 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
 
   const restore = async (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    setPlacements((prev) => prev.map((p) => (p.id === id ? { ...p, dismissed: false } : p)));
     const { error } = await supabase.from('placements').update({ dismissed: false }).eq('id', id);
     if (error) {
       toast.error('Failed to restore placement.');
-      setPlacements((prev) => prev.map((p) => (p.id === id ? { ...p, dismissed: true } : p)));
+      return;
     }
+    await fetchPlacements();
   };
 
   const handleAdd = async () => {
