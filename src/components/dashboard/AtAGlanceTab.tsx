@@ -532,41 +532,182 @@ function MarketingCalendar({
     return arr;
   }, [moments, products]);
 
+  const allEntries = useMemo(() => groups.flatMap(g => g.entries), [groups]);
+  const [calendarView, setCalendarView] = useState<'list' | 'calendar'>('list');
+
   if (!groups.length) return <PlaceholderCard />;
 
   return (
-    <div className="overflow-x-auto -mx-6 px-6 pb-2">
-      <div className="flex gap-5 min-w-min">
-        {groups.map(g => (
-          <div key={g.label} className="flex-shrink-0 w-[280px]">
-            <div className="mb-3 pb-2 border-b-2 border-foreground/80">
-              <h3 className="font-display text-[20px] leading-none text-foreground">{g.label}</h3>
-              <div className="mt-1 font-mono-ui text-[10px] tracking-[0.18em] uppercase text-muted-foreground">
-                {g.entries.length} {g.entries.length === 1 ? 'entry' : 'entries'}
-              </div>
-            </div>
-            <div className="space-y-3">
-              {g.entries.map(e => (
-                <div key={e.id} className="bg-white border border-black/10 rounded-md p-3">
-                  <div className="flex items-start gap-2">
-                    <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-foreground/70 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-[14px] text-foreground leading-snug">{e.title}</div>
-                      {e.description && (
-                        <p className="text-[12px] text-foreground/65 leading-snug mt-0.5 line-clamp-1">{e.description}</p>
-                      )}
-                      <div className="mt-2">
-                        <span className="inline-block px-2 py-0.5 text-[9px] font-mono-ui tracking-[0.16em] uppercase rounded-full bg-black/5 text-foreground/75">
-                          {e.badge}
-                        </span>
-                      </div>
-                    </div>
+    <div>
+      <div className="flex justify-end mb-4">
+        <div className="inline-flex border border-foreground/20 rounded overflow-hidden">
+          {(['list', 'calendar'] as const).map(v => (
+            <button
+              key={v}
+              onClick={() => setCalendarView(v)}
+              className={`px-3 py-1.5 font-mono-ui text-[10px] font-semibold tracking-[0.1em] uppercase transition-colors ${
+                calendarView === v
+                  ? 'bg-foreground text-background'
+                  : 'text-foreground/70 hover:bg-black/5'
+              }`}
+            >
+              {v}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {calendarView === 'list' ? (
+        <div className="overflow-x-auto -mx-6 px-6 pb-2">
+          <div className="flex gap-5 min-w-min">
+            {groups.map(g => (
+              <div key={g.label} className="flex-shrink-0 w-[280px]">
+                <div className="mb-3 pb-2 border-b-2 border-foreground/80">
+                  <h3 className="font-display text-[20px] leading-none text-foreground">{g.label}</h3>
+                  <div className="mt-1 font-mono-ui text-[10px] tracking-[0.18em] uppercase text-muted-foreground">
+                    {g.entries.length} {g.entries.length === 1 ? 'entry' : 'entries'}
                   </div>
                 </div>
-              ))}
-            </div>
+                <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
+                  {g.entries.map(e => <CalendarEntryCard key={e.id} entry={e} />)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <MonthGrid entries={allEntries} />
+      )}
+    </div>
+  );
+}
+
+function CalendarEntryCard({ entry: e }: { entry: CalendarEntry }) {
+  return (
+    <div className="bg-white border border-black/10 rounded-md p-3">
+      <div className="flex items-start gap-2">
+        <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-foreground/70 flex-shrink-0" />
+        <div className="flex-1 min-w-0">
+          <div className="font-medium text-[14px] text-foreground leading-snug">{e.title}</div>
+          {e.description && (
+            <p className="text-[12px] text-foreground/65 leading-snug mt-0.5 line-clamp-1">{e.description}</p>
+          )}
+          <div className="mt-2">
+            <span className="inline-block px-2 py-0.5 text-[9px] font-mono-ui tracking-[0.16em] uppercase rounded-full bg-black/5 text-foreground/75">
+              {e.badge}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function isoDay(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function MonthGrid({ entries }: { entries: CalendarEntry[] }) {
+  const today = new Date();
+  const [cursor, setCursor] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
+
+  const byDay = useMemo(() => {
+    const map = new Map<string, CalendarEntry[]>();
+    entries.forEach(e => {
+      const key = e.date.slice(0, 10);
+      map.set(key, [...(map.get(key) ?? []), e]);
+    });
+    return map;
+  }, [entries]);
+
+  const days = useMemo(() => {
+    const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
+    const start = new Date(first);
+    start.setDate(1 - first.getDay());
+    return Array.from({ length: 42 }, (_, i) => {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      return d;
+    });
+  }, [cursor]);
+
+  const shift = (n: number) => setCursor(c => new Date(c.getFullYear(), c.getMonth() + n, 1));
+  const todayKey = isoDay(today);
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-display text-[20px] leading-none text-foreground">
+          {cursor.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+        </h3>
+        <div className="flex items-center gap-2">
+          {[['‹', -1], ['Today', 0], ['›', 1]].map(([label, n]) => (
+            <button
+              key={String(label)}
+              onClick={() => (n === 0 ? setCursor(new Date(today.getFullYear(), today.getMonth(), 1)) : shift(n as number))}
+              className="px-2.5 py-1 font-mono-ui text-[10px] font-semibold tracking-[0.1em] uppercase border border-foreground/20 text-foreground/75 hover:bg-black/5 rounded"
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-7 border-l border-t border-black/10">
+        {DOW.map(d => (
+          <div key={d} className="border-r border-b border-black/10 px-2 py-1.5 font-mono-ui text-[10px] tracking-[0.16em] uppercase text-muted-foreground bg-black/[0.02]">
+            {d}
           </div>
         ))}
+        {days.map(d => {
+          const key = isoDay(d);
+          const dayEntries = byDay.get(key) ?? [];
+          const outside = d.getMonth() !== cursor.getMonth();
+          return (
+            <Popover key={key}>
+              <PopoverTrigger asChild>
+                <div
+                  className={`border-r border-b border-black/10 min-h-[92px] p-1.5 text-left align-top cursor-pointer hover:bg-black/[0.03] transition-colors ${
+                    outside ? 'bg-black/[0.02] text-foreground/35' : ''
+                  }`}
+                >
+                  <div className={`font-mono-ui text-[10px] mb-1 ${key === todayKey ? 'font-bold text-foreground' : 'text-foreground/60'}`}>
+                    {d.getDate()}
+                  </div>
+                  <div className="space-y-1">
+                    {dayEntries.slice(0, 2).map(e => (
+                      <div
+                        key={e.id}
+                        className="flex items-center gap-1 px-1 py-0.5 rounded bg-black/5"
+                        title={e.title}
+                      >
+                        <span className="h-1.5 w-1.5 rounded-full bg-foreground/70 flex-shrink-0" />
+                        <span className="truncate text-[10px] text-foreground/80">{e.title}</span>
+                      </div>
+                    ))}
+                    {dayEntries.length > 2 && (
+                      <div className="font-mono-ui text-[9px] tracking-[0.12em] uppercase text-muted-foreground pl-1">
+                        +{dayEntries.length - 2} more
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </PopoverTrigger>
+              {dayEntries.length > 0 && (
+                <PopoverContent align="start" className="w-[300px] p-3 max-h-[360px] overflow-y-auto">
+                  <div className="font-mono-ui text-[10px] tracking-[0.16em] uppercase text-muted-foreground mb-2">
+                    {d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </div>
+                  <div className="space-y-3">
+                    {dayEntries.map(e => <CalendarEntryCard key={e.id} entry={e} />)}
+                  </div>
+                </PopoverContent>
+              )}
+            </Popover>
+          );
+        })}
       </div>
     </div>
   );
