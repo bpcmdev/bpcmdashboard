@@ -202,7 +202,7 @@ function PlacementForm({ values, onChange }: PlacementFormProps) {
 
 function defaultFormValues() {
   return {
-    headline: '', url: '', outletName: '', outletTier: '1',
+    headline: '', url: '', outletName: '', outletTier: '',
     outletUmv: '', authorName: '', publishedAt: new Date() as Date | undefined,
     sentiment: '', placementType: '', adValue: '0',
     impressions: '0', placedBy: 'Manual entry', tags: '',
