@@ -1,33 +1,32 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useWeek, applyWeekStartFilter } from '@/contexts/WeekContext';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useWeek } from '@/contexts/WeekContext';
 
-interface SentimentData {
+interface SentimentCounts {
   positive: number;
   neutral: number;
   negative: number;
-  positiveDrivers: string;
-  negativeThemes: string;
+  classified: number;
+  total: number;
 }
 
 const SentimentBreakdown = () => {
-  const [data, setData] = useState<SentimentData | null>(null);
+  const [counts, setCounts] = useState<SentimentCounts | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const { selectedWeek, refreshKey, activeClientId, rangeMode, rangeFrom, rangeTo, weekFilterCtx } = useWeek();
+  const { refreshKey, activeClientId, effectiveFrom, effectiveTo, isAllTime } = useWeek();
 
   useEffect(() => {
-    if (rangeMode === 'week' && !selectedWeek) return;
-    if (rangeMode === 'range' && (!rangeFrom || !rangeTo)) return;
+    if (!isAllTime && (!effectiveFrom || !effectiveTo)) return;
+
     const fetchSentiment = async () => {
       setLoading(true);
       setError(false);
 
-      let query = supabase
-        .from('weekly_snapshots')
-        .select('sentiment_score');
-      query = applyWeekStartFilter(query, weekFilterCtx);
+      let query = supabase.from('placements').select('sentiment');
+      if (!isAllTime) {
+        query = query.gte('published_at', effectiveFrom).lte('published_at', effectiveTo);
+      }
       if (activeClientId) query = query.eq('client_id', activeClientId);
 
       const { data: rows, error: err } = await query;
@@ -39,72 +38,101 @@ const SentimentBreakdown = () => {
         return;
       }
 
-      const scores = (rows ?? []).map((r: any) => r.sentiment_score).filter((v: any) => v != null);
-      if (scores.length > 0) {
-        const score = scores.reduce((a: number, b: number) => a + b, 0) / scores.length;
-        const positive = Math.round(score * 0.8);
-        const negative = Math.round((100 - score) * 0.4);
-        const neutral = 100 - positive - negative;
-        setData({
-          positive,
-          neutral: Math.max(0, neutral),
-          negative,
-          positiveDrivers: 'Frank B, Hydro Grip launch, Ulta expansion',
-          negativeThemes: 'prior sales decline coverage, pricing',
-        });
-      } else {
-        setData({ positive: 0, neutral: 0, negative: 0, positiveDrivers: '—', negativeThemes: '—' });
-      }
+      const list = rows ?? [];
+      const tally = { positive: 0, neutral: 0, negative: 0 };
+      list.forEach((r: any) => {
+        const s = typeof r.sentiment === 'string' ? r.sentiment.toLowerCase() : null;
+        if (s === 'positive' || s === 'neutral' || s === 'negative') tally[s] += 1;
+      });
+
+      setCounts({
+        ...tally,
+        classified: tally.positive + tally.neutral + tally.negative,
+        total: list.length,
+      });
       setLoading(false);
     };
+
     fetchSentiment();
-  }, [selectedWeek, refreshKey, activeClientId, rangeMode, rangeFrom, rangeTo, weekFilterCtx]);
+  }, [effectiveFrom, effectiveTo, isAllTime, refreshKey, activeClientId]);
 
   if (error) {
     return <p className="text-sm text-destructive text-center py-8">Unable to load data. Please try refreshing.</p>;
   }
 
-  if (loading || !data) {
+  if (loading || !counts) {
     return (
       <div className="space-y-4">
-        <Skeleton className="h-4 w-40" />
-        <Skeleton className="h-5 w-full" />
-        <Skeleton className="h-5 w-full" />
-        <Skeleton className="h-5 w-full" />
+        <div className="shimmer h-3 w-40" />
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="space-y-1.5">
+              <div className="flex justify-between">
+                <div className="shimmer h-2.5 w-16" />
+                <div className="shimmer h-2.5 w-8" />
+              </div>
+              <div className="shimmer h-5 w-full" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (counts.classified === 0) {
+    return (
+      <div>
+        <h3 className="section-label mb-4">Sentiment Breakdown</h3>
+        <div className="py-8">
+          <p className="text-xs text-foreground/80 leading-relaxed">
+            Sentiment analysis not yet available — awaiting classification.
+          </p>
+          <p className="text-[11px] text-muted-foreground leading-relaxed mt-2">
+            Sentiment isn&apos;t included in the current Launchmetrics tier, so none of the
+            {counts.total > 0 ? ` ${counts.total.toLocaleString()} placement${counts.total !== 1 ? 's' : ''} in this range have` : ' placements have'}{' '}
+            a sentiment value recorded.
+          </p>
+        </div>
       </div>
     );
   }
 
   const bars = [
-    { label: 'Positive', pct: data.positive, barColor: 'hsl(225 70% 35%)' },
-    { label: 'Neutral', pct: data.neutral, barColor: 'hsl(0 0% 60%)' },
-    { label: 'Negative', pct: data.negative, barColor: 'hsl(0 70% 50%)' },
+    { label: 'Positive', value: counts.positive, barColor: 'hsl(225 70% 35%)' },
+    { label: 'Neutral', value: counts.neutral, barColor: 'hsl(0 0% 60%)' },
+    { label: 'Negative', value: counts.negative, barColor: 'hsl(0 70% 50%)' },
   ];
 
   return (
     <div>
       <h3 className="section-label mb-4">Sentiment Breakdown</h3>
       <div className="space-y-3">
-        {bars.map((b) => (
-          <div key={b.label}>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-medium text-foreground">{b.label}</span>
-              <span className="text-xs font-bold text-foreground">{b.pct}%</span>
+        {bars.map((b, i) => {
+          const pct = Math.round((b.value / counts.classified) * 100);
+          return (
+            <div key={b.label} className="stagger-in" style={{ '--stagger-delay': `${i * 40}ms` } as React.CSSProperties}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-medium text-foreground">{b.label}</span>
+                <span className="text-xs font-bold text-foreground">
+                  {pct}% <span className="font-normal text-muted-foreground">({b.value.toLocaleString()})</span>
+                </span>
+              </div>
+              <div className="h-5 bg-secondary w-full rounded-sm overflow-hidden">
+                <div
+                  className="h-full transition-[width] duration-700 ease-out"
+                  style={{ width: `${pct}%`, background: b.barColor }}
+                />
+              </div>
             </div>
-            <div className="h-5 bg-secondary w-full rounded-sm overflow-hidden">
-              <div className="h-full" style={{ width: `${b.pct}%`, background: b.barColor }} />
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
-      <div className="mt-4 space-y-1">
-        <p className="text-[11px] text-muted-foreground">
-          <span className="font-semibold text-foreground">Positive drivers:</span> {data.positiveDrivers}
+      {counts.total > counts.classified && (
+        <p className="text-[11px] text-muted-foreground mt-4">
+          Based on {counts.classified.toLocaleString()} of {counts.total.toLocaleString()} placements — the rest have no
+          sentiment recorded.
         </p>
-        <p className="text-[11px] text-muted-foreground">
-          <span className="font-semibold text-foreground">Negative themes:</span> {data.negativeThemes}
-        </p>
-      </div>
+      )}
     </div>
   );
 };
