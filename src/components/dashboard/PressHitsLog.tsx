@@ -162,7 +162,7 @@ function PlacementForm({ values, onChange }: PlacementFormProps) {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         <Field label="Sentiment">
           <Select value={values.sentiment} onValueChange={v => onChange('sentiment', v)}>
-            <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="text-xs"><SelectValue placeholder="Not analyzed" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="positive">Positive</SelectItem>
               <SelectItem value="neutral">Neutral</SelectItem>
