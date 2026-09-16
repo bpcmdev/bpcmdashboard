@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { X, ExternalLink, Plus, AlertCircle, Pencil, Trash2, CalendarIcon, RotateCcw } from 'lucide-react';
+import { X, ExternalLink, Plus, AlertCircle, Pencil, Trash2, CalendarIcon, RotateCcw, Image as ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Switch } from '@/components/ui/switch';
@@ -30,17 +30,21 @@ interface Placement {
   headline: string;
   url: string;
   outlet_name: string;
-  outlet_tier: number;
+  outlet_tier: number | null;
   outlet_umv: number | null;
   author_name: string | null;
   published_at: string | null;
-  placement_type: string;
+  placement_type: string | null;
   placed_by: string;
   sentiment: string | null;
   ad_value: number | null;
   impressions: number | null;
   tags: string[] | null;
   dismissed: boolean;
+  category: string | null;
+  product_name: string | null;
+  print_clipping_url: string | null;
+  holding_company: string | null;
 }
 
 function formatReach(val: number | null): string {
@@ -55,8 +59,8 @@ function formatDate(dateStr: string): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function tierLabel(tier: number): string {
-  return `TIER ${tier}`;
+function tierLabel(tier: number | null): string {
+  return tier != null ? `TIER ${tier}` : 'UNRATED';
 }
 
 const tierBg: Record<number, string> = {
@@ -65,9 +69,21 @@ const tierBg: Record<number, string> = {
   3: 'bg-tier3',
 };
 
-function placementLabel(placedBy: string, placementType: string): string {
-  if (placementType === 'placed' || (placedBy && placedBy.toLowerCase() !== 'organic')) return 'BPCM Placed';
-  return 'Organic';
+function tierClass(tier: number | null): string {
+  if (tier == null) return 'bg-muted text-muted-foreground';
+  return tierBg[tier] ?? 'bg-muted text-muted-foreground';
+}
+
+const PLACEMENT_TYPE_LABELS: Record<string, string> = {
+  placed: 'BPCM Placed',
+  organic: 'Organic',
+  newswire: 'Newswire',
+  corporate: 'Corporate',
+};
+
+function placementLabel(placementType: string | null): string {
+  if (!placementType) return 'Unclassified';
+  return PLACEMENT_TYPE_LABELS[placementType] ?? placementType;
 }
 
 function sentimentColor(s: string | null): string {
@@ -115,7 +131,7 @@ function PlacementForm({ values, onChange }: PlacementFormProps) {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         <Field label="Outlet Tier">
           <Select value={values.outletTier} onValueChange={v => onChange('outletTier', v)}>
-            <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="text-xs"><SelectValue placeholder="Unrated" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="1">Tier 1</SelectItem>
               <SelectItem value="2">Tier 2</SelectItem>
@@ -146,7 +162,7 @@ function PlacementForm({ values, onChange }: PlacementFormProps) {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         <Field label="Sentiment">
           <Select value={values.sentiment} onValueChange={v => onChange('sentiment', v)}>
-            <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="text-xs"><SelectValue placeholder="Not analyzed" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="positive">Positive</SelectItem>
               <SelectItem value="neutral">Neutral</SelectItem>
@@ -156,7 +172,7 @@ function PlacementForm({ values, onChange }: PlacementFormProps) {
         </Field>
         <Field label="Placement Type">
           <Select value={values.placementType} onValueChange={v => onChange('placementType', v)}>
-            <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="text-xs"><SelectValue placeholder="Unclassified" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="placed">BPCM Placed</SelectItem>
               <SelectItem value="organic">Organic</SelectItem>
@@ -186,9 +202,9 @@ function PlacementForm({ values, onChange }: PlacementFormProps) {
 
 function defaultFormValues() {
   return {
-    headline: '', url: '', outletName: '', outletTier: '1',
+    headline: '', url: '', outletName: '', outletTier: '',
     outletUmv: '', authorName: '', publishedAt: new Date() as Date | undefined,
-    sentiment: 'positive', placementType: 'placed', adValue: '0',
+    sentiment: '', placementType: '', adValue: '0',
     impressions: '0', placedBy: 'Manual entry', tags: '',
   };
 }
@@ -198,12 +214,12 @@ function placementToForm(p: Placement) {
     headline: p.headline || '',
     url: p.url || '',
     outletName: p.outlet_name || '',
-    outletTier: String(p.outlet_tier ?? 1),
+    outletTier: p.outlet_tier != null ? String(p.outlet_tier) : '',
     outletUmv: p.outlet_umv?.toString() || '',
     authorName: p.author_name || '',
     publishedAt: p.published_at ? new Date(p.published_at + 'T00:00:00') : undefined,
-    sentiment: p.sentiment || 'neutral',
-    placementType: p.placement_type || 'placed',
+    sentiment: p.sentiment || '',
+    placementType: p.placement_type || '',
     adValue: p.ad_value?.toString() || '0',
     impressions: p.impressions?.toString() || '0',
     placedBy: p.placed_by || '',
@@ -216,12 +232,12 @@ function formToPayload(v: ReturnType<typeof defaultFormValues>) {
     headline: v.headline.trim(),
     url: v.url.trim() || null,
     outlet_name: v.outletName.trim(),
-    outlet_tier: Number(v.outletTier),
+    outlet_tier: v.outletTier ? Number(v.outletTier) : null,
     outlet_umv: num(v.outletUmv),
     author_name: v.authorName.trim() || null,
     published_at: v.publishedAt ? format(v.publishedAt, 'yyyy-MM-dd') : new Date().toISOString().split('T')[0],
-    sentiment: v.sentiment,
-    placement_type: v.placementType,
+    sentiment: v.sentiment || null,
+    placement_type: v.placementType || null,
     ad_value: num(v.adValue) ?? 0,
     impressions: num(v.impressions) ?? 0,
     placed_by: v.placedBy.trim() || 'Manual entry',
@@ -260,7 +276,7 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
 
     let query = supabase
       .from('placements')
-      .select('id, headline, url, outlet_name, outlet_tier, outlet_umv, author_name, published_at, placement_type, placed_by, sentiment, ad_value, impressions, tags, dismissed')
+      .select('id, headline, url, outlet_name, outlet_tier, outlet_umv, author_name, published_at, placement_type, placed_by, sentiment, ad_value, impressions, tags, dismissed, category, product_name, print_clipping_url, holding_company')
       .order('published_at', { ascending: false });
 
     if (!isAllTime) {
@@ -303,6 +319,18 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
       toast.error('Failed to dismiss placement.');
       setPlacements((prev) => prev.map((p) => (p.id === id ? { ...p, dismissed: false } : p)));
     }
+  };
+
+  const classify = async (id: string, value: string) => {
+    const prev = placements.find((p) => p.id === id)?.placement_type ?? null;
+    setPlacements((list) => list.map((p) => (p.id === id ? { ...p, placement_type: value } : p)));
+    const { error } = await supabase.from('placements').update({ placement_type: value }).eq('id', id);
+    if (error) {
+      toast.error('Failed to save classification.');
+      setPlacements((list) => list.map((p) => (p.id === id ? { ...p, placement_type: prev } : p)));
+      return;
+    }
+    toast.success(`Classified as ${placementLabel(value)}.`);
   };
 
   const restore = async (id: string, e?: React.MouseEvent) => {
@@ -427,9 +455,9 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
             ))}
           </div>
         ) : displayList.length === 0 ? (
-          <p className="text-xs text-muted-foreground text-center py-6">
+          <p className="text-xs text-muted-foreground text-center py-6 max-w-md mx-auto leading-relaxed">
             {corporateOnly
-              ? 'No corporate or executive placements in this window yet. Launchmetrics feed lands mid-August.'
+              ? 'No placements classified as Corporate or Newswire yet. Classification is set manually — an admin can label each hit in the full press log using the dropdown on its row.'
               : 'No placements for this week.'}
           </p>
         ) : (
@@ -459,10 +487,50 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
                 <span className="text-[11px] text-muted-foreground shrink-0 w-12 text-right">
                   {formatReach(p.outlet_umv)}
                 </span>
-                <span className="text-[10px] text-muted-foreground shrink-0 hidden md:inline w-24 text-center">
-                  {placementLabel(p.placed_by, p.placement_type)}
-                </span>
-                <span className={`shrink-0 text-[10px] font-bold tracking-wider px-2 py-0.5 ${tierBg[p.outlet_tier] ?? 'bg-tier1'}`}>
+                {p.print_clipping_url && (
+                  <a
+                    href={ensureHttps(p.print_clipping_url)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="shrink-0 hidden md:inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground underline underline-offset-2"
+                    title="View scanned print clipping"
+                  >
+                    <ImageIcon className="w-3 h-3" />
+                    View clipping
+                  </a>
+                )}
+                {isAdmin ? (
+                  <div className="shrink-0 hidden md:block w-28" onClick={(e) => e.stopPropagation()}>
+                    <Select
+                      value={p.placement_type ?? ''}
+                      onValueChange={(v) => classify(p.id, v)}
+                    >
+                      <SelectTrigger
+                        className={cn(
+                          'h-6 text-[10px] px-2',
+                          !p.placement_type && 'text-muted-foreground italic'
+                        )}
+                      >
+                        <SelectValue placeholder="Unclassified" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="placed">BPCM Placed</SelectItem>
+                        <SelectItem value="organic">Organic</SelectItem>
+                        <SelectItem value="newswire">Newswire</SelectItem>
+                        <SelectItem value="corporate">Corporate</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : (
+                  <span className={cn(
+                    'text-[10px] shrink-0 hidden md:inline w-24 text-center',
+                    p.placement_type ? 'text-muted-foreground' : 'text-muted-foreground/60 italic'
+                  )}>
+                    {placementLabel(p.placement_type)}
+                  </span>
+                )}
+                <span className={cn('shrink-0 text-[10px] font-bold tracking-wider px-2 py-0.5', tierClass(p.outlet_tier))}>
                   {tierLabel(p.outlet_tier)}
                 </span>
                 {isAdmin && !p.dismissed && (
@@ -523,19 +591,37 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
                   <p className="text-muted-foreground">{formatDate(previewItem.published_at)}</p>
                 )}
                 <p className="text-muted-foreground">Reach: {formatReach(previewItem.outlet_umv)}</p>
+                {(previewItem.category || previewItem.product_name || previewItem.holding_company) && (
+                  <div className="space-y-1 text-xs text-muted-foreground">
+                    {previewItem.category && <p>Category: {previewItem.category}</p>}
+                    {previewItem.product_name && <p>Product: {previewItem.product_name}</p>}
+                    {previewItem.holding_company && <p>Holding company: {previewItem.holding_company}</p>}
+                  </div>
+                )}
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className={`inline-block text-[10px] font-bold tracking-wider px-2 py-0.5 ${tierBg[previewItem.outlet_tier] ?? 'bg-tier1'}`}>
+                  <span className={cn('inline-block text-[10px] font-bold tracking-wider px-2 py-0.5', tierClass(previewItem.outlet_tier))}>
                     {tierLabel(previewItem.outlet_tier)}
                   </span>
-                  {previewItem.sentiment && (
-                    <Badge variant="outline" className={cn('text-[10px] capitalize', sentimentColor(previewItem.sentiment))}>
-                      {previewItem.sentiment}
-                    </Badge>
-                  )}
-                  <span className="text-[10px] text-muted-foreground">
-                    {placementLabel(previewItem.placed_by, previewItem.placement_type)}
+                  <Badge variant="outline" className={cn('text-[10px]', sentimentColor(previewItem.sentiment))}>
+                    {previewItem.sentiment
+                      ? <span className="capitalize">{previewItem.sentiment}</span>
+                      : <span className="italic opacity-70">Not analyzed</span>}
+                  </Badge>
+                  <span className={cn('text-[10px]', previewItem.placement_type ? 'text-muted-foreground' : 'text-muted-foreground/60 italic')}>
+                    {placementLabel(previewItem.placement_type)}
                   </span>
                 </div>
+                {previewItem.print_clipping_url && (
+                  <a
+                    href={ensureHttps(previewItem.print_clipping_url)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs text-foreground underline underline-offset-2"
+                  >
+                    <ImageIcon className="w-3.5 h-3.5" />
+                    View print clipping
+                  </a>
+                )}
               </div>
               {previewItem.url && (() => {
                 const safeUrl = ensureHttps(previewItem.url);

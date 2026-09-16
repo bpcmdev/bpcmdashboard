@@ -12,6 +12,8 @@ interface TierData {
 
 const CoverageByTier = ({ corporateOnly = false }: { corporateOnly?: boolean }) => {
   const [data, setData] = useState<TierData[]>([]);
+  const [unrated, setUnrated] = useState(0);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const { refreshKey, activeClientId, effectiveFrom, effectiveTo, isAllTime } = useWeek();
@@ -29,6 +31,7 @@ const CoverageByTier = ({ corporateOnly = false }: { corporateOnly?: boolean }) 
         query = query.gte('published_at', effectiveFrom).lte('published_at', effectiveTo);
       }
       if (activeClientId) query = query.eq('client_id', activeClientId);
+      // Corporate/Executive is a manual classification set per placement in the press log.
       if (corporateOnly) query = query.in('placement_type', ['corporate', 'newswire']);
 
       const { data: placements, error: err } = await query;
@@ -43,24 +46,22 @@ const CoverageByTier = ({ corporateOnly = false }: { corporateOnly?: boolean }) 
       const tier1Color = 'hsl(225 70% 35%)';
       const tier2Color = 'hsl(42 64% 45%)';
       const tier3Color = 'hsl(0 0% 60%)';
-      if (placements && placements.length > 0) {
-        const counts: Record<number, number> = {};
-        placements.forEach((p: any) => {
-          const tier = p.outlet_tier ?? 3;
-          counts[tier] = (counts[tier] || 0) + 1;
-        });
-        setData([
-          { name: 'Tier 1', value: counts[1] || 0, color: tier1Color },
-          { name: 'Tier 2', value: counts[2] || 0, color: tier2Color },
-          { name: 'Tier 3', value: counts[3] || 0, color: tier3Color },
-        ]);
-      } else {
-        setData([
-          { name: 'Tier 1', value: 0, color: tier1Color },
-          { name: 'Tier 2', value: 0, color: tier2Color },
-          { name: 'Tier 3', value: 0, color: tier3Color },
-        ]);
-      }
+      const unratedColor = 'hsl(0 0% 82%)';
+      const rows = placements ?? [];
+      const counts: Record<number, number> = {};
+      let noTier = 0;
+      rows.forEach((p: any) => {
+        if (p.outlet_tier == null) { noTier += 1; return; }
+        counts[p.outlet_tier] = (counts[p.outlet_tier] || 0) + 1;
+      });
+      setUnrated(noTier);
+      setTotal(rows.length);
+      setData([
+        { name: 'Tier 1', value: counts[1] || 0, color: tier1Color },
+        { name: 'Tier 2', value: counts[2] || 0, color: tier2Color },
+        { name: 'Tier 3', value: counts[3] || 0, color: tier3Color },
+        ...(noTier > 0 ? [{ name: 'Unrated', value: noTier, color: unratedColor }] : []),
+      ]);
       setLoading(false);
     };
     fetchTiers();
@@ -79,9 +80,27 @@ const CoverageByTier = ({ corporateOnly = false }: { corporateOnly?: boolean }) 
     );
   }
 
+  if (total === 0) {
+    return (
+      <div>
+        <h3 className="section-label mb-4">Coverage by Outlet Tier</h3>
+        <p className="text-xs text-muted-foreground leading-relaxed py-8">
+          {corporateOnly
+            ? 'No placements classified as Corporate or Newswire yet. Classification is set manually per placement in the press log.'
+            : 'No placements in the selected range.'}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div>
       <h3 className="section-label mb-4">Coverage by Outlet Tier</h3>
+      {unrated > 0 && (
+        <p className="text-[10px] text-muted-foreground mb-3">
+          {unrated} of {total} placement{total !== 1 ? 's' : ''} have no outlet tier recorded.
+        </p>
+      )}
       <div className="flex items-center gap-6">
         <ResponsiveContainer width={160} height={160}>
           <PieChart>
