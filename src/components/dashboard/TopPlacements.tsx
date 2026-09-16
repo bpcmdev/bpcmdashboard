@@ -1,10 +1,13 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
 import { useAdmin } from '@/hooks/useAdmin';
 import { Skeleton } from '@/components/ui/skeleton';
 import DeleteEntryButton from './DeleteEntryButton';
 import EditPlacementDialog from './EditPlacementDialog';
+import PaginationControls from './PaginationControls';
+
+const PAGE_SIZE = 10;
 
 interface RawPlacement {
   id: string;
@@ -66,8 +69,15 @@ const TopPlacements = ({ searchText = '', tierFilter = 'all', sentimentFilter = 
   const [rawPlacements, setRawPlacements] = useState<RawPlacement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const { refreshKey, activeClientId, effectiveFrom, effectiveTo, isAllTime } = useWeek();
   const { isAdmin } = useAdmin();
+
+  // Reset to page 1 whenever scope or filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeClientId, effectiveFrom, effectiveTo, isAllTime, searchText, tierFilter, sentimentFilter, typeFilter]);
 
   useEffect(() => {
     if (!isAllTime && (!effectiveFrom || !effectiveTo)) return;
@@ -75,10 +85,14 @@ const TopPlacements = ({ searchText = '', tierFilter = 'all', sentimentFilter = 
       setLoading(true);
       setError(false);
 
+      const from = (currentPage - 1) * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
       let query = supabase
         .from('placements')
-        .select('*')
-        .order('outlet_umv', { ascending: false });
+        .select('*', { count: 'exact' })
+        .order('outlet_umv', { ascending: false })
+        .range(from, to);
 
       if (!isAllTime) {
         query = query.gte('published_at', effectiveFrom).lte('published_at', effectiveTo);
@@ -88,7 +102,21 @@ const TopPlacements = ({ searchText = '', tierFilter = 'all', sentimentFilter = 
         query = query.eq('client_id', activeClientId);
       }
 
-      const { data, error: err } = await query;
+      if (tierFilter !== 'all') {
+        query = query.eq('outlet_tier', Number(tierFilter));
+      }
+      if (sentimentFilter !== 'all') {
+        query = query.eq('sentiment', sentimentFilter);
+      }
+      if (typeFilter !== 'all') {
+        query = query.eq('placement_type', typeFilter);
+      }
+      if (searchText) {
+        const q = searchText.replace(/[%,()]/g, '');
+        query = query.or(`headline.ilike.%${q}%,outlet_name.ilike.%${q}%`);
+      }
+
+      const { data, count, error: err } = await query;
 
       if (err) {
         console.error('Failed to fetch placements:', err);
@@ -97,6 +125,7 @@ const TopPlacements = ({ searchText = '', tierFilter = 'all', sentimentFilter = 
         return;
       }
 
+      setTotalCount(count ?? 0);
       setRawPlacements((data ?? []).map((row: Record<string, any>) => ({
         id: row.id,
         headline: row.headline ?? '',
@@ -117,27 +146,7 @@ const TopPlacements = ({ searchText = '', tierFilter = 'all', sentimentFilter = 
     };
 
     fetchPlacements();
-  }, [effectiveFrom, effectiveTo, isAllTime, refreshKey, activeClientId]);
-
-  const filtered = useMemo(() => {
-    let result = rawPlacements;
-    if (searchText) {
-      const q = searchText.toLowerCase();
-      result = result.filter(p =>
-        p.headline.toLowerCase().includes(q) || p.outlet_name.toLowerCase().includes(q)
-      );
-    }
-    if (tierFilter !== 'all') {
-      result = result.filter(p => p.outlet_tier === Number(tierFilter));
-    }
-    if (sentimentFilter !== 'all') {
-      result = result.filter(p => p.sentiment === sentimentFilter);
-    }
-    if (typeFilter !== 'all') {
-      result = result.filter(p => p.placement_type === typeFilter);
-    }
-    return result;
-  }, [rawPlacements, searchText, tierFilter, sentimentFilter, typeFilter]);
+  }, [effectiveFrom, effectiveTo, isAllTime, refreshKey, activeClientId, currentPage, searchText, tierFilter, sentimentFilter, typeFilter]);
 
   if (error) {
     return <p className="text-sm text-destructive text-center py-8">Unable to load data. Please try refreshing.</p>;
@@ -154,12 +163,17 @@ const TopPlacements = ({ searchText = '', tierFilter = 'all', sentimentFilter = 
     );
   }
 
-  if (filtered.length === 0) {
+  const hasActiveFilters = !!searchText || tierFilter !== 'all' || sentimentFilter !== 'all' || typeFilter !== 'all';
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const from = (currentPage - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+
+  if (rawPlacements.length === 0) {
     return (
       <div>
         <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-3">Top Placements This Week</h3>
         <p className="text-xs text-muted-foreground text-center py-8">
-          {rawPlacements.length > 0 ? 'No placements match your filters.' : 'No placements for this week.'}
+          {hasActiveFilters ? 'No placements match your filters.' : 'No placements for this week.'}
         </p>
       </div>
     );
@@ -169,12 +183,9 @@ const TopPlacements = ({ searchText = '', tierFilter = 'all', sentimentFilter = 
     <div>
       <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-3">
         Top Placements This Week
-        {filtered.length !== rawPlacements.length && (
-          <span className="ml-2 text-muted-foreground font-normal">({filtered.length} of {rawPlacements.length})</span>
-        )}
       </h3>
       <div className="divide-y divide-white/[0.07]">
-        {filtered.map((p) => {
+        {rawPlacements.map((p) => {
           const tier = formatTier(p.outlet_tier, p.placement_type, p.headline);
           return (
             <div key={p.id} className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 py-3">
@@ -200,6 +211,10 @@ const TopPlacements = ({ searchText = '', tierFilter = 'all', sentimentFilter = 
           );
         })}
       </div>
+      <p className="text-[11px] text-muted-foreground text-center pt-3">
+        Showing {from + 1}–{Math.min(to + 1, totalCount)} of {totalCount}
+      </p>
+      <PaginationControls currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
     </div>
   );
 };
