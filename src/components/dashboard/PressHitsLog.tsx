@@ -475,10 +475,50 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
                 <span className="text-[11px] text-muted-foreground shrink-0 w-12 text-right">
                   {formatReach(p.outlet_umv)}
                 </span>
-                <span className="text-[10px] text-muted-foreground shrink-0 hidden md:inline w-24 text-center">
-                  {placementLabel(p.placed_by, p.placement_type)}
-                </span>
-                <span className={`shrink-0 text-[10px] font-bold tracking-wider px-2 py-0.5 ${tierBg[p.outlet_tier] ?? 'bg-tier1'}`}>
+                {p.print_clipping_url && (
+                  <a
+                    href={ensureHttps(p.print_clipping_url)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="shrink-0 hidden md:inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground underline underline-offset-2"
+                    title="View scanned print clipping"
+                  >
+                    <ImageIcon className="w-3 h-3" />
+                    View clipping
+                  </a>
+                )}
+                {isAdmin ? (
+                  <div className="shrink-0 hidden md:block w-28" onClick={(e) => e.stopPropagation()}>
+                    <Select
+                      value={p.placement_type ?? ''}
+                      onValueChange={(v) => classify(p.id, v)}
+                    >
+                      <SelectTrigger
+                        className={cn(
+                          'h-6 text-[10px] px-2',
+                          !p.placement_type && 'text-muted-foreground italic'
+                        )}
+                      >
+                        <SelectValue placeholder="Unclassified" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="placed">BPCM Placed</SelectItem>
+                        <SelectItem value="organic">Organic</SelectItem>
+                        <SelectItem value="newswire">Newswire</SelectItem>
+                        <SelectItem value="corporate">Corporate</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : (
+                  <span className={cn(
+                    'text-[10px] shrink-0 hidden md:inline w-24 text-center',
+                    p.placement_type ? 'text-muted-foreground' : 'text-muted-foreground/60 italic'
+                  )}>
+                    {placementLabel(p.placement_type)}
+                  </span>
+                )}
+                <span className={cn('shrink-0 text-[10px] font-bold tracking-wider px-2 py-0.5', tierClass(p.outlet_tier))}>
                   {tierLabel(p.outlet_tier)}
                 </span>
                 {isAdmin && !p.dismissed && (
