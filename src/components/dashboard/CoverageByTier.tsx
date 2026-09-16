@@ -31,6 +31,7 @@ const CoverageByTier = ({ corporateOnly = false }: { corporateOnly?: boolean }) 
         query = query.gte('published_at', effectiveFrom).lte('published_at', effectiveTo);
       }
       if (activeClientId) query = query.eq('client_id', activeClientId);
+      // Corporate/Executive is a manual classification set per placement in the press log.
       if (corporateOnly) query = query.in('placement_type', ['corporate', 'newswire']);
 
       const { data: placements, error: err } = await query;
