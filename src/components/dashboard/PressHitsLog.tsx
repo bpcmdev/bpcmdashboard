@@ -30,17 +30,21 @@ interface Placement {
   headline: string;
   url: string;
   outlet_name: string;
-  outlet_tier: number;
+  outlet_tier: number | null;
   outlet_umv: number | null;
   author_name: string | null;
   published_at: string | null;
-  placement_type: string;
+  placement_type: string | null;
   placed_by: string;
   sentiment: string | null;
   ad_value: number | null;
   impressions: number | null;
   tags: string[] | null;
   dismissed: boolean;
+  category: string | null;
+  product_name: string | null;
+  print_clipping_url: string | null;
+  holding_company: string | null;
 }
 
 function formatReach(val: number | null): string {
@@ -55,8 +59,8 @@ function formatDate(dateStr: string): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function tierLabel(tier: number): string {
-  return `TIER ${tier}`;
+function tierLabel(tier: number | null): string {
+  return tier != null ? `TIER ${tier}` : 'UNRATED';
 }
 
 const tierBg: Record<number, string> = {
@@ -65,9 +69,21 @@ const tierBg: Record<number, string> = {
   3: 'bg-tier3',
 };
 
-function placementLabel(placedBy: string, placementType: string): string {
-  if (placementType === 'placed' || (placedBy && placedBy.toLowerCase() !== 'organic')) return 'BPCM Placed';
-  return 'Organic';
+function tierClass(tier: number | null): string {
+  if (tier == null) return 'bg-muted text-muted-foreground';
+  return tierBg[tier] ?? 'bg-muted text-muted-foreground';
+}
+
+const PLACEMENT_TYPE_LABELS: Record<string, string> = {
+  placed: 'BPCM Placed',
+  organic: 'Organic',
+  newswire: 'Newswire',
+  corporate: 'Corporate',
+};
+
+function placementLabel(placementType: string | null): string {
+  if (!placementType) return 'Unclassified';
+  return PLACEMENT_TYPE_LABELS[placementType] ?? placementType;
 }
 
 function sentimentColor(s: string | null): string {
