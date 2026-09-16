@@ -57,6 +57,7 @@ const PlacementVolumeChart = ({ corporateOnly = false }: { corporateOnly?: boole
         query = query.gte('published_at', from).lte('published_at', to);
       }
       if (activeClientId) query = query.eq('client_id', activeClientId);
+      // Corporate/Executive is a manual classification set per placement in the press log.
       if (corporateOnly) query = query.in('placement_type', ['corporate', 'newswire']);
 
       const { data, error } = await query;
