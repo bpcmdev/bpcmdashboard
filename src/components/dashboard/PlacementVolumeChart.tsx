@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts';
 import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
-import { Skeleton } from '@/components/ui/skeleton';
 
 interface Bucket {
   label: string;
@@ -128,7 +127,11 @@ const PlacementVolumeChart = ({ corporateOnly = false }: { corporateOnly?: boole
     <div>
       <h3 className="section-label mb-4">{title}</h3>
       {loading ? (
-        <Skeleton className="h-[240px] w-full" />
+        <div className="h-[240px] flex items-end gap-2 px-2">
+          {[38, 62, 48, 80, 55, 70, 44, 66].map((h, i) => (
+            <div key={i} className="shimmer flex-1" style={{ height: `${h}%` }} />
+          ))}
+        </div>
       ) : buckets.length === 0 ? (
         <div className="h-[240px] flex items-center justify-center text-center text-xs text-muted-foreground px-6 leading-relaxed">
           {corporateOnly
@@ -169,7 +172,15 @@ const PlacementVolumeChart = ({ corporateOnly = false }: { corporateOnly?: boole
                 boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
               }}
             />
-            <Bar dataKey="placements" fill="url(#barClientBlue)" radius={[3, 3, 0, 0]} />
+            <Bar
+              dataKey="placements"
+              fill="url(#barClientBlue)"
+              radius={[3, 3, 0, 0]}
+              activeBar={{ fill: 'hsl(225 70% 48%)' }}
+              animationBegin={80}
+              animationDuration={800}
+              animationEasing="ease-out"
+            />
           </BarChart>
         </ResponsiveContainer>
       )}

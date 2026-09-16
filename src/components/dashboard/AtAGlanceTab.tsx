@@ -90,17 +90,20 @@ const SectionHeader = ({ eyebrow, title }: { eyebrow: string; title: string }) =
 /* ─────────────────────────────────────────────────────────────────
    Brand Momentum Snapshot
    ───────────────────────────────────────────────────────────────── */
-function GlanceCardTile({ card }: { card: GlanceCard }) {
+function GlanceCardTile({ card, index = 0 }: { card: GlanceCard; index?: number }) {
   const isDark = !!card.featured;
   return (
     <div
       className={[
-        'rounded-lg p-5 transition-all hover:-translate-y-0.5',
+        'stagger-in rounded-lg p-6 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_26px_rgba(0,0,0,0.08)]',
         isDark
           ? 'bg-foreground text-background border border-foreground'
-          : 'bg-white text-foreground border border-black/10',
+          : 'section-card text-foreground border',
       ].join(' ')}
-      style={isDark ? { boxShadow: '0 1px 0 rgba(0,0,0,0.04)' } : undefined}
+      style={{
+        '--stagger-delay': `${Math.min(index * 40, 400)}ms`,
+        ...(isDark ? { boxShadow: '0 1px 0 rgba(0,0,0,0.04)' } : {}),
+      } as React.CSSProperties}
     >
       {card.category && (
         <span
@@ -286,7 +289,11 @@ function AssetTracker({
           </thead>
           <tbody>
             {sorted.map((r, i) => (
-              <tr key={r.id} className={i % 2 ? 'bg-black/[0.015]' : ''}>
+              <tr
+                key={r.id}
+                className={`stagger-in transition-colors hover:bg-black/[0.035] ${i % 2 ? 'bg-black/[0.015]' : ''}`}
+                style={{ '--stagger-delay': `${Math.min(i * 40, 400)}ms` } as React.CSSProperties}
+              >
                 <td className="px-4 py-3 font-medium text-foreground">{r.launch}</td>
                 <td className="px-4 py-3 font-mono-ui text-[12px] tracking-wider text-foreground/80">
                   {r.target_date ? new Date(r.target_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
@@ -336,13 +343,18 @@ const AGENT_CATEGORY_COLOR: Record<string, string> = {
   sov:     'hsl(272 55% 50%)',   // purple
 };
 
-function AgentIntelCard({ row }: { row: AgentIntelRow }) {
+function AgentIntelCard({ row, index = 0 }: { row: AgentIntelRow; index?: number }) {
   const accent = AGENT_CATEGORY_COLOR[row.category] ?? 'rgba(0,0,0,0.25)';
   const limited = row.confidence === 'limited';
   return (
     <div
-      className="bg-white border border-black/10 rounded-lg p-5 transition-all hover:-translate-y-0.5"
-      style={{ borderLeft: `4px solid ${accent}`, borderLeftColor: accent, opacity: limited ? 0.85 : 1 }}
+      className="stagger-in section-card border rounded-lg p-6 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_26px_rgba(0,0,0,0.08)]"
+      style={{
+        borderLeft: `4px solid ${accent}`,
+        borderLeftColor: accent,
+        opacity: limited ? 0.85 : 1,
+        '--stagger-delay': `${Math.min(index * 40, 400)}ms`,
+      } as React.CSSProperties}
     >
       <div className="flex items-center gap-2 mb-2">
         <span
@@ -449,7 +461,7 @@ function AgentIntelligenceSection({ clientId }: { clientId: string | null }) {
       {ordered.length > 0 && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {ordered.map(r => <AgentIntelCard key={r.category} row={r} />)}
+            {ordered.map((r, i) => <AgentIntelCard key={r.category} row={r} index={i} />)}
           </div>
           {newest && (
             <div className="mt-3 font-mono-ui text-[10px] tracking-[0.14em] uppercase text-muted-foreground">
@@ -827,7 +839,7 @@ const AtAGlanceTab = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {sortedCards.map(c => <GlanceCardTile key={c.id} card={c} />)}
+              {sortedCards.map((c, i) => <GlanceCardTile key={c.id} card={c} index={i} />)}
             </div>
           )}
         </section>

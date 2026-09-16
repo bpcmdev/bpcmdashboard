@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
 import { useAdmin } from '@/hooks/useAdmin';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Image as ImageIcon } from 'lucide-react';
 import DeleteEntryButton from './DeleteEntryButton';
@@ -162,9 +161,14 @@ const TopPlacements = ({ searchText = '', tierFilter = 'all', sentimentFilter = 
   if (loading) {
     return (
       <div className="space-y-3">
-        <Skeleton className="h-4 w-48" />
+        <div className="shimmer h-3 w-48" />
         {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-10 w-full" />
+          <div key={i} className="flex items-center gap-4 py-2">
+            <div className="shimmer h-3 w-32 shrink-0" />
+            <div className="shimmer h-3 flex-1" />
+            <div className="shimmer h-3 w-20 shrink-0" />
+            <div className="shimmer h-4 w-14 shrink-0" />
+          </div>
         ))}
       </div>
     );
@@ -192,10 +196,14 @@ const TopPlacements = ({ searchText = '', tierFilter = 'all', sentimentFilter = 
         Top Placements This Week
       </h3>
       <div className="divide-y divide-white/[0.07]">
-        {rawPlacements.map((p) => {
+        {rawPlacements.map((p, i) => {
           const tier = formatTier(p.outlet_tier, p.placement_type, p.headline);
           return (
-            <div key={p.id} className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 py-3">
+            <div
+              key={p.id}
+              className="stagger-in list-row flex flex-col md:flex-row md:items-center gap-2 md:gap-4 py-3 px-2 -mx-2"
+              style={{ '--stagger-delay': `${Math.min(i * 40, 400)}ms` } as React.CSSProperties}
+            >
               <span className="text-sm font-bold md:w-36 shrink-0">{p.outlet_name}</span>
               <span className="text-sm flex-1 text-foreground/80">
                 {p.url ? (
@@ -224,7 +232,7 @@ const TopPlacements = ({ searchText = '', tierFilter = 'all', sentimentFilter = 
                 <span className="hidden md:inline">·</span>
                 <span>{formatPlacedBy(p.placed_by, p.placement_type)}</span>
               </div>
-              <span className={`shrink-0 text-[10px] font-bold tracking-wider px-2 py-0.5 w-fit ${tierClass[tier] ?? 'bg-tier1'}`}>
+              <span className={`badge-tier shrink-0 tracking-wider w-fit ${tierClass[tier] ?? 'bg-unrated'}`}>
                 {tier}
               </span>
               {isAdmin && (

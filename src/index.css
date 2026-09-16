@@ -200,11 +200,11 @@
   /* Section header — monospace label + count */
   .section-label {
     font-family: 'DM Mono', ui-monospace, monospace;
-    font-size: 10px;
-    font-weight: 500;
+    font-size: 11px;
+    font-weight: 600;
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: hsl(0 0% 40%);
+    color: hsl(0 0% 26%);
   }
   .section-count {
     display: inline-block;
@@ -264,6 +264,87 @@
     color: hsl(0 0% 50%);
     max-width: 320px;
     margin: 0 auto;
+  }
+
+  /* ---- Motion & depth system ---- */
+
+  /* Staggered entrance for cards and list rows.
+     Set --stagger-delay inline per item (capped by the caller around 400ms). */
+  .stagger-in {
+    opacity: 0;
+    animation: fade-in-up 0.25s ease-out forwards;
+    animation-delay: var(--stagger-delay, 0ms);
+  }
+
+  /* Shimmer skeleton block — shape it with width/height utilities */
+  .shimmer {
+    position: relative;
+    overflow: hidden;
+    background: hsl(0 0% 0% / 0.055);
+    border-radius: 3px;
+  }
+  .shimmer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, hsl(0 0% 100% / 0.75), transparent);
+    animation: shimmer-sweep 1.4s ease-in-out infinite;
+  }
+
+  /* List rows — tint + accent bar on hover */
+  .list-row {
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: inset 0 0 0 0 transparent;
+  }
+  .list-row:hover {
+    background-color: hsl(0 0% 0% / 0.022);
+    box-shadow: inset 2px 0 0 0 hsl(var(--client-accent, var(--primary)));
+  }
+  .row-clickable {
+    cursor: pointer;
+  }
+
+  /* Section cards — warm off-white gradient, warmer border, hover lift */
+  .section-card {
+    background-image: linear-gradient(180deg, hsl(0 0% 100%), hsl(40 25% 98.5%));
+    border-color: hsl(38 18% 87%);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .section-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 26px hsl(0 0% 0% / 0.07);
+  }
+
+  /* Tier / status badges — distinct per level */
+  .badge-tier {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 2px 8px;
+  }
+  .bg-unrated {
+    background-color: transparent;
+    border: 1px solid hsl(0 0% 0% / 0.18);
+    color: hsl(0 0% 45%);
+  }
+}
+
+@keyframes shimmer-sweep {
+  100% { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stagger-in {
+    animation: none;
+    opacity: 1;
+  }
+  .shimmer::after {
+    animation: none;
+  }
+  .section-card:hover {
+    transform: none;
   }
 }
 
