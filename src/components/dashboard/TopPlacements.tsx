@@ -3,6 +3,8 @@ import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
 import { useAdmin } from '@/hooks/useAdmin';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Image as ImageIcon } from 'lucide-react';
 import DeleteEntryButton from './DeleteEntryButton';
 import EditPlacementDialog from './EditPlacementDialog';
 import PaginationControls from './PaginationControls';
@@ -24,6 +26,8 @@ interface RawPlacement {
   placement_type: string;
   placed_by: string;
   tags: string[];
+  print_clipping_url: string | null;
+  print_cover_url: string | null;
 }
 
 interface TopPlacementsProps {
@@ -141,6 +145,8 @@ const TopPlacements = ({ searchText = '', tierFilter = 'all', sentimentFilter = 
         placement_type: row.placement_type ?? '',
         placed_by: row.placed_by ?? '',
         tags: Array.isArray(row.tags) ? row.tags : [],
+        print_clipping_url: row.print_clipping_url ?? null,
+        print_cover_url: row.print_cover_url ?? null,
       })));
       setLoading(false);
     };
