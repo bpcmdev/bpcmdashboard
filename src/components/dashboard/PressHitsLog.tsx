@@ -253,8 +253,13 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
   const { selectedWeek, refreshKey, activeClientId, effectiveFrom, effectiveTo, rangeMode, isAllTime } = useWeek();
   const { isAdmin } = useAdmin();
   const [placements, setPlacements] = useState<Placement[]>([]);
+  const [dismissedPlacements, setDismissedPlacements] = useState<Placement[]>([]);
   const [loading, setLoading] = useState(true);
   const [previewItem, setPreviewItem] = useState<Placement | null>(null);
+  const [activePage, setActivePage] = useState(1);
+  const [dismissedPage, setDismissedPage] = useState(1);
+  const [activeCount, setActiveCount] = useState(0);
+  const [dismissedCount, setDismissedCount] = useState(0);
 
   // Add form
   const [addForm, setAddForm] = useState(defaultFormValues());
@@ -273,47 +278,67 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
   const updateAddForm = (field: string, value: any) => setAddForm(prev => ({ ...prev, [field]: value }));
   const updateEditForm = (field: string, value: any) => setEditForm(prev => ({ ...prev, [field]: value }));
 
+  // Reset both lists to page 1 whenever scope changes
+  useEffect(() => {
+    setActivePage(1);
+    setDismissedPage(1);
+  }, [effectiveFrom, effectiveTo, isAllTime, activeClientId, rangeMode, corporateOnly]);
+
   const fetchPlacements = async () => {
     if (!isAllTime && (!effectiveFrom || !effectiveTo)) return;
     setLoading(true);
 
-    let query = supabase
-      .from('placements')
-      .select('id, headline, url, outlet_name, outlet_tier, outlet_umv, author_name, published_at, placement_type, placed_by, sentiment, ad_value, impressions, tags, dismissed, category, product_name, print_clipping_url, holding_company')
-      .order('published_at', { ascending: false });
+    const buildQuery = (dismissedFlag: boolean, page: number) => {
+      const from = (page - 1) * PAGE_SIZE;
+      let q = supabase
+        .from('placements')
+        .select('id, headline, url, outlet_name, outlet_tier, outlet_umv, author_name, published_at, placement_type, placed_by, sentiment, ad_value, impressions, tags, dismissed, category, product_name, print_clipping_url, holding_company', { count: 'exact' })
+        .order('published_at', { ascending: false })
+        .eq('dismissed', dismissedFlag)
+        .range(from, from + PAGE_SIZE - 1);
 
-    if (!isAllTime) {
-      query = query.gte('published_at', effectiveFrom).lte('published_at', effectiveTo);
+      if (!isAllTime) {
+        q = q.gte('published_at', effectiveFrom).lte('published_at', effectiveTo);
+      }
+
+      if (activeClientId) {
+        q = q.eq('client_id', activeClientId);
+      }
+
+      if (corporateOnly) {
+        q = q.in('placement_type', ['corporate', 'newswire']);
+      }
+
+      return q;
+    };
+
+    const { data: activeData, count: ac } = await buildQuery(false, activePage);
+    setPlacements(activeData ?? []);
+    setActiveCount(ac ?? 0);
+
+    if (showDismissed && isAdmin) {
+      const { data: dismissedData, count: dc } = await buildQuery(true, dismissedPage);
+      setDismissedPlacements(dismissedData ?? []);
+      setDismissedCount(dc ?? 0);
+    } else {
+      setDismissedPlacements([]);
+      setDismissedCount(0);
     }
 
-    if (activeClientId) {
-      query = query.eq('client_id', activeClientId);
-    }
-
-    if (corporateOnly) {
-      query = query.in('placement_type', ['corporate', 'newswire']);
-    }
-
-    const { data } = await query;
-    setPlacements(data ?? []);
     setLoading(false);
   };
 
   useEffect(() => {
     fetchPlacements();
-  }, [effectiveFrom, effectiveTo, isAllTime, refreshKey, activeClientId, rangeMode, corporateOnly]);
+  }, [effectiveFrom, effectiveTo, isAllTime, refreshKey, activeClientId, rangeMode, corporateOnly, activePage, dismissedPage, showDismissed, isAdmin]);
 
-  const visible = useMemo(
-    () => placements.filter((p) => !p.dismissed),
-    [placements]
-  );
+  const patchRow = (id: string, patch: Partial<Placement>) => {
+    setPlacements((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+    setDismissedPlacements((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+  };
 
-  const dismissed = useMemo(
-    () => placements.filter((p) => p.dismissed),
-    [placements]
-  );
-
-  const displayList = showDismissed ? [...visible, ...dismissed] : visible;
+  const activeTotalPages = Math.max(1, Math.ceil(activeCount / PAGE_SIZE));
+  const dismissedTotalPages = Math.max(1, Math.ceil(dismissedCount / PAGE_SIZE));
 
   const dismiss = async (id: string) => {
     setPlacements((prev) => prev.map((p) => (p.id === id ? { ...p, dismissed: true } : p)));
