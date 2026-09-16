@@ -173,24 +173,24 @@ const EarnedMediaTab = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-6">
-        <div className="md:col-span-3 bg-card p-4 md:p-5 border border-border">
+        <div className="stagger-in section-card md:col-span-3 p-5 md:p-6 border" style={{ '--stagger-delay': '0ms' } as React.CSSProperties}>
           <PlacementVolumeChart corporateOnly={corporateOnly} />
         </div>
-        <div className="md:col-span-2 bg-card p-4 md:p-5 border border-border">
+        <div className="stagger-in section-card md:col-span-2 p-5 md:p-6 border" style={{ '--stagger-delay': '80ms' } as React.CSSProperties}>
           <ShareOfVoiceTable />
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-6">
-        <div className="md:col-span-3 bg-card p-4 md:p-5 border border-border">
+        <div className="stagger-in section-card md:col-span-3 p-5 md:p-6 border" style={{ '--stagger-delay': '160ms' } as React.CSSProperties}>
           <SentimentBreakdown />
         </div>
-        <div className="md:col-span-2 bg-card p-4 md:p-5 border border-border">
+        <div className="stagger-in section-card md:col-span-2 p-5 md:p-6 border" style={{ '--stagger-delay': '240ms' } as React.CSSProperties}>
           <CoverageByTier corporateOnly={corporateOnly} />
         </div>
       </div>
 
       {/* Search & Filter controls */}
-      <div className="bg-card p-4 md:p-5 border border-border space-y-4">
+      <div className="stagger-in section-card p-5 md:p-6 border space-y-4" style={{ '--stagger-delay': '320ms' } as React.CSSProperties}>
         <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
           <div className="relative flex-1 w-full md:w-auto">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -213,17 +213,19 @@ const EarnedMediaTab = () => {
                 <SelectItem value="3" className="text-xs">Tier 3</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={sentimentFilter} onValueChange={setSentimentFilter}>
-              <SelectTrigger className="w-full md:w-[130px] text-xs">
-                <SelectValue placeholder="Sentiment" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all" className="text-xs">All Sentiment</SelectItem>
-                <SelectItem value="positive" className="text-xs">Positive</SelectItem>
-                <SelectItem value="neutral" className="text-xs">Neutral</SelectItem>
-                <SelectItem value="negative" className="text-xs">Negative</SelectItem>
-              </SelectContent>
-            </Select>
+            {hasSentimentData && (
+              <Select value={sentimentFilter} onValueChange={setSentimentFilter}>
+                <SelectTrigger className="w-full md:w-[130px] text-xs">
+                  <SelectValue placeholder="Sentiment" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="text-xs">All Sentiment</SelectItem>
+                  <SelectItem value="positive" className="text-xs">Positive</SelectItem>
+                  <SelectItem value="neutral" className="text-xs">Neutral</SelectItem>
+                  <SelectItem value="negative" className="text-xs">Negative</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
             <Select value={typeFilter} onValueChange={setTypeFilter}>
               <SelectTrigger className="w-full md:w-[130px] text-xs">
                 <SelectValue placeholder="Type" />
