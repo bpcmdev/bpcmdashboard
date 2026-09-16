@@ -20,6 +20,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Search, X, CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useWeek } from '@/contexts/WeekContext';
+import { supabase } from '@/lib/supabase';
 import PressHitsLog from './PressHitsLog';
 
 const EarnedMediaTab = () => {
@@ -28,11 +29,29 @@ const EarnedMediaTab = () => {
   const [sentimentFilter, setSentimentFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [corporateOnly, setCorporateOnly] = useState(false);
+  const [hasSentimentData, setHasSentimentData] = useState(false);
 
   const {
     rangeMode, setRangeMode, rangeFrom, rangeTo, setRangeFrom, setRangeTo,
-    selectedWeek,
+    selectedWeek, activeClientId, refreshKey,
   } = useWeek();
+
+  // The sentiment filter is only meaningful if any placement actually carries a
+  // sentiment value — it is null across the board on the current data tier.
+  useEffect(() => {
+    let cancelled = false;
+    const check = async () => {
+      let query = supabase.from('placements').select('id').not('sentiment', 'is', null).limit(1);
+      if (activeClientId) query = query.eq('client_id', activeClientId);
+      const { data } = await query;
+      if (!cancelled) {
+        setHasSentimentData((data ?? []).length > 0);
+        if ((data ?? []).length === 0) setSentimentFilter('all');
+      }
+    };
+    check();
+    return () => { cancelled = true; };
+  }, [activeClientId, refreshKey]);
 
   // When entering Range mode for the first time, seed dates from the active week.
   useEffect(() => {
