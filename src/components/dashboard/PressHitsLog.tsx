@@ -591,19 +591,37 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
                   <p className="text-muted-foreground">{formatDate(previewItem.published_at)}</p>
                 )}
                 <p className="text-muted-foreground">Reach: {formatReach(previewItem.outlet_umv)}</p>
+                {(previewItem.category || previewItem.product_name || previewItem.holding_company) && (
+                  <div className="space-y-1 text-xs text-muted-foreground">
+                    {previewItem.category && <p>Category: {previewItem.category}</p>}
+                    {previewItem.product_name && <p>Product: {previewItem.product_name}</p>}
+                    {previewItem.holding_company && <p>Holding company: {previewItem.holding_company}</p>}
+                  </div>
+                )}
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className={`inline-block text-[10px] font-bold tracking-wider px-2 py-0.5 ${tierBg[previewItem.outlet_tier] ?? 'bg-tier1'}`}>
+                  <span className={cn('inline-block text-[10px] font-bold tracking-wider px-2 py-0.5', tierClass(previewItem.outlet_tier))}>
                     {tierLabel(previewItem.outlet_tier)}
                   </span>
-                  {previewItem.sentiment && (
-                    <Badge variant="outline" className={cn('text-[10px] capitalize', sentimentColor(previewItem.sentiment))}>
-                      {previewItem.sentiment}
-                    </Badge>
-                  )}
-                  <span className="text-[10px] text-muted-foreground">
-                    {placementLabel(previewItem.placed_by, previewItem.placement_type)}
+                  <Badge variant="outline" className={cn('text-[10px]', sentimentColor(previewItem.sentiment))}>
+                    {previewItem.sentiment
+                      ? <span className="capitalize">{previewItem.sentiment}</span>
+                      : <span className="italic opacity-70">Not analyzed</span>}
+                  </Badge>
+                  <span className={cn('text-[10px]', previewItem.placement_type ? 'text-muted-foreground' : 'text-muted-foreground/60 italic')}>
+                    {placementLabel(previewItem.placement_type)}
                   </span>
                 </div>
+                {previewItem.print_clipping_url && (
+                  <a
+                    href={ensureHttps(previewItem.print_clipping_url)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs text-foreground underline underline-offset-2"
+                  >
+                    <ImageIcon className="w-3.5 h-3.5" />
+                    View print clipping
+                  </a>
+                )}
               </div>
               {previewItem.url && (() => {
                 const safeUrl = ensureHttps(previewItem.url);
