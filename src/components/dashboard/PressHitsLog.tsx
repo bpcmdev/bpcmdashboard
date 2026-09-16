@@ -744,6 +744,27 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
         </DialogContent>
       </Dialog>
 
+      {/* Print clipping lightbox */}
+      <Dialog open={!!clipping} onOpenChange={(open) => !open && setClipping(null)}>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-sm leading-snug pr-6">{clipping?.title}</DialogTitle>
+          </DialogHeader>
+          {clipping && (
+            <div className={cn('grid gap-3', clipping.cover ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1')}>
+              {clipping.cover && (
+                <a href={ensureHttps(clipping.cover)} target="_blank" rel="noopener noreferrer">
+                  <img src={ensureHttps(clipping.cover)} alt="Print cover" className="w-full border border-border rounded" loading="lazy" />
+                </a>
+              )}
+              <a href={ensureHttps(clipping.url)} target="_blank" rel="noopener noreferrer">
+                <img src={ensureHttps(clipping.url)} alt="Scanned print clipping" className="w-full border border-border rounded" loading="lazy" />
+              </a>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Delete confirmation */}
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
         <AlertDialogContent>
