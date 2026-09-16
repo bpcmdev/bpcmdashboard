@@ -457,7 +457,7 @@ function AgentIntelligenceSection({ clientId }: { clientId: string | null }) {
       {ordered.length > 0 && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {ordered.map(r => <AgentIntelCard key={r.category} row={r} />)}
+            {ordered.map((r, i) => <AgentIntelCard key={r.category} row={r} index={i} />)}
           </div>
           {newest && (
             <div className="mt-3 font-mono-ui text-[10px] tracking-[0.14em] uppercase text-muted-foreground">
@@ -835,7 +835,7 @@ const AtAGlanceTab = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {sortedCards.map(c => <GlanceCardTile key={c.id} card={c} />)}
+              {sortedCards.map((c, i) => <GlanceCardTile key={c.id} card={c} index={i} />)}
             </div>
           )}
         </section>
