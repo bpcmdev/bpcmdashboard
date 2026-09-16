@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { supabase } from '@/lib/supabase';
 import { logActivity } from '@/lib/activityLog';
@@ -19,6 +19,9 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import PaginationControls from './PaginationControls';
+
+const PAGE_SIZE = 10;
 
 function ensureHttps(url: string): string {
   if (/^https?:\/\//i.test(url)) return url;
