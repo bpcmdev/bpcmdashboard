@@ -339,7 +339,7 @@ const AGENT_CATEGORY_COLOR: Record<string, string> = {
   sov:     'hsl(272 55% 50%)',   // purple
 };
 
-function AgentIntelCard({ row }: { row: AgentIntelRow }) {
+function AgentIntelCard({ row, index = 0 }: { row: AgentIntelRow; index?: number }) {
   const accent = AGENT_CATEGORY_COLOR[row.category] ?? 'rgba(0,0,0,0.25)';
   const limited = row.confidence === 'limited';
   return (
