@@ -130,8 +130,10 @@ const PlacementVolumeChart = ({ corporateOnly = false }: { corporateOnly?: boole
       {loading ? (
         <Skeleton className="h-[240px] w-full" />
       ) : buckets.length === 0 ? (
-        <div className="h-[240px] flex items-center justify-center text-xs text-muted-foreground">
-          No placements in selected range.
+        <div className="h-[240px] flex items-center justify-center text-center text-xs text-muted-foreground px-6 leading-relaxed">
+          {corporateOnly
+            ? 'No placements classified as Corporate or Newswire yet. Classification is set manually per placement in the press log.'
+            : 'No placements in selected range.'}
         </div>
       ) : (
         <ResponsiveContainer width="100%" height={240}>
