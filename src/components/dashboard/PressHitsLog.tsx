@@ -321,6 +321,18 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
     }
   };
 
+  const classify = async (id: string, value: string) => {
+    const prev = placements.find((p) => p.id === id)?.placement_type ?? null;
+    setPlacements((list) => list.map((p) => (p.id === id ? { ...p, placement_type: value } : p)));
+    const { error } = await supabase.from('placements').update({ placement_type: value }).eq('id', id);
+    if (error) {
+      toast.error('Failed to save classification.');
+      setPlacements((list) => list.map((p) => (p.id === id ? { ...p, placement_type: prev } : p)));
+      return;
+    }
+    toast.success(`Classified as ${placementLabel(value)}.`);
+  };
+
   const restore = async (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
     setPlacements((prev) => prev.map((p) => (p.id === id ? { ...p, dismissed: false } : p)));
