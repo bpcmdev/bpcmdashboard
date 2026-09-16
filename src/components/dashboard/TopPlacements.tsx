@@ -69,8 +69,15 @@ const TopPlacements = ({ searchText = '', tierFilter = 'all', sentimentFilter = 
   const [rawPlacements, setRawPlacements] = useState<RawPlacement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const { refreshKey, activeClientId, effectiveFrom, effectiveTo, isAllTime } = useWeek();
   const { isAdmin } = useAdmin();
+
+  // Reset to page 1 whenever scope or filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeClientId, effectiveFrom, effectiveTo, isAllTime, searchText, tierFilter, sentimentFilter, typeFilter]);
 
   useEffect(() => {
     if (!isAllTime && (!effectiveFrom || !effectiveTo)) return;
@@ -78,10 +85,14 @@ const TopPlacements = ({ searchText = '', tierFilter = 'all', sentimentFilter = 
       setLoading(true);
       setError(false);
 
+      const from = (currentPage - 1) * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
       let query = supabase
         .from('placements')
-        .select('*')
-        .order('outlet_umv', { ascending: false });
+        .select('*', { count: 'exact' })
+        .order('outlet_umv', { ascending: false })
+        .range(from, to);
 
       if (!isAllTime) {
         query = query.gte('published_at', effectiveFrom).lte('published_at', effectiveTo);
@@ -91,7 +102,21 @@ const TopPlacements = ({ searchText = '', tierFilter = 'all', sentimentFilter = 
         query = query.eq('client_id', activeClientId);
       }
 
-      const { data, error: err } = await query;
+      if (tierFilter !== 'all') {
+        query = query.eq('outlet_tier', Number(tierFilter));
+      }
+      if (sentimentFilter !== 'all') {
+        query = query.eq('sentiment', sentimentFilter);
+      }
+      if (typeFilter !== 'all') {
+        query = query.eq('placement_type', typeFilter);
+      }
+      if (searchText) {
+        const q = searchText.replace(/[%,()]/g, '');
+        query = query.or(`headline.ilike.%${q}%,outlet_name.ilike.%${q}%`);
+      }
+
+      const { data, count, error: err } = await query;
 
       if (err) {
         console.error('Failed to fetch placements:', err);
@@ -100,6 +125,7 @@ const TopPlacements = ({ searchText = '', tierFilter = 'all', sentimentFilter = 
         return;
       }
 
+      setTotalCount(count ?? 0);
       setRawPlacements((data ?? []).map((row: Record<string, any>) => ({
         id: row.id,
         headline: row.headline ?? '',
@@ -120,27 +146,7 @@ const TopPlacements = ({ searchText = '', tierFilter = 'all', sentimentFilter = 
     };
 
     fetchPlacements();
-  }, [effectiveFrom, effectiveTo, isAllTime, refreshKey, activeClientId]);
-
-  const filtered = useMemo(() => {
-    let result = rawPlacements;
-    if (searchText) {
-      const q = searchText.toLowerCase();
-      result = result.filter(p =>
-        p.headline.toLowerCase().includes(q) || p.outlet_name.toLowerCase().includes(q)
-      );
-    }
-    if (tierFilter !== 'all') {
-      result = result.filter(p => p.outlet_tier === Number(tierFilter));
-    }
-    if (sentimentFilter !== 'all') {
-      result = result.filter(p => p.sentiment === sentimentFilter);
-    }
-    if (typeFilter !== 'all') {
-      result = result.filter(p => p.placement_type === typeFilter);
-    }
-    return result;
-  }, [rawPlacements, searchText, tierFilter, sentimentFilter, typeFilter]);
+  }, [effectiveFrom, effectiveTo, isAllTime, refreshKey, activeClientId, currentPage, searchText, tierFilter, sentimentFilter, typeFilter]);
 
   if (error) {
     return <p className="text-sm text-destructive text-center py-8">Unable to load data. Please try refreshing.</p>;
