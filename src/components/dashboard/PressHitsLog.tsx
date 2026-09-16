@@ -204,7 +204,7 @@ function defaultFormValues() {
   return {
     headline: '', url: '', outletName: '', outletTier: '1',
     outletUmv: '', authorName: '', publishedAt: new Date() as Date | undefined,
-    sentiment: 'positive', placementType: 'placed', adValue: '0',
+    sentiment: '', placementType: '', adValue: '0',
     impressions: '0', placedBy: 'Manual entry', tags: '',
   };
 }
