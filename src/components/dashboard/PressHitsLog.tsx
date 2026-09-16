@@ -455,9 +455,9 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
             ))}
           </div>
         ) : displayList.length === 0 ? (
-          <p className="text-xs text-muted-foreground text-center py-6">
+          <p className="text-xs text-muted-foreground text-center py-6 max-w-md mx-auto leading-relaxed">
             {corporateOnly
-              ? 'No corporate or executive placements in this window yet. Launchmetrics feed lands mid-August.'
+              ? 'No placements classified as Corporate or Newswire yet. Classification is set manually — an admin can label each hit in the full press log using the dropdown on its row.'
               : 'No placements for this week.'}
           </p>
         ) : (
