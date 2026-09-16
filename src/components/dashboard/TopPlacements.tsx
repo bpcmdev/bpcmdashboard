@@ -211,6 +211,10 @@ const TopPlacements = ({ searchText = '', tierFilter = 'all', sentimentFilter = 
           );
         })}
       </div>
+      <p className="text-[11px] text-muted-foreground text-center pt-3">
+        Showing {from + 1}–{Math.min(to + 1, totalCount)} of {totalCount}
+      </p>
+      <PaginationControls currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
     </div>
   );
 };
