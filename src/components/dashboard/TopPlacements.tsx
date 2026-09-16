@@ -241,6 +241,27 @@ const TopPlacements = ({ searchText = '', tierFilter = 'all', sentimentFilter = 
         Showing {from + 1}–{Math.min(to + 1, totalCount)} of {totalCount}
       </p>
       <PaginationControls currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+
+      {/* Print clipping lightbox */}
+      <Dialog open={!!clipping} onOpenChange={(open) => !open && setClipping(null)}>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-sm leading-snug pr-6">{clipping?.title}</DialogTitle>
+          </DialogHeader>
+          {clipping && (
+            <div className={`grid gap-3 ${clipping.cover ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
+              {clipping.cover && (
+                <a href={clipping.cover} target="_blank" rel="noopener noreferrer">
+                  <img src={clipping.cover} alt="Print cover" className="w-full border border-border rounded" loading="lazy" />
+                </a>
+              )}
+              <a href={clipping.url} target="_blank" rel="noopener noreferrer">
+                <img src={clipping.url} alt="Scanned print clipping" className="w-full border border-border rounded" loading="lazy" />
+              </a>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
