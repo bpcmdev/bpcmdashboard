@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useWeek, applyWeekStartFilter } from '@/contexts/WeekContext';
-import { Skeleton } from '@/components/ui/skeleton';
+
 
 interface SovRow {
   rank: number;
