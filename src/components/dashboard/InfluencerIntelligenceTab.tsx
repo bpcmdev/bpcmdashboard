@@ -3,7 +3,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   Line, ComposedChart, BarChart, Bar, LabelList, Cell,
 } from 'recharts';
-import { ChevronDown, ChevronUp, ExternalLink, Search, X, Instagram, Youtube, Twitter } from 'lucide-react';
+import { ChevronDown, ChevronUp, ExternalLink, Search, X, Instagram, Youtube, Twitter, Music2, Globe } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -15,7 +15,7 @@ import PaginationControls from './PaginationControls';
 import { LinkPreviewTrigger } from './LinkPreviewDrawer';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format as formatDate } from 'date-fns';
+import { format as formatDate, formatDistanceToNowStrict } from 'date-fns';
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle,
 } from '@/components/ui/sheet';
@@ -1240,6 +1240,9 @@ const InfluencerIntelligenceTab = () => {
                 </div>
               )}
             </section>
+
+            {/* 7. Inbound Creator Discovery */}
+            {activeClientId && <InboundCreatorsSection clientId={activeClientId} accent={accent} />}
           </>
         )}
       </DataStateWrapper>
