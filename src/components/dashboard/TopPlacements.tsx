@@ -1,10 +1,13 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
 import { useAdmin } from '@/hooks/useAdmin';
 import { Skeleton } from '@/components/ui/skeleton';
 import DeleteEntryButton from './DeleteEntryButton';
 import EditPlacementDialog from './EditPlacementDialog';
+import PaginationControls from './PaginationControls';
+
+const PAGE_SIZE = 10;
 
 interface RawPlacement {
   id: string;
