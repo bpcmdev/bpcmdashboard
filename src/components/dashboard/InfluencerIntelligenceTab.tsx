@@ -1644,4 +1644,203 @@ const InfluencerSummarySection = ({
   );
 };
 
+// ---------- inbound creator discovery ----------
+interface LaunchmetricsSummary {
+  total_mentions: number | null;
+  inbound_creators: number | null;
+  activated_creators: number | null;
+  inbound_miv: number | null;
+}
+
+interface InboundCreator {
+  voice_name: string | null;
+  source_handle: string | null;
+  voice_type: string | null;
+  channel: string | null;
+  mentions: number | null;
+  total_reach: number | null;
+  total_miv: number | null;
+  in_lefty: boolean | null;
+  latest_post: string | null;
+}
+
+const VOICE_TYPE_STYLES: Record<string, string> = {
+  influencer: 'bg-[#1B2B8A]/10 text-[#1B2B8A]',
+  celebrity: 'bg-[#C9A961]/15 text-[#8A6A2E]',
+  brand: 'bg-black/[0.06] text-foreground/70',
+  media: 'bg-black text-white',
+};
+
+const ChannelIcon = ({ channel }: { channel: string | null }) => {
+  const c = (channel ?? '').toLowerCase();
+  if (c.includes('instagram')) return <Instagram className="w-3.5 h-3.5 text-[#C13584]" />;
+  if (c.includes('tiktok')) return <Music2 className="w-3.5 h-3.5 text-foreground" />;
+  if (c.includes('youtube')) return <Youtube className="w-3.5 h-3.5 text-[#FF0000]" />;
+  if (c.includes('twitter') || c === 'x') return <Twitter className="w-3.5 h-3.5 text-foreground/70" />;
+  return <Globe className="w-3.5 h-3.5 text-muted-foreground" />;
+};
+
+const relativeDate = (v: string | null | undefined) => {
+  if (!v) return '—';
+  const d = new Date(v);
+  if (isNaN(d.getTime())) return '—';
+  return formatDistanceToNowStrict(d, { addSuffix: true });
+};
+
+const InboundCreatorsSection = ({ clientId, accent }: { clientId: string; accent: string }) => {
+  const [summary, setSummary] = useState<LaunchmetricsSummary | null>(null);
+  const [creators, setCreators] = useState<InboundCreator[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [mivSort, setMivSort] = useState<'asc' | 'desc'>('desc');
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    (async () => {
+      try {
+        const { data: sumData, error: sumErr } = await supabase.rpc('launchmetrics_social_summary', { p_client_id: clientId });
+        if (sumErr) throw sumErr;
+        const s: LaunchmetricsSummary | null = Array.isArray(sumData) ? sumData[0] ?? null : sumData ?? null;
+        if (cancelled) return;
+        setSummary(s);
+        if (!s || !Number(s.total_mentions)) {
+          setCreators([]);
+          setLoading(false);
+          return;
+        }
+        const { data: cData, error: cErr } = await supabase.rpc('launchmetrics_inbound_creators', { p_client_id: clientId, p_limit: 25 });
+        if (cErr) throw cErr;
+        if (cancelled) return;
+        setCreators(Array.isArray(cData) ? (cData as InboundCreator[]) : []);
+        setLoading(false);
+      } catch (e) {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : 'Failed to load inbound creators');
+          setLoading(false);
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [clientId]);
+
+  if (loading) {
+    return (
+      <section className="animate-fade-in">
+        <div className="flex items-baseline justify-between mb-4">
+          <span className="section-label">Inbound Creator Discovery</span>
+        </div>
+        <Skeleton className="h-[240px] w-full" />
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="animate-fade-in">
+        <div className="flex items-baseline justify-between mb-4">
+          <span className="section-label">Inbound Creator Discovery</span>
+        </div>
+        <p className="text-xs text-destructive py-6 text-center">{error}</p>
+      </section>
+    );
+  }
+
+  // Hide the entire section when the client has no tracked mentions.
+  if (!summary || !Number(summary.total_mentions)) return null;
+
+  const sorted = [...creators].sort((a, b) =>
+    mivSort === 'desc' ? (b.total_miv ?? 0) - (a.total_miv ?? 0) : (a.total_miv ?? 0) - (b.total_miv ?? 0)
+  );
+
+  const stats = [
+    { label: 'Inbound Creators', value: formatCount(summary.inbound_creators) },
+    { label: 'Activated in Lefty', value: formatCount(summary.activated_creators) },
+    { label: 'Inbound MIV', value: formatMoney(summary.inbound_miv) },
+  ];
+
+  return (
+    <section className="animate-fade-in">
+      <div className="flex items-baseline justify-between mb-1">
+        <span className="section-label">Inbound Creator Discovery</span>
+      </div>
+      <p className="text-xs text-muted-foreground mb-4">Organic mentions from creators outside your activated campaigns.</p>
+
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        {stats.map(s => (
+          <div key={s.label} className="border border-black/[0.08] bg-white px-4 py-3">
+            <p className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground">{s.label}</p>
+            <p className="font-display text-xl font-bold tabular-nums" style={s.label === 'Inbound MIV' ? { color: accent } : undefined}>
+              {s.value}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      <div className="overflow-x-auto border border-black/[0.08] bg-white">
+        <table className="w-full text-sm min-w-[720px]">
+          <thead>
+            <tr className="border-b border-black/10">
+              <th className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground py-2 px-4 text-left">Creator</th>
+              <th className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground py-2 px-4 text-left">Type</th>
+              <th className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground py-2 px-4 text-left">Channel</th>
+              <th className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground py-2 px-4 text-right">Mentions</th>
+              <th className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground py-2 px-4 text-right">Total Reach</th>
+              <th className="py-2 px-4 text-right">
+                <button
+                  onClick={() => setMivSort(d => (d === 'desc' ? 'asc' : 'desc'))}
+                  className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground inline-flex items-center gap-1 cursor-pointer select-none hover:text-foreground"
+                >
+                  Total MIV
+                  {mivSort === 'desc' ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
+                </button>
+              </th>
+              <th className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground py-2 px-4 text-right">Latest Post</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sorted.length === 0 && (
+              <tr><td colSpan={7} className="py-6 text-center text-xs text-muted-foreground">No inbound creators found.</td></tr>
+            )}
+            {sorted.map((c, i) => {
+              const vt = (c.voice_type ?? '').toLowerCase();
+              const vtLabel = c.voice_type
+                ? c.voice_type.charAt(0).toUpperCase() + c.voice_type.slice(1).toLowerCase()
+                : '—';
+              return (
+                <tr key={`${c.voice_name ?? 'creator'}-${i}`} className="border-b border-black/5 hover:bg-black/[0.02] transition-colors">
+                  <td className="py-3 px-4 max-w-[220px]">
+                    <p className="font-medium text-foreground truncate">{c.voice_name ?? '—'}</p>
+                    <p className="text-[11px] text-muted-foreground truncate">{c.source_handle ?? ''}</p>
+                  </td>
+                  <td className="py-3 px-4">
+                    <span className={`font-mono-ui text-[9px] tracking-[0.12em] uppercase px-1.5 py-0.5 whitespace-nowrap ${VOICE_TYPE_STYLES[vt] ?? 'bg-black/[0.06] text-foreground/70'}`}>
+                      {vtLabel}
+                    </span>
+                    {c.in_lefty && (
+                      <span className="ml-1.5 font-mono-ui text-[8px] tracking-[0.12em] uppercase px-1.5 py-0.5 border border-black/15 text-muted-foreground whitespace-nowrap">
+                        Also in Lefty
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-3 px-4">
+                    <span title={c.channel ?? undefined} className="inline-flex"><ChannelIcon channel={c.channel} /></span>
+                  </td>
+                  <td className="py-3 px-4 text-right tabular-nums text-foreground/80">{c.mentions ?? 0}</td>
+                  <td className="py-3 px-4 text-right tabular-nums text-foreground/80">{formatReach(c.total_reach)}</td>
+                  <td className="py-3 px-4 text-right font-display font-bold tabular-nums" style={{ color: GOLD }}>
+                    {formatMoney(c.total_miv)}
+                  </td>
+                  <td className="py-3 px-4 text-right text-[11px] text-muted-foreground whitespace-nowrap">{relativeDate(c.latest_post)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+};
+
 export default InfluencerIntelligenceTab;
