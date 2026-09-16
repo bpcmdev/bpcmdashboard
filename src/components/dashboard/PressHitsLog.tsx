@@ -47,6 +47,7 @@ interface Placement {
   category: string | null;
   product_name: string | null;
   print_clipping_url: string | null;
+  print_cover_url: string | null;
   holding_company: string | null;
 }
 
