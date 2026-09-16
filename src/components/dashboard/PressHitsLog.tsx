@@ -131,7 +131,7 @@ function PlacementForm({ values, onChange }: PlacementFormProps) {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         <Field label="Outlet Tier">
           <Select value={values.outletTier} onValueChange={v => onChange('outletTier', v)}>
-            <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="text-xs"><SelectValue placeholder="Unrated" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="1">Tier 1</SelectItem>
               <SelectItem value="2">Tier 2</SelectItem>
