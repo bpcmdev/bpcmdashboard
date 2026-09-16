@@ -276,7 +276,7 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
 
     let query = supabase
       .from('placements')
-      .select('id, headline, url, outlet_name, outlet_tier, outlet_umv, author_name, published_at, placement_type, placed_by, sentiment, ad_value, impressions, tags, dismissed')
+      .select('id, headline, url, outlet_name, outlet_tier, outlet_umv, author_name, published_at, placement_type, placed_by, sentiment, ad_value, impressions, tags, dismissed, category, product_name, print_clipping_url, holding_company')
       .order('published_at', { ascending: false });
 
     if (!isAllTime) {
