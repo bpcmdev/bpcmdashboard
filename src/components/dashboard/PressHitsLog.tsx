@@ -47,6 +47,7 @@ interface Placement {
   category: string | null;
   product_name: string | null;
   print_clipping_url: string | null;
+  print_cover_url: string | null;
   holding_company: string | null;
 }
 
@@ -256,6 +257,7 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
   const [dismissedPlacements, setDismissedPlacements] = useState<Placement[]>([]);
   const [loading, setLoading] = useState(true);
   const [previewItem, setPreviewItem] = useState<Placement | null>(null);
+  const [clipping, setClipping] = useState<{ url: string; cover: string | null; title: string } | null>(null);
   const [activePage, setActivePage] = useState(1);
   const [dismissedPage, setDismissedPage] = useState(1);
   const [activeCount, setActiveCount] = useState(0);
@@ -292,7 +294,7 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
       const from = (page - 1) * PAGE_SIZE;
       let q = supabase
         .from('placements')
-        .select('id, headline, url, outlet_name, outlet_tier, outlet_umv, author_name, published_at, placement_type, placed_by, sentiment, ad_value, impressions, tags, dismissed, category, product_name, print_clipping_url, holding_company', { count: 'exact' })
+        .select('id, headline, url, outlet_name, outlet_tier, outlet_umv, author_name, published_at, placement_type, placed_by, sentiment, ad_value, impressions, tags, dismissed, category, product_name, print_clipping_url, print_cover_url, holding_company', { count: 'exact' })
         .order('published_at', { ascending: false })
         .eq('dismissed', dismissedFlag)
         .range(from, from + PAGE_SIZE - 1);
@@ -466,7 +468,21 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
         onClick={() => setPreviewItem(p)}
       >
         <span className="text-[13px] font-bold w-28 md:w-36 shrink-0 truncate text-foreground">{p.outlet_name}</span>
-        <span className="text-xs text-primary flex-1 text-left truncate">{p.headline}</span>
+        <span className="text-xs text-primary flex-1 text-left truncate">
+          {p.url ? (
+            <a
+              href={p.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="hover:underline"
+            >
+              {p.headline}
+            </a>
+          ) : (
+            p.headline
+          )}
+        </span>
         <span className="text-[11px] text-muted-foreground shrink-0 hidden md:inline">
           {p.published_at ? formatDate(p.published_at) : ''}
         </span>
@@ -474,17 +490,15 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
           {formatReach(p.outlet_umv)}
         </span>
         {p.print_clipping_url && (
-          <a
-            href={ensureHttps(p.print_clipping_url)}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setClipping({ url: p.print_clipping_url!, cover: p.print_cover_url ?? null, title: p.headline }); }}
             className="shrink-0 hidden md:inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground underline underline-offset-2"
             title="View scanned print clipping"
           >
             <ImageIcon className="w-3 h-3" />
             View clipping
-          </a>
+          </button>
         )}
         {isAdmin ? (
           <div className="shrink-0 hidden md:block w-28" onClick={(e) => e.stopPropagation()}>
@@ -727,6 +741,27 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
               {editSubmitting ? 'Saving…' : 'Save Changes'}
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Print clipping lightbox */}
+      <Dialog open={!!clipping} onOpenChange={(open) => !open && setClipping(null)}>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-sm leading-snug pr-6">{clipping?.title}</DialogTitle>
+          </DialogHeader>
+          {clipping && (
+            <div className={cn('grid gap-3', clipping.cover ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1')}>
+              {clipping.cover && (
+                <a href={ensureHttps(clipping.cover)} target="_blank" rel="noopener noreferrer">
+                  <img src={ensureHttps(clipping.cover)} alt="Print cover" className="w-full border border-border rounded" loading="lazy" />
+                </a>
+              )}
+              <a href={ensureHttps(clipping.url)} target="_blank" rel="noopener noreferrer">
+                <img src={ensureHttps(clipping.url)} alt="Scanned print clipping" className="w-full border border-border rounded" loading="lazy" />
+              </a>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

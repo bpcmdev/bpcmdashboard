@@ -3,6 +3,8 @@ import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
 import { useAdmin } from '@/hooks/useAdmin';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Image as ImageIcon } from 'lucide-react';
 import DeleteEntryButton from './DeleteEntryButton';
 import EditPlacementDialog from './EditPlacementDialog';
 import PaginationControls from './PaginationControls';
@@ -24,6 +26,8 @@ interface RawPlacement {
   placement_type: string;
   placed_by: string;
   tags: string[];
+  print_clipping_url: string | null;
+  print_cover_url: string | null;
 }
 
 interface TopPlacementsProps {
@@ -71,6 +75,7 @@ const TopPlacements = ({ searchText = '', tierFilter = 'all', sentimentFilter = 
   const [error, setError] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [clipping, setClipping] = useState<{ url: string; cover: string | null; title: string } | null>(null);
   const { refreshKey, activeClientId, effectiveFrom, effectiveTo, isAllTime } = useWeek();
   const { isAdmin } = useAdmin();
 
@@ -141,6 +146,8 @@ const TopPlacements = ({ searchText = '', tierFilter = 'all', sentimentFilter = 
         placement_type: row.placement_type ?? '',
         placed_by: row.placed_by ?? '',
         tags: Array.isArray(row.tags) ? row.tags : [],
+        print_clipping_url: row.print_clipping_url ?? null,
+        print_cover_url: row.print_cover_url ?? null,
       })));
       setLoading(false);
     };
@@ -190,7 +197,26 @@ const TopPlacements = ({ searchText = '', tierFilter = 'all', sentimentFilter = 
           return (
             <div key={p.id} className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 py-3">
               <span className="text-sm font-bold md:w-36 shrink-0">{p.outlet_name}</span>
-              <span className="text-sm flex-1 text-foreground/80">{p.headline}</span>
+              <span className="text-sm flex-1 text-foreground/80">
+                {p.url ? (
+                  <a href={p.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                    {p.headline}
+                  </a>
+                ) : (
+                  p.headline
+                )}
+                {p.print_clipping_url && (
+                  <button
+                    type="button"
+                    onClick={() => setClipping({ url: p.print_clipping_url!, cover: p.print_cover_url, title: p.headline })}
+                    className="ml-2 inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground underline underline-offset-2 align-middle"
+                    title="View scanned print clipping"
+                  >
+                    <ImageIcon className="w-3 h-3" />
+                    View clipping
+                  </button>
+                )}
+              </span>
               <div className="flex flex-wrap items-center gap-2 shrink-0 text-[11px] text-muted-foreground">
                 <span>{p.published_at ? formatDate(p.published_at) : ''}</span>
                 <span className="hidden md:inline">·</span>
@@ -215,6 +241,27 @@ const TopPlacements = ({ searchText = '', tierFilter = 'all', sentimentFilter = 
         Showing {from + 1}–{Math.min(to + 1, totalCount)} of {totalCount}
       </p>
       <PaginationControls currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+
+      {/* Print clipping lightbox */}
+      <Dialog open={!!clipping} onOpenChange={(open) => !open && setClipping(null)}>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-sm leading-snug pr-6">{clipping?.title}</DialogTitle>
+          </DialogHeader>
+          {clipping && (
+            <div className={`grid gap-3 ${clipping.cover ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
+              {clipping.cover && (
+                <a href={clipping.cover} target="_blank" rel="noopener noreferrer">
+                  <img src={clipping.cover} alt="Print cover" className="w-full border border-border rounded" loading="lazy" />
+                </a>
+              )}
+              <a href={clipping.url} target="_blank" rel="noopener noreferrer">
+                <img src={clipping.url} alt="Scanned print clipping" className="w-full border border-border rounded" loading="lazy" />
+              </a>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
