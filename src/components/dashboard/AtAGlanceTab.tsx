@@ -380,7 +380,7 @@ function MentionAction({
         />
         <button
           onClick={() => void send()}
-          disabled={!userId || sending}
+          disabled={!target || sending}
           className="w-full bg-foreground text-background py-1.5 text-[10px] font-mono-ui tracking-[0.14em] uppercase disabled:opacity-40"
         >
           {sending ? 'Sending…' : 'Send'}
@@ -539,7 +539,7 @@ function AssetTracker({
                     <div className="flex items-center justify-end gap-1">
                       <StatusAction row={r} onChange={s => onStatusChange(r, s)} />
                       <TagEditor row={r} availableTags={availableTags} onToggle={(t, a) => onTagToggle(r, t, a)} />
-                      <MentionAction users={clientUsers} onSend={(uid, msg) => onMention(r, uid, msg)} />
+                      <MentionAction targets={mentionTargets} onSend={(target, msg) => onMention(r, target, msg)} />
                     </div>
                   </td>
                 )}
