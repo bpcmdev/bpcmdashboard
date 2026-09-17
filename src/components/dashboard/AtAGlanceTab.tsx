@@ -1080,6 +1080,24 @@ const AtAGlanceTab = () => {
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState(false);
   const [assetKey, setAssetKey] = useState(0);
+  const [clientUsers, setClientUsers] = useState<ClientUser[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
+  }, []);
+
+  useEffect(() => {
+    if (!clientId) { setClientUsers([]); return; }
+    let cancelled = false;
+    supabase.rpc('client_users', { p_client_id: clientId }).then(({ data, error: err }) => {
+      if (cancelled) return;
+      if (err) { console.error('[AtAGlance] client_users failed', err); return; }
+      setClientUsers((data as ClientUser[]) ?? []);
+    });
+    return () => { cancelled = true; };
+  }, [clientId]);
 
   const reloadAssets = useCallback(async () => {
     if (!clientId) return;
@@ -1093,6 +1111,27 @@ const AtAGlanceTab = () => {
     if (err) { console.error('[AtAGlance] status update failed', err); return; }
     await reloadAssets();
   }, [reloadAssets]);
+
+  const handleOwnerChange = useCallback(async (row: AssetRow, userId: string | null) => {
+    const { error: err } = await supabase.from('asset_tracker').update({ owner_id: userId }).eq('id', row.id);
+    if (err) { console.error('[AtAGlance] owner update failed', err); return; }
+    await reloadAssets();
+  }, [reloadAssets]);
+
+  const handleMention = useCallback(async (row: AssetRow, userId: string, message: string) => {
+    if (!clientId) return false;
+    const { error: err } = await supabase.rpc('create_mention', {
+      p_client_id: clientId,
+      p_recipient_id: userId,
+      p_actor_id: currentUserId,
+      p_entity_type: 'asset',
+      p_entity_id: row.id,
+      p_entity_title: row.launch,
+      p_message: message || null,
+    });
+    if (err) { console.error('[AtAGlance] create_mention failed', err); return false; }
+    return true;
+  }, [clientId, currentUserId]);
 
   const handleTagToggle = useCallback(async (row: AssetRow, tag: TagRow, active: boolean) => {
     if (active) {
