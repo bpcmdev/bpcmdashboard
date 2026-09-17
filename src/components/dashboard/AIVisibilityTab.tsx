@@ -1408,6 +1408,7 @@ const ConversationIntelligence = ({
           </div>
         </>
       )}
+      </CollapsibleSection>
 
       <ChatDetailModal
         selected={selected}
