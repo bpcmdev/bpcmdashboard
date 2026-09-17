@@ -2774,12 +2774,13 @@ const PullQuotesSection = ({
 
   return (
     <section className="bg-card border border-border rounded-sm p-6">
-      <div className="mb-5">
-        <h3 className="font-display text-xl tracking-tight text-foreground">What AI Is Saying About You</h3>
-        <p className="text-[11px] font-mono tracking-[0.1em] uppercase text-muted-foreground mt-1">
-          Verbatim mentions from AI assistants
-        </p>
-      </div>
+      <CollapsibleSection
+        title="What AI Is Saying About You"
+        defaultOpen
+        titleClassName="font-display text-xl tracking-tight text-foreground"
+        subtitle="Verbatim mentions from AI assistants"
+        contentClassName="pt-5"
+      >
 
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
