@@ -618,6 +618,21 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
                         targets={mentionTargets}
                         onSend={(target, message) => handleMention(doc, target, message)}
                       />
+
+                      {isAdmin && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={() => setDeleteDoc(doc)}
+                              aria-label="Delete"
+                              className="p-1.5 border border-border hover:bg-muted text-destructive"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>Delete</TooltipContent>
+                        </Tooltip>
+                      )}
                     </div>
                     </TooltipProvider>
                   </div>
@@ -634,6 +649,35 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
           </div>
         </div>
       </DataStateWrapper>
+      )}
+
+      {isAdmin && deleteDoc && (
+        <Dialog open onOpenChange={(v) => { if (!v) setDeleteDoc(null); }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="font-mono-ui text-[11px] tracking-[0.16em] uppercase">Delete document</DialogTitle>
+            </DialogHeader>
+            <p className="text-xs leading-relaxed">
+              Delete '{deleteDoc.title}'? This removes it from Document Bank. An admin can restore it from Archived Documents.
+            </p>
+            <div className="flex justify-end gap-2 pt-1">
+              <button
+                onClick={() => setDeleteDoc(null)}
+                className="px-3 py-1.5 text-[10px] font-mono-ui tracking-[0.12em] uppercase border border-border hover:bg-muted"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => void handleArchive(deleteDoc)}
+                className="px-3 py-1.5 text-[10px] font-mono-ui font-semibold tracking-[0.12em] uppercase text-background"
+                style={{ backgroundColor: accent }}
+              >
+                Delete
+              </button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {isAdmin && (
         <UploadDialog
