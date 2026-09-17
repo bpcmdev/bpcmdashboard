@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FileText, FileSpreadsheet, FileImage, FileVideo, FileArchive, File as FileIcon,
-  Download, Upload, AtSign, Tags, Search, Check, X, Loader2, Trash2, UserPlus, Mail, Archive, Undo2,
+  Download, Upload, AtSign, Tags, Search, Check, X, Loader2, Trash2, UserPlus, Mail, Archive, Undo2, Eye,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -11,6 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Switch } from '@/components/ui/switch';
 import DataStateWrapper from './DataStateWrapper';
 import PaginationControls from './PaginationControls';
+import DocumentPreviewDialog from './DocumentPreviewDialog';
 
 /* ── Types ─────────────────────────────────────────────────────── */
 interface TagRow {
@@ -159,6 +160,7 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
   const [archivedDocs, setArchivedDocs] = useState<DocRow[]>([]);
   const [archivedLoading, setArchivedLoading] = useState(false);
   const [archivedError, setArchivedError] = useState(false);
+  const [previewDoc, setPreviewDoc] = useState<DocRow | null>(null);
   const [deleteDoc, setDeleteDoc] = useState<DocRow | null>(null);
 
   useEffect(() => {
