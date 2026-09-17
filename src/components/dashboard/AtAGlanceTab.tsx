@@ -139,19 +139,31 @@ function GlanceCardTile({ card, index = 0 }: { card: GlanceCard; index?: number 
    Asset Tracker
    ───────────────────────────────────────────────────────────────── */
 type SortKey = 'launch' | 'target_date' | 'status' | 'owner_name';
-const statusOrder: Record<string, number> = { urgent: 0, due_soon: 1, received: 2 };
+const statusOrder: Record<string, number> = { urgent: 0, due_soon: 1, received: 2, in_review: 3, draft: 4, approved: 5, final: 6 };
 
-const STATUS_OPTIONS = ['urgent', 'due_soon', 'received'] as const;
+const STATUS_OPTIONS = ['urgent', 'due_soon', 'received', 'draft', 'in_review', 'approved', 'final'] as const;
+
+const NEUTRAL_CHIP = 'bg-muted text-muted-foreground border border-border';
+
+const titleCase = (s: string) =>
+  (s || '')
+    .replace(/[_-]+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, c => c.toUpperCase()) || 'Unknown';
 
 const statusMap: Record<string, { label: string; cls: string }> = {
-  received: { label: 'Received',   cls: 'bg-[hsl(145_63%_42%/0.15)] text-[hsl(145_63%_28%)] border border-[hsl(145_63%_42%/0.35)]' },
-  due_soon: { label: 'Due soon',   cls: 'bg-[hsl(42_85%_50%/0.18)]  text-[hsl(36_75%_30%)] border border-[hsl(42_85%_50%/0.4)]' },
-  urgent:   { label: 'Urgent',     cls: 'bg-[hsl(0_75%_55%/0.15)]   text-[hsl(0_75%_38%)]  border border-[hsl(0_75%_55%/0.35)]' },
+  received:  { label: 'Received',  cls: 'bg-[hsl(145_63%_42%/0.15)] text-[hsl(145_63%_28%)] border border-[hsl(145_63%_42%/0.35)]' },
+  due_soon:  { label: 'Due soon',  cls: 'bg-[hsl(42_85%_50%/0.18)]  text-[hsl(36_75%_30%)] border border-[hsl(42_85%_50%/0.4)]' },
+  urgent:    { label: 'Urgent',    cls: 'bg-[hsl(0_75%_55%/0.15)]   text-[hsl(0_75%_38%)]  border border-[hsl(0_75%_55%/0.35)]' },
+  draft:     { label: 'Draft',     cls: NEUTRAL_CHIP },
+  in_review: { label: 'In Review', cls: 'bg-[hsl(42_85%_50%/0.18)]  text-[hsl(36_75%_30%)] border border-[hsl(42_85%_50%/0.4)]' },
+  approved:  { label: 'Approved',  cls: 'bg-[hsl(145_63%_42%/0.15)] text-[hsl(145_63%_28%)] border border-[hsl(145_63%_42%/0.35)]' },
+  final:     { label: 'Final',     cls: 'bg-foreground text-background border border-foreground' },
 };
 
 function StatusChip({ status }: { status: string }) {
-  const m = statusMap[status] ?? { label: status, cls: 'bg-muted text-muted-foreground border border-border' };
-  return <span className={`inline-block px-2 py-0.5 text-[10px] font-mono-ui tracking-wider uppercase rounded-full ${m.cls}`}>{m.label}</span>;
+  const m = statusMap[(status || '').toLowerCase()] ?? { label: titleCase(status), cls: NEUTRAL_CHIP };
+  return <span className={`inline-block px-2 py-0.5 text-[10px] font-mono-ui tracking-wider uppercase rounded-full whitespace-nowrap ${m.cls}`}>{m.label}</span>;
 }
 
 function StatusEditor({ row, onChange }: { row: AssetRow; onChange: (status: string) => void }) {
@@ -163,7 +175,7 @@ function StatusEditor({ row, onChange }: { row: AssetRow; onChange: (status: str
           <StatusChip status={row.status} />
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-40 p-1">
+      <PopoverContent align="start" className="w-44 p-1">
         {STATUS_OPTIONS.map(s => (
           <button
             key={s}
@@ -190,6 +202,38 @@ function TagPill({ tag }: { tag: TagRow }) {
   );
 }
 
+const iconBtn = 'p-1.5 border border-black/10 rounded hover:bg-black/5 transition-colors';
+
+const userLabel = (u: ClientUser) => u.full_name || u.name || u.email || 'User';
+
+/* ── Row actions ───────────────────────────────────────────────── */
+function StatusAction({ row, onChange }: { row: AssetRow; onChange: (status: string) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <button aria-label="Change status" className={iconBtn}><Check className="w-3.5 h-3.5" /></button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent>Change status</TooltipContent>
+      </Tooltip>
+      <PopoverContent align="end" className="w-44 p-1">
+        {STATUS_OPTIONS.map(s => (
+          <button
+            key={s}
+            onClick={() => { setOpen(false); if (s !== row.status) onChange(s); }}
+            className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-black/5 text-left"
+          >
+            <StatusChip status={s} />
+          </button>
+        ))}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function TagEditor({
   row,
   availableTags,
@@ -198,11 +242,14 @@ function TagEditor({
   const active = new Set((row.tags ?? []).map(t => t.id));
   return (
     <Popover>
-      <PopoverTrigger asChild>
-        <button className="font-mono-ui text-[10px] tracking-[0.14em] uppercase text-muted-foreground hover:text-foreground">
-          Edit
-        </button>
-      </PopoverTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <button aria-label="Edit tags" className={iconBtn}><Tags className="w-3.5 h-3.5" /></button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent>Edit tags</TooltipContent>
+      </Tooltip>
       <PopoverContent align="end" className="w-56 p-2">
         <div className="font-mono-ui text-[10px] tracking-[0.14em] uppercase text-muted-foreground mb-2">Tags</div>
         {availableTags.length === 0 ? (
@@ -226,18 +273,132 @@ function TagEditor({
   );
 }
 
+function MentionAction({
+  users,
+  onSend,
+}: { users: ClientUser[]; onSend: (userId: string, message: string) => Promise<boolean> }) {
+  const [open, setOpen] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
+
+  const send = async () => {
+    if (!userId) return;
+    setSending(true);
+    const ok = await onSend(userId, message.trim());
+    setSending(false);
+    if (ok) { setOpen(false); setUserId(null); setMessage(''); }
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <button aria-label="Mention someone" className={iconBtn}><AtSign className="w-3.5 h-3.5" /></button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent>Mention someone</TooltipContent>
+      </Tooltip>
+      <PopoverContent align="end" className="w-64 p-2 space-y-2">
+        <div className="font-mono-ui text-[10px] tracking-[0.14em] uppercase text-muted-foreground">Mention</div>
+        <div className="max-h-40 overflow-y-auto border border-black/10">
+          {users.length === 0 ? (
+            <div className="px-2 py-2 text-xs text-muted-foreground">No users found</div>
+          ) : users.map(u => (
+            <button
+              key={u.id}
+              onClick={() => setUserId(u.id)}
+              className={`w-full flex items-center justify-between px-2 py-1.5 text-xs text-left hover:bg-black/5 ${userId === u.id ? 'bg-black/5 font-semibold' : ''}`}
+            >
+              <span className="truncate">{userLabel(u)}</span>
+              {userId === u.id && <Check className="w-3 h-3" />}
+            </button>
+          ))}
+        </div>
+        <div className="text-[10px] leading-snug text-muted-foreground">
+          Dashboard users only — use Manage recipients in Document Bank to notify external addresses.
+        </div>
+        <textarea
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          placeholder="Add a note…"
+          rows={2}
+          className="w-full border border-black/10 bg-transparent p-2 text-xs outline-none"
+        />
+        <button
+          onClick={() => void send()}
+          disabled={!userId || sending}
+          className="w-full bg-foreground text-background py-1.5 text-[10px] font-mono-ui tracking-[0.14em] uppercase disabled:opacity-40"
+        >
+          {sending ? 'Sending…' : 'Send'}
+        </button>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function OwnerPicker({
+  row,
+  users,
+  onAssign,
+}: { row: AssetRow; users: ClientUser[]; onAssign: (userId: string | null) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <button className="flex items-center gap-1.5 text-left hover:opacity-70 transition-opacity">
+              <User className="w-3 h-3 opacity-50" />
+              {row.owner_name || <span className="text-muted-foreground">Unassigned</span>}
+            </button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent>Assign owner</TooltipContent>
+      </Tooltip>
+      <PopoverContent align="start" className="w-56 p-1 max-h-60 overflow-y-auto">
+        {users.length === 0 ? (
+          <div className="px-2 py-2 text-xs text-muted-foreground">No users found</div>
+        ) : users.map(u => (
+          <button
+            key={u.id}
+            onClick={() => { setOpen(false); onAssign(u.id); }}
+            className="w-full flex items-center justify-between px-2 py-1.5 text-xs text-left rounded hover:bg-black/5"
+          >
+            <span className="truncate">{userLabel(u)}</span>
+            {row.owner_name === userLabel(u) && <Check className="w-3 h-3" />}
+          </button>
+        ))}
+        <button
+          onClick={() => { setOpen(false); onAssign(null); }}
+          className="w-full px-2 py-1.5 mt-1 border-t border-black/10 text-[10px] font-mono-ui tracking-wider uppercase text-muted-foreground hover:text-foreground"
+        >
+          Unassign
+        </button>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function AssetTracker({
   rows,
   isAdmin,
   availableTags,
+  clientUsers,
   onStatusChange,
   onTagToggle,
+  onMention,
+  onOwnerChange,
 }: {
   rows: AssetRow[];
   isAdmin: boolean;
   availableTags: TagRow[];
+  clientUsers: ClientUser[];
   onStatusChange: (row: AssetRow, status: string) => void;
   onTagToggle: (row: AssetRow, tag: TagRow, active: boolean) => void;
+  onMention: (row: AssetRow, userId: string, message: string) => Promise<boolean>;
+  onOwnerChange: (row: AssetRow, userId: string | null) => void;
 }) {
   const [sortKey, setSortKey] = useState<SortKey>('target_date');
   const [asc, setAsc] = useState(true);
@@ -275,6 +436,7 @@ function AssetTracker({
   if (!rows.length) return <PlaceholderCard />;
 
   return (
+    <TooltipProvider delayDuration={150}>
     <div className="bg-white border border-black/10 rounded-lg overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -307,7 +469,9 @@ function AssetTracker({
                     : <StatusChip status={r.status} />}
                 </td>
                 <td className="px-4 py-3 text-foreground/80">
-                  {r.owner_name || <span className="text-muted-foreground">Unassigned</span>}
+                  {isAdmin
+                    ? <OwnerPicker row={r} users={clientUsers} onAssign={(uid) => onOwnerChange(r, uid)} />
+                    : (r.owner_name || <span className="text-muted-foreground">Unassigned</span>)}
                 </td>
                 <td className="px-4 py-3">
                   {(r.tags ?? []).length > 0 && (
@@ -319,8 +483,12 @@ function AssetTracker({
                 <td className="px-4 py-3 text-foreground/80">{r.assets_needed || '—'}</td>
                 <td className="px-4 py-3 text-foreground/60 text-[13px]">{r.notes || '—'}</td>
                 {isAdmin && (
-                  <td className="px-4 py-3 text-right">
-                    <TagEditor row={r} availableTags={availableTags} onToggle={(t, a) => onTagToggle(r, t, a)} />
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-1">
+                      <StatusAction row={r} onChange={s => onStatusChange(r, s)} />
+                      <TagEditor row={r} availableTags={availableTags} onToggle={(t, a) => onTagToggle(r, t, a)} />
+                      <MentionAction users={clientUsers} onSend={(uid, msg) => onMention(r, uid, msg)} />
+                    </div>
                   </td>
                 )}
               </tr>
@@ -329,6 +497,168 @@ function AssetTracker({
         </table>
       </div>
     </div>
+    </TooltipProvider>
+  );
+}
+
+/* ── Add asset dialog ──────────────────────────────────────────── */
+function AddAssetDialog({
+  open, onOpenChange, clientId, clientTags, clientUsers, onCreated,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  clientId: string | null;
+  clientTags: TagRow[];
+  clientUsers: ClientUser[];
+  onCreated: () => void;
+}) {
+  const [launch, setLaunch] = useState('');
+  const [targetDate, setTargetDate] = useState('');
+  const [status, setStatus] = useState<string>('due_soon');
+  const [ownerId, setOwnerId] = useState<string>('');
+  const [assetsNeeded, setAssetsNeeded] = useState('');
+  const [notes, setNotes] = useState('');
+  const [tagIds, setTagIds] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const reset = () => {
+    setLaunch(''); setTargetDate(''); setStatus('due_soon'); setOwnerId('');
+    setAssetsNeeded(''); setNotes(''); setTagIds([]); setBusy(false); setErr(null);
+  };
+
+  const submit = async () => {
+    if (!clientId || !launch.trim()) return;
+    setBusy(true); setErr(null);
+    const ins = await supabase.from('asset_tracker').insert({
+      client_id: clientId,
+      launch: launch.trim(),
+      target_date: targetDate || null,
+      status,
+      owner_id: ownerId || null,
+      assets_needed: assetsNeeded.trim() || null,
+      notes: notes.trim() || null,
+    }).select('id').maybeSingle();
+
+    if (ins.error || !ins.data?.id) {
+      setErr(`Could not save that asset: ${ins.error?.message ?? 'unknown error'}`);
+      setBusy(false);
+      return;
+    }
+
+    if (tagIds.length) {
+      const tagRes = await supabase.from('entity_tags').insert(
+        tagIds.map(tag_id => ({
+          client_id: clientId,
+          entity_type: 'asset',
+          entity_id: ins.data!.id,
+          tag_id,
+        }))
+      );
+      if (tagRes.error) {
+        setErr(`Asset saved, but tags failed: ${tagRes.error.message}`);
+        setBusy(false);
+        onCreated();
+        return;
+      }
+    }
+
+    onCreated();
+    reset();
+    onOpenChange(false);
+  };
+
+  const fieldLabel = 'font-mono-ui text-[10px] tracking-[0.14em] uppercase text-muted-foreground mb-1';
+  const fieldCls = 'w-full border border-black/10 bg-transparent p-2 text-xs outline-none';
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!busy) { onOpenChange(v); if (!v) reset(); } }}>
+      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="font-mono-ui text-[11px] tracking-[0.16em] uppercase">Add asset</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-3">
+          <div>
+            <div className={fieldLabel}>Launch</div>
+            <input value={launch} onChange={(e) => setLaunch(e.target.value)} maxLength={200} className={fieldCls} />
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <div>
+              <div className={fieldLabel}>Target date</div>
+              <input type="date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} className={fieldCls} />
+            </div>
+            <div>
+              <div className={fieldLabel}>Status</div>
+              <select value={status} onChange={(e) => setStatus(e.target.value)} className={fieldCls}>
+                {STATUS_OPTIONS.map(s => (
+                  <option key={s} value={s}>{statusMap[s]?.label ?? titleCase(s)}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <div className={fieldLabel}>Owner</div>
+            <select value={ownerId} onChange={(e) => setOwnerId(e.target.value)} className={fieldCls}>
+              <option value="">Unassigned</option>
+              {clientUsers.map(u => <option key={u.id} value={u.id}>{userLabel(u)}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <div className={fieldLabel}>Assets needed</div>
+            <textarea value={assetsNeeded} onChange={(e) => setAssetsNeeded(e.target.value)} rows={2} className={fieldCls} />
+          </div>
+
+          <div>
+            <div className={fieldLabel}>Notes</div>
+            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className={fieldCls} />
+          </div>
+
+          <div>
+            <div className={fieldLabel}>Tags</div>
+            {clientTags.length === 0 ? (
+              <div className="text-xs text-muted-foreground">No tags available</div>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {clientTags.map(t => {
+                  const active = tagIds.includes(t.id);
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => setTagIds(prev => active ? prev.filter(id => id !== t.id) : [...prev, t.id])}
+                      className={active ? 'opacity-100' : 'opacity-45 hover:opacity-80'}
+                    >
+                      <TagPill tag={t} />
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {err && <div className="border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive">{err}</div>}
+
+          <div className="flex justify-end gap-2 pt-1">
+            <button
+              onClick={() => { if (!busy) { onOpenChange(false); reset(); } }}
+              className="px-3 py-1.5 text-[10px] font-mono-ui tracking-[0.12em] uppercase border border-black/10 hover:bg-black/5"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => void submit()}
+              disabled={busy || !launch.trim()}
+              className="px-3 py-1.5 text-[10px] font-mono-ui font-semibold tracking-[0.12em] uppercase bg-foreground text-background disabled:opacity-40"
+            >
+              {busy ? 'Saving…' : 'Add asset'}
+            </button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
