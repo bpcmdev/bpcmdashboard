@@ -438,6 +438,7 @@ function AssetTracker({
   isAdmin,
   availableTags,
   clientUsers,
+  mentionTargets,
   onStatusChange,
   onTagToggle,
   onMention,
@@ -447,9 +448,10 @@ function AssetTracker({
   isAdmin: boolean;
   availableTags: TagRow[];
   clientUsers: ClientUser[];
+  mentionTargets: MentionTarget[];
   onStatusChange: (row: AssetRow, status: string) => void;
   onTagToggle: (row: AssetRow, tag: TagRow, active: boolean) => void;
-  onMention: (row: AssetRow, userId: string, message: string) => Promise<boolean>;
+  onMention: (row: AssetRow, target: MentionTarget, message: string) => Promise<boolean>;
   onOwnerChange: (row: AssetRow, userId: string | null) => void;
 }) {
   const [sortKey, setSortKey] = useState<SortKey>('target_date');
