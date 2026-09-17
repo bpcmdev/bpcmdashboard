@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FileText, FileSpreadsheet, FileImage, FileVideo, FileArchive, File as FileIcon,
-  Download, Upload, AtSign, Tags, Search, Check, X, Loader2,
+  Download, Upload, AtSign, Tags, Search, Check, X, Loader2, Trash2, UserPlus, Mail,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAdmin } from '@/hooks/useAdmin';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Switch } from '@/components/ui/switch';
 import DataStateWrapper from './DataStateWrapper';
 import PaginationControls from './PaginationControls';
 
@@ -142,6 +144,7 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
   const [clientUsers, setClientUsers] = useState<ClientUser[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [recipientsOpen, setRecipientsOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
@@ -262,14 +265,23 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
           <h2 className="font-display text-xl md:text-2xl font-bold mt-1">Shared files</h2>
         </div>
         {isAdmin && (
-          <button
-            onClick={() => setUploadOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono-ui font-semibold tracking-[0.12em] uppercase text-background"
-            style={{ backgroundColor: accent }}
-          >
-            <Upload className="w-3 h-3" />
-            Upload document
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setRecipientsOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono-ui font-semibold tracking-[0.12em] uppercase border border-border hover:bg-muted"
+            >
+              <UserPlus className="w-3 h-3" />
+              Manage recipients
+            </button>
+            <button
+              onClick={() => setUploadOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono-ui font-semibold tracking-[0.12em] uppercase text-background"
+              style={{ backgroundColor: accent }}
+            >
+              <Upload className="w-3 h-3" />
+              Upload document
+            </button>
+          </div>
         )}
       </div>
 
@@ -380,21 +392,32 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
                     </div>
 
                     {/* Row actions */}
+                    <TooltipProvider delayDuration={150}>
                     <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        onClick={() => handleDownload(doc)}
-                        title="Download"
-                        className="p-1.5 border border-border hover:bg-muted"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                      </button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={() => handleDownload(doc)}
+                            aria-label="Download"
+                            className="p-1.5 border border-border hover:bg-muted"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>Download</TooltipContent>
+                      </Tooltip>
 
                       <Popover>
-                        <PopoverTrigger asChild>
-                          <button title="Change status" className="p-1.5 border border-border hover:bg-muted">
-                            <Check className="w-3.5 h-3.5" />
-                          </button>
-                        </PopoverTrigger>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <PopoverTrigger asChild>
+                              <button aria-label="Change status" className="p-1.5 border border-border hover:bg-muted">
+                                <Check className="w-3.5 h-3.5" />
+                              </button>
+                            </PopoverTrigger>
+                          </TooltipTrigger>
+                          <TooltipContent>Change status</TooltipContent>
+                        </Tooltip>
                         <PopoverContent align="end" className="w-44 p-1">
                           {STATUS_VALUES.map(s => (
                             <button
@@ -409,11 +432,16 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
                       </Popover>
 
                       <Popover>
-                        <PopoverTrigger asChild>
-                          <button title="Edit tags" className="p-1.5 border border-border hover:bg-muted">
-                            <Tags className="w-3.5 h-3.5" />
-                          </button>
-                        </PopoverTrigger>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <PopoverTrigger asChild>
+                              <button aria-label="Edit tags" className="p-1.5 border border-border hover:bg-muted">
+                                <Tags className="w-3.5 h-3.5" />
+                              </button>
+                            </PopoverTrigger>
+                          </TooltipTrigger>
+                          <TooltipContent>Edit tags</TooltipContent>
+                        </Tooltip>
                         <PopoverContent align="end" className="w-56 p-1 max-h-72 overflow-y-auto">
                           {clientTags.length === 0 ? (
                             <div className="px-2 py-2 text-xs text-muted-foreground">No tags yet</div>
@@ -438,6 +466,7 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
                         onSend={(userId, message) => handleMention(doc, userId, message)}
                       />
                     </div>
+                    </TooltipProvider>
                   </div>
                 );
               })}
@@ -462,6 +491,15 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
           clientTags={clientTags}
           accent={accent}
           onUploaded={() => { setPage(0); void fetchDocs(); }}
+        />
+      )}
+
+      {isAdmin && (
+        <RecipientsDialog
+          open={recipientsOpen}
+          onOpenChange={setRecipientsOpen}
+          clientId={clientId}
+          accent={accent}
         />
       )}
     </div>
@@ -508,6 +546,9 @@ function MentionButton({
               {userId === u.id && <Check className="w-3 h-3" />}
             </button>
           ))}
+        </div>
+        <div className="text-[10px] leading-snug text-muted-foreground">
+          Dashboard users only — use Manage recipients to notify external addresses.
         </div>
         <textarea
           value={message}
