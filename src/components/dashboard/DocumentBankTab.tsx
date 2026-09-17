@@ -666,6 +666,8 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
       </DataStateWrapper>
       )}
 
+      <DocumentPreviewDialog doc={previewDoc} accent={accent} onClose={() => setPreviewDoc(null)} />
+
       {isAdmin && deleteDoc && (
         <Dialog open onOpenChange={(v) => { if (!v) setDeleteDoc(null); }}>
           <DialogContent className="sm:max-w-md">
