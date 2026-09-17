@@ -518,21 +518,53 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
 
 /* ── Mention picker ────────────────────────────────────────────── */
 function MentionButton({
-  users,
+  targets,
   onSend,
-}: { users: ClientUser[]; onSend: (userId: string, message: string) => Promise<boolean> }) {
+}: { targets: MentionTarget[]; onSend: (target: MentionTarget, message: string) => Promise<boolean> }) {
   const [open, setOpen] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
+  const [target, setTarget] = useState<MentionTarget | null>(null);
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
 
+  const userTargets = targets.filter(t => t.target_kind === 'user');
+  const externalTargets = targets.filter(t => t.target_kind === 'external');
+  const keyOf = (t: MentionTarget) => `${t.target_kind}:${t.user_id ?? t.email ?? ''}`;
+  const selectedKey = target ? keyOf(target) : null;
+
   const send = async () => {
-    if (!userId) return;
+    if (!target) return;
     setSending(true);
-    const ok = await onSend(userId, message.trim());
+    const ok = await onSend(target, message.trim());
     setSending(false);
-    if (ok) { setOpen(false); setMessage(''); setUserId(null); }
+    if (ok) { setOpen(false); setMessage(''); setTarget(null); }
   };
+
+  const groupHeader = (label: string) => (
+    <div className="px-2 pt-2 pb-1 font-mono-ui text-[9px] tracking-[0.14em] uppercase text-muted-foreground">
+      {label}
+    </div>
+  );
+
+  const renderTarget = (t: MentionTarget) => (
+    <button
+      key={keyOf(t)}
+      onClick={() => setTarget(t)}
+      className={`w-full flex items-center justify-between gap-2 px-2 py-1.5 text-xs text-left hover:bg-muted ${selectedKey === keyOf(t) ? 'bg-muted font-semibold' : ''}`}
+    >
+      <span className="min-w-0">
+        <span className="truncate flex items-center gap-1.5">
+          {targetLabel(t)}
+          {t.target_kind === 'external' && (
+            <span className="shrink-0 border border-border px-1 text-[8px] font-mono-ui tracking-[0.1em] uppercase text-muted-foreground">external</span>
+          )}
+        </span>
+        {t.target_kind === 'external' && t.email && (
+          <span className="block truncate text-[10px] text-muted-foreground">{t.email}</span>
+        )}
+      </span>
+      {selectedKey === keyOf(t) && <Check className="w-3 h-3 shrink-0" />}
+    </button>
+  );
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -544,21 +576,27 @@ function MentionButton({
       <PopoverContent align="end" className="w-64 p-2 space-y-2">
         <div className="font-mono-ui text-[10px] tracking-[0.14em] uppercase text-muted-foreground">Mention</div>
         <div className="max-h-40 overflow-y-auto border border-border">
-          {users.length === 0 ? (
-            <div className="px-2 py-2 text-xs text-muted-foreground">No users found</div>
-          ) : users.map(u => (
-            <button
-              key={u.id}
-              onClick={() => setUserId(u.id)}
-              className={`w-full flex items-center justify-between px-2 py-1.5 text-xs text-left hover:bg-muted ${userId === u.id ? 'bg-muted font-semibold' : ''}`}
-            >
-              <span className="truncate">{userLabel(u)}</span>
-              {userId === u.id && <Check className="w-3 h-3" />}
-            </button>
-          ))}
+          {targets.length === 0 ? (
+            <div className="px-2 py-2 text-xs text-muted-foreground">No recipients found</div>
+          ) : (
+            <>
+              {userTargets.length > 0 && (
+                <>
+                  {groupHeader('Dashboard users')}
+                  {userTargets.map(renderTarget)}
+                </>
+              )}
+              {externalTargets.length > 0 && (
+                <>
+                  {groupHeader('External recipients')}
+                  {externalTargets.map(renderTarget)}
+                </>
+              )}
+            </>
+          )}
         </div>
         <div className="text-[10px] leading-snug text-muted-foreground">
-          Dashboard users only — use Manage recipients to notify external addresses.
+          External recipients receive an email but can't open the dashboard.
         </div>
         <textarea
           value={message}
@@ -569,7 +607,7 @@ function MentionButton({
         />
         <button
           onClick={() => void send()}
-          disabled={!userId || sending}
+          disabled={!target || sending}
           className="w-full bg-foreground text-background py-1.5 text-[10px] font-mono-ui tracking-[0.14em] uppercase disabled:opacity-40"
         >
           {sending ? 'Sending…' : 'Send'}
