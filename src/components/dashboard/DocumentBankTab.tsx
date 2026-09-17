@@ -552,6 +552,19 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <button
+                            onClick={() => setPreviewDoc(doc)}
+                            aria-label="Preview"
+                            className="p-1.5 border border-border hover:bg-muted"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>Preview</TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
                             onClick={() => handleDownload(doc)}
                             aria-label="Download"
                             className="p-1.5 border border-border hover:bg-muted"
