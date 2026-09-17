@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FileText, FileSpreadsheet, FileImage, FileVideo, FileArchive, File as FileIcon,
-  Download, Upload, AtSign, Tags, Search, Check, X, Loader2, Trash2, UserPlus, Mail,
+  Download, Upload, AtSign, Tags, Search, Check, X, Loader2, Trash2, UserPlus, Mail, Archive, Undo2,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -155,6 +155,12 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
   const [recipientsOpen, setRecipientsOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
+  const [showArchived, setShowArchived] = useState(false);
+  const [archivedDocs, setArchivedDocs] = useState<DocRow[]>([]);
+  const [archivedLoading, setArchivedLoading] = useState(false);
+  const [archivedError, setArchivedError] = useState(false);
+  const [deleteDoc, setDeleteDoc] = useState<DocRow | null>(null);
+
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(searchText.trim()), 300);
     return () => clearTimeout(t);
@@ -205,6 +211,45 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
   }, [clientId, debouncedSearch, selectedTagIds, selectedStatus, page]);
 
   useEffect(() => { void fetchDocs(); }, [fetchDocs]);
+
+  const fetchArchived = useCallback(async () => {
+    if (!clientId) return;
+    setArchivedLoading(true);
+    const { data, error: err } = await supabase
+      .from('documents')
+      .select('id, title, description, storage_path, file_name, file_size, mime_type, status, version, created_at, updated_at')
+      .eq('client_id', clientId)
+      .eq('archived', true)
+      .order('updated_at', { ascending: false });
+    if (err) {
+      setArchivedError(true);
+      setArchivedDocs([]);
+      setArchivedLoading(false);
+      return;
+    }
+    const rows = (data as DocRow[]) ?? [];
+    const tagMap = new Map<string, TagRow[]>();
+    if (rows.length) {
+      const { data: etags } = await supabase
+        .from('entity_tags')
+        .select('entity_id, tag_id')
+        .eq('client_id', clientId)
+        .eq('entity_type', 'document')
+        .in('entity_id', rows.map(r => r.id));
+      for (const et of (etags as { entity_id: string; tag_id: string }[]) ?? []) {
+        const tag = clientTags.find(t => t.id === et.tag_id);
+        if (!tag) continue;
+        const list = tagMap.get(et.entity_id) ?? [];
+        list.push(tag);
+        tagMap.set(et.entity_id, list);
+      }
+    }
+    setArchivedError(false);
+    setArchivedDocs(rows.map(r => ({ ...r, tags: tagMap.get(r.id) ?? [] })));
+    setArchivedLoading(false);
+  }, [clientId, clientTags]);
+
+  useEffect(() => { if (showArchived) void fetchArchived(); }, [showArchived, fetchArchived]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -266,6 +311,27 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
     return true;
   };
 
+  const handleArchive = async (doc: DocRow) => {
+    const { error } = await supabase.from('documents').update({ archived: true }).eq('id', doc.id);
+    setDeleteDoc(null);
+    if (error) {
+      setNotice('Could not delete that document.');
+    } else {
+      setNotice(`"${doc.title}" deleted. An admin can restore it from Archived Documents.`);
+      if (showArchived) void fetchArchived(); else void fetchDocs();
+    }
+  };
+
+  const handleRestore = async (doc: DocRow) => {
+    const { error } = await supabase.from('documents').update({ archived: false }).eq('id', doc.id);
+    if (error) {
+      setNotice('Could not restore that document.');
+    } else {
+      setArchivedDocs(prev => prev.filter(d => d.id !== doc.id));
+      setNotice(`"${doc.title}" restored to Document Bank. The file was kept, so it's fully usable right away.`);
+    }
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-4">
       {/* Header row */}
@@ -276,6 +342,14 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
         </div>
         {isAdmin && (
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowArchived(v => !v)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono-ui font-semibold tracking-[0.12em] uppercase border border-border ${showArchived ? 'text-background' : 'hover:bg-muted'}`}
+              style={showArchived ? { backgroundColor: accent, borderColor: 'transparent' } : undefined}
+            >
+              <Archive className="w-3 h-3" />
+              {showArchived ? 'Hide archived' : 'View archived'}
+            </button>
             <button
               onClick={() => setRecipientsOpen(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono-ui font-semibold tracking-[0.12em] uppercase border border-border hover:bg-muted"
