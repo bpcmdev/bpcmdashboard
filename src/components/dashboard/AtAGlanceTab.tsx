@@ -30,6 +30,13 @@ interface ClientUser {
   name?: string | null;
 }
 
+interface MentionTarget {
+  target_kind: 'user' | 'external';
+  user_id: string | null;
+  email: string | null;
+  display_name: string | null;
+}
+
 interface TagRow {
   id: string;
   name: string;

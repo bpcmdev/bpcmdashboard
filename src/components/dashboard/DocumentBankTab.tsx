@@ -888,6 +888,9 @@ function RecipientsDialog({
           These people receive email notifications for this client without needing a dashboard login.
           Dashboard users are notified automatically.
         </p>
+        <p className="text-[11px] text-muted-foreground leading-relaxed -mt-2">
+          Mentions: when off, this person still receives status-change emails but won't appear in the mention picker.
+        </p>
 
         {err && <div className="border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive">{err}</div>}
 
