@@ -2847,6 +2847,7 @@ const PullQuotesSection = ({
           )}
         </>
       )}
+      </CollapsibleSection>
 
     </section>
   );
@@ -2961,11 +2962,18 @@ const AIVisibilityTab = () => {
         isAdmin={isAdmin}
       />
       {activeClientId && (
-        <BrandPerceptionSection
-          clientId={activeClientId}
-          clientName={clientName}
-          accent={clientColor || '#1B2B8A'}
-        />
+        <CollapsibleSection
+          title="Brand Perception"
+          defaultOpen
+          titleClassName="font-display text-xl tracking-tight text-foreground"
+          contentClassName="pt-4"
+        >
+          <BrandPerceptionSection
+            clientId={activeClientId}
+            clientName={clientName}
+            accent={clientColor || '#1B2B8A'}
+          />
+        </CollapsibleSection>
       )}
       <BrandAttributesSection clientId={activeClientId} accent={clientColor || '#1B2B8A'} clientName={clientName || 'your brand'} />
       <KpiCards rows={kpis} loading={loading.kpis} />
