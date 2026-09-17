@@ -1225,13 +1225,34 @@ const AtAGlanceTab = () => {
 
         {/* Asset Tracker */}
         <section>
-          <SectionHeader eyebrow="02 — Awaiting from Client" title="Asset Tracker" />
+          <div className="flex items-end justify-between gap-4">
+            <SectionHeader eyebrow="02 — Awaiting from Client" title="Asset Tracker" />
+            {isAdmin && (
+              <button
+                onClick={() => setAddOpen(true)}
+                className="mb-4 flex items-center gap-1.5 px-3 py-1.5 border border-black/10 rounded text-[10px] font-mono-ui tracking-[0.12em] uppercase hover:bg-black/5 transition-colors"
+              >
+                <Plus className="w-3 h-3" /> Add asset
+              </button>
+            )}
+          </div>
           <AssetTracker
             rows={assets}
             isAdmin={isAdmin}
             availableTags={clientTags}
+            clientUsers={clientUsers}
             onStatusChange={handleStatusChange}
             onTagToggle={handleTagToggle}
+            onMention={handleMention}
+            onOwnerChange={handleOwnerChange}
+          />
+          <AddAssetDialog
+            open={addOpen}
+            onOpenChange={setAddOpen}
+            clientId={clientId}
+            clientTags={clientTags}
+            clientUsers={clientUsers}
+            onCreated={() => { void reloadAssets(); setAssetKey(k => k + 1); }}
           />
         </section>
 
