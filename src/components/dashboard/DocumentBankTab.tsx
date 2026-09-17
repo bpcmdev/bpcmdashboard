@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FileText, FileSpreadsheet, FileImage, FileVideo, FileArchive, File as FileIcon,
-  Download, Upload, AtSign, Tags, Search, Check, X, Loader2, Trash2, UserPlus, Mail, Archive, Undo2,
+  Download, Upload, AtSign, Tags, Search, Check, X, Loader2, Trash2, UserPlus, Mail, Archive, Undo2, Eye,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -11,6 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Switch } from '@/components/ui/switch';
 import DataStateWrapper from './DataStateWrapper';
 import PaginationControls from './PaginationControls';
+import DocumentPreviewDialog from './DocumentPreviewDialog';
 
 /* ── Types ─────────────────────────────────────────────────────── */
 interface TagRow {
@@ -159,6 +160,7 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
   const [archivedDocs, setArchivedDocs] = useState<DocRow[]>([]);
   const [archivedLoading, setArchivedLoading] = useState(false);
   const [archivedError, setArchivedError] = useState(false);
+  const [previewDoc, setPreviewDoc] = useState<DocRow | null>(null);
   const [deleteDoc, setDeleteDoc] = useState<DocRow | null>(null);
 
   useEffect(() => {
@@ -550,6 +552,19 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <button
+                            onClick={() => setPreviewDoc(doc)}
+                            aria-label="Preview"
+                            className="p-1.5 border border-border hover:bg-muted"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>Preview</TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
                             onClick={() => handleDownload(doc)}
                             aria-label="Download"
                             className="p-1.5 border border-border hover:bg-muted"
@@ -650,6 +665,8 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
         </div>
       </DataStateWrapper>
       )}
+
+      <DocumentPreviewDialog doc={previewDoc} accent={accent} onClose={() => setPreviewDoc(null)} />
 
       {isAdmin && deleteDoc && (
         <Dialog open onOpenChange={(v) => { if (!v) setDeleteDoc(null); }}>
