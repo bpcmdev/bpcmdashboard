@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ChevronDown, ChevronUp, ImageIcon } from 'lucide-react';
+import { ExternalLink, ImageIcon, RefreshCw } from 'lucide-react';
 import {
   LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid,
 } from 'recharts';
@@ -7,9 +7,11 @@ import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
 import { useAdmin } from '@/hooks/useAdmin';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { format, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { formatReach } from '@/lib/format';
 
 // ---------- AI Shopping Visibility ----------
 interface ShoppingProductRow {
@@ -23,8 +25,8 @@ interface ShoppingProductRow {
   mention_count: number | null;
   win_count: number | null;
   price_range: Record<string, { min: number; max: number }> | null;
-  categories: string[] | null;
-  captured_date: string | null;
+  categories: (string | ProductCategory)[] | null;
+  captured_date?: string | null;
 }
 
 const fmtPriceRange = (pr: ShoppingProductRow['price_range']): string | null => {
@@ -54,13 +56,6 @@ const positionTierDetail = (p: number | null | undefined): string => {
   if (p <= 5) return `Top 5 · #${n}`;
   if (p <= 10) return `Featured · #${n}`;
   return `Present · #${n}`;
-};
-
-const rankTier = (idx: number, expanded: boolean): { label: string; tone: 'top' | 'high' | 'growing' | 'active' } => {
-  if (idx === 0) return { label: 'Most Visible', tone: 'top' };
-  if (idx <= 2) return { label: 'High Visibility', tone: 'high' };
-  if (idx <= 7) return { label: 'Growing Presence', tone: 'growing' };
-  return { label: 'Active', tone: 'active' };
 };
 
 interface ProductCategory { id?: string | null; name?: string | null; path?: string | null }
@@ -626,209 +621,318 @@ const GeoSummaryCard = ({ clientId }: { clientId: string | null }) => {
 };
 
 
-// ---------- Leaderboard ----------
-interface CategoryOption { category_id: string; name: string }
+// ---------- Product cards ----------
+interface ProductCardCompetitor { name?: string | null; visibility?: number | null }
+interface ProductCardMerchant { name?: string | null; share?: number | null; share_of_voice?: number | null }
+interface ProductCardQuery { query?: string | null; query_text?: string | null }
+interface ProductCardPress {
+  outlet?: string | null;
+  outlet_name?: string | null;
+  headline?: string | null;
+  title?: string | null;
+  url?: string | null;
+  date?: string | null;
+  published_at?: string | null;
+  reach?: number | null;
+}
+interface ProductCardRow extends ShoppingProductRow {
+  first_seen: string | null;
+  competitors: ProductCardCompetitor[] | null;
+  press_count: number | null;
+  recent_press: ProductCardPress[] | null;
+  merchants: ProductCardMerchant[] | null;
+  top_queries: (ProductCardQuery | string)[] | null;
+  insight_headline: string | null;
+  insight_text: string | null;
+}
 
-const AiShoppingVisibilitySection = ({ clientId, accent }: { clientId: string | null; accent: string }) => {
-  const [rows, setRows] = useState<ShoppingProductRow[]>([]);
-  const [categories, setCategories] = useState<CategoryOption[]>([]);
-  const [activeCategory, setActiveCategory] = useState<string>('all');
-  const [loading, setLoading] = useState(true);
-  const [expanded, setExpanded] = useState(false);
-  const [selected, setSelected] = useState<ShoppingProductRow | null>(null);
+type ProductSort = 'newest' | 'visible';
 
-  useEffect(() => {
-    if (!clientId) { setLoading(false); return; }
-    let cancelled = false;
-    setLoading(true);
-    setActiveCategory('all');
-    (async () => {
-      try {
-        const [prodRes, cfgRes] = await Promise.all([
-          supabase.rpc('peec_products_latest', { p_client_id: clientId, p_limit: 24 }),
-          supabase.from('peec_client_config').select('project_id').eq('client_id', clientId).maybeSingle(),
-        ]);
-        if (prodRes.error) throw prodRes.error;
-        const list: ShoppingProductRow[] = Array.isArray(prodRes.data) ? prodRes.data : [];
-        list.sort((a, b) => (b.visibility ?? 0) - (a.visibility ?? 0));
-        if (!cancelled) setRows(list);
+const asPercent = (value: number | null | undefined, decimals = 0): string => {
+  if (value == null || !Number.isFinite(Number(value))) return '—';
+  const n = Number(value);
+  return `${(Math.abs(n) <= 1 ? n * 100 : n).toFixed(decimals)}%`;
+};
 
-        const projectId = (cfgRes.data as { project_id?: string } | null)?.project_id;
-        if (projectId) {
-          const { data: cats } = await supabase
-            .from('peec_product_categories')
-            .select('category_id, name')
-            .eq('project_id', projectId);
-          if (!cancelled) setCategories((cats as CategoryOption[]) ?? []);
-        } else if (!cancelled) {
-          setCategories([]);
-        }
-      } catch (e) {
-        console.error('[AiShoppingVisibility] load failed', e);
-        if (!cancelled) { setRows([]); setCategories([]); }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [clientId]);
+const percentNumber = (value: number | null | undefined): number => {
+  if (value == null || !Number.isFinite(Number(value))) return 0;
+  const n = Number(value);
+  return Math.abs(n) <= 1 ? n * 100 : n;
+};
 
-  // Only categories that actually appear in the current product set.
-  const presentCategories = useMemo(() => {
-    const used = new Set<string>();
-    rows.forEach((r) => (r.categories ?? []).forEach((c) => c && used.add(String(c))));
-    const seenNames = new Set<string>();
-    return categories
-      .filter((c) => c.category_id && c.name && used.has(String(c.category_id)))
-      .filter((c) => {
-        if (seenNames.has(c.name)) return false;
-        seenNames.add(c.name);
-        return true;
-      })
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [rows, categories]);
-
-  const filteredRows = useMemo(() => {
-    if (activeCategory === 'all') return rows;
-    return rows.filter((r) => (r.categories ?? []).some((c) => String(c) === activeCategory));
-  }, [rows, activeCategory]);
-
-  useEffect(() => { setExpanded(false); }, [activeCategory]);
-
-  if (loading) {
-    return (
-      <section className="border border-border bg-card p-6">
-        <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground mb-4">AI Shopping Visibility</h3>
-        <div className="space-y-2">
-          {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
-        </div>
-      </section>
-    );
+const objectArray = <T,>(value: unknown): T[] => {
+  if (Array.isArray(value)) return value as T[];
+  if (typeof value === 'string') {
+    try {
+      const parsed: unknown = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed as T[] : [];
+    } catch {
+      return [];
+    }
   }
+  return [];
+};
 
-  if (!rows.length) return null;
+const categoryNames = (categories: ProductCardRow['categories']): string[] => objectArray<string | ProductCategory>(categories)
+  .map((category) => typeof category === 'string' ? category : category?.name ?? '')
+  .filter((name): name is string => Boolean(name));
 
-  const captured = rows.find(r => r.captured_date)?.captured_date;
-  const capturedLabel = captured && !isNaN(new Date(captured).getTime())
-    ? new Date(captured).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    : null;
-
-  const visible = expanded ? filteredRows : filteredRows.slice(0, 8);
-  const hasMore = filteredRows.length > 8;
+const ProductCard = ({ product, accent, onOpen }: { product: ProductCardRow; accent: string; onOpen: () => void }) => {
+  const categories = categoryNames(product.categories);
+  const competitors = objectArray<ProductCardCompetitor>(product.competitors)
+    .sort((a, b) => percentNumber(b.visibility) - percentNumber(a.visibility))
+    .slice(0, 5);
+  const merchants = objectArray<ProductCardMerchant>(product.merchants).slice(0, 3);
+  const queries = objectArray<ProductCardQuery | string>(product.top_queries).slice(0, 4);
+  const press = objectArray<ProductCardPress>(product.recent_press).slice(0, 3);
+  const firstSeen = product.first_seen ? new Date(product.first_seen) : null;
+  const isNew = firstSeen != null && !Number.isNaN(firstSeen.getTime()) && Date.now() - firstSeen.getTime() <= 45 * 24 * 60 * 60 * 1000;
+  const ranking = [
+    { name: product.name, visibility: product.visibility, own: true },
+    ...competitors.map((competitor) => ({ name: competitor.name || 'Unnamed competitor', visibility: competitor.visibility, own: false })),
+  ];
+  const maxVisibility = Math.max(...ranking.map((item) => percentNumber(item.visibility)), 1);
+  const initial = (product.name?.trim()?.[0] ?? '?').toUpperCase();
 
   return (
-    <section className="border border-border bg-card">
-      <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-border">
-        <div>
-          <div className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground">AI Shopping Visibility</div>
-          <div className="text-sm text-foreground mt-1">Which of your products AI recommends most</div>
+    <article
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onOpen();
+        }
+      }}
+      className="group flex min-h-full cursor-pointer flex-col overflow-hidden border border-border bg-card transition-all duration-200 hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-[0_12px_30px_-18px_hsl(var(--foreground)/0.28)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      <div className="p-5 sm:p-6 space-y-5">
+        <div className="flex gap-4">
+          <div className="h-24 w-24 shrink-0 overflow-hidden rounded bg-muted flex items-center justify-center">
+            {product.image_url ? (
+              <img src={product.image_url} alt="" className="h-full w-full object-contain" loading="lazy" />
+            ) : (
+              <div className="flex flex-col items-center gap-1 text-muted-foreground">
+                <ImageIcon className="h-6 w-6" />
+                <span className="font-display text-lg font-semibold">{initial}</span>
+              </div>
+            )}
+          </div>
+          <div className="min-w-0 flex-1 pt-1">
+            <h3 className="font-display text-xl font-bold leading-tight text-foreground line-clamp-2">{product.name}</h3>
+            {product.brand && <p className="mt-1 text-sm text-muted-foreground truncate">{product.brand}</p>}
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {categories.map((name) => (
+                <span key={name} className="rounded-sm border border-border bg-muted/40 px-2 py-0.5 text-[10px] font-mono-ui uppercase text-muted-foreground">
+                  {name}
+                </span>
+              ))}
+              {isNew && (
+                <span className="rounded-sm border border-emerald-600/30 bg-emerald-600/10 px-2 py-0.5 text-[10px] font-mono-ui font-semibold uppercase text-emerald-700">
+                  New
+                </span>
+              )}
+            </div>
+          </div>
         </div>
-        {capturedLabel && (
-          <div className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">
-            As of {capturedLabel}
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 border-y border-border divide-x divide-y sm:divide-y-0 divide-border">
+          {[
+            { label: 'Visibility', value: asPercent(product.visibility, 1) },
+            { label: 'Mentions', value: Number(product.mention_count ?? 0).toLocaleString() },
+            { label: 'Avg position', value: product.avg_position == null ? '—' : `Top ${Number(product.avg_position).toFixed(1)}` },
+            { label: 'AI #1 wins', value: Number(product.win_count ?? 0).toLocaleString() },
+          ].map((stat) => (
+            <div key={stat.label} className="min-w-0 px-2 py-3 text-center bg-muted/15">
+              <div className="font-display text-xl font-bold tabular-nums leading-none text-foreground">{stat.value}</div>
+              <div className="mt-1.5 text-[9px] font-mono-ui uppercase text-muted-foreground">{stat.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {competitors.length > 0 && (
+          <div>
+            <div className="mb-2.5 text-[10px] font-bold tracking-[0.15em] uppercase text-muted-foreground">Competitive SOV</div>
+            <div className="space-y-2">
+              {ranking.map((item, index) => {
+                const value = percentNumber(item.visibility);
+                return (
+                  <div key={`${item.name}-${index}`} className="grid grid-cols-[minmax(90px,0.85fr)_1.4fr_42px] items-center gap-2">
+                    <span className={cn('truncate text-[11px]', item.own ? 'font-bold' : 'text-muted-foreground')} style={item.own ? { color: accent } : undefined}>{item.name}</span>
+                    <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                      <div className="h-full rounded-full" style={{ width: `${Math.max(2, value / maxVisibility * 100)}%`, backgroundColor: item.own ? accent : 'hsl(var(--muted-foreground) / 0.45)' }} />
+                    </div>
+                    <span className={cn('text-right text-[10px] font-mono tabular-nums', item.own ? 'font-bold' : 'text-muted-foreground')} style={item.own ? { color: accent } : undefined}>{asPercent(item.visibility)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {merchants.length > 0 && (
+          <div>
+            <div className="mb-2 text-[10px] font-bold tracking-[0.15em] uppercase text-muted-foreground">Where AI sends shoppers</div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {merchants.map((merchant, index) => (
+                <div key={`${merchant.name}-${index}`} className="flex items-center justify-between gap-2 border border-border bg-muted/20 px-2.5 py-2">
+                  <span className="truncate text-[11px] font-medium text-foreground">{merchant.name || 'Unknown merchant'}</span>
+                  <span className="shrink-0 text-[10px] font-mono tabular-nums text-muted-foreground">{asPercent(merchant.share ?? merchant.share_of_voice)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {queries.length > 0 && (
+          <div>
+            <div className="mb-2 text-[10px] font-bold tracking-[0.15em] uppercase text-muted-foreground">Top queries</div>
+            <div className="flex flex-wrap gap-1.5">
+              {queries.map((query, index) => {
+                const label = typeof query === 'string' ? query : query.query ?? query.query_text;
+                return label ? <span key={`${label}-${index}`} className="rounded-full border border-border px-2.5 py-1 text-[11px] text-foreground">{label}</span> : null;
+              })}
+            </div>
+          </div>
+        )}
+
+        {Number(product.press_count ?? 0) > 0 && press.length > 0 && (
+          <div>
+            <div className="mb-2 flex items-center gap-2 text-[10px] font-bold tracking-[0.15em] uppercase text-muted-foreground">
+              Recent press
+              <span className="rounded-full bg-muted px-1.5 py-0.5 font-mono tabular-nums text-foreground">{Number(product.press_count).toLocaleString()}</span>
+            </div>
+            <div className="divide-y divide-border border-y border-border">
+              {press.map((item, index) => {
+                const date = item.date ?? item.published_at;
+                const dateLabel = date && !Number.isNaN(new Date(date).getTime()) ? format(new Date(date), 'MMM d') : null;
+                return (
+                  <div key={`${item.url}-${index}`} className="grid grid-cols-[1fr_auto] gap-3 py-2.5">
+                    <div className="min-w-0">
+                      <div className="text-[11px] font-bold text-foreground truncate">{item.outlet ?? item.outlet_name ?? 'Press'}</div>
+                      {item.url ? (
+                        <a href={item.url} target="_blank" rel="noopener noreferrer" onClick={(event) => event.stopPropagation()} className="mt-0.5 inline-flex max-w-full items-center gap-1 text-xs text-foreground hover:underline">
+                          <span className="truncate">{item.headline ?? item.title ?? 'View coverage'}</span><ExternalLink className="h-3 w-3 shrink-0" />
+                        </a>
+                      ) : (
+                        <div className="mt-0.5 truncate text-xs text-foreground">{item.headline ?? item.title ?? 'Untitled coverage'}</div>
+                      )}
+                    </div>
+                    <div className="text-right text-[10px] font-mono text-muted-foreground">
+                      {dateLabel && <div>{dateLabel}</div>}
+                      {item.reach != null && <div className="mt-0.5">{formatReach(item.reach)} reach</div>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
 
-      {presentCategories.length > 0 && (
-        <div className="px-6 py-3 border-b border-border">
-          <div className="flex flex-wrap gap-1.5">
-            {[{ category_id: 'all', name: 'All' }, ...presentCategories].map((c) => {
-              const active = activeCategory === c.category_id;
-              return (
-                <button
-                  key={c.category_id}
-                  type="button"
-                  onClick={() => setActiveCategory(c.category_id)}
-                  className={cn(
-                    'px-3 py-1 rounded-full border text-[10px] font-semibold tracking-[0.1em] uppercase transition-colors',
-                    active ? 'text-white border-transparent' : 'text-muted-foreground border-border hover:text-foreground'
-                  )}
-                  style={active ? { backgroundColor: accent } : undefined}
-                >
-                  {c.name}
-                </button>
-              );
-            })}
+      {product.insight_text && (
+        <div className="mt-auto border-l-4 border-emerald-600 bg-emerald-600/10 px-5 py-4">
+          {product.insight_headline && <div className="text-sm font-bold text-foreground">{product.insight_headline}</div>}
+          <p className={cn('text-xs leading-relaxed text-muted-foreground', product.insight_headline && 'mt-1')}>{product.insight_text}</p>
+        </div>
+      )}
+    </article>
+  );
+};
+
+const ProductCardsSection = ({ clientId, accent }: { clientId: string | null; accent: string }) => {
+  const { isAdmin } = useAdmin();
+  const [rows, setRows] = useState<ProductCardRow[]>([]);
+  const [sort, setSort] = useState<ProductSort>('newest');
+  const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [selected, setSelected] = useState<ProductCardRow | null>(null);
+
+  const load = async () => {
+    if (!clientId) { setRows([]); setLoading(false); return; }
+    const { data, error } = await supabase.rpc('peec_product_cards', { p_client_id: clientId, p_limit: 12 });
+    if (error) {
+      console.error('[ProductCards] load failed', error);
+      setRows([]);
+      setErrorMsg(error.message || 'Unable to load products.');
+    } else {
+      setRows(Array.isArray(data) ? data as ProductCardRow[] : []);
+      setErrorMsg(null);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    setLoading(true);
+    setSelected(null);
+    void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientId]);
+
+  const sortedRows = useMemo(() => [...rows].sort((a, b) => {
+    const dateA = a.first_seen ? new Date(a.first_seen).getTime() : Number.NaN;
+    const dateB = b.first_seen ? new Date(b.first_seen).getTime() : Number.NaN;
+    if (sort === 'visible') {
+      return Number(b.visibility ?? 0) - Number(a.visibility ?? 0) || (Number.isNaN(dateB) ? 0 : dateB) - (Number.isNaN(dateA) ? 0 : dateA);
+    }
+    if (!Number.isNaN(dateA) && !Number.isNaN(dateB)) return dateB - dateA || Number(b.visibility ?? 0) - Number(a.visibility ?? 0);
+    if (!Number.isNaN(dateA)) return -1;
+    if (!Number.isNaN(dateB)) return 1;
+    return Number(b.visibility ?? 0) - Number(a.visibility ?? 0);
+  }), [rows, sort]);
+
+  const handleGenerate = async () => {
+    if (!clientId) return;
+    setGenerating(true);
+    setErrorMsg(null);
+    const { data, error } = await supabase.functions.invoke('peec-product-card-insights', { body: { client_id: clientId, limit: 12 } });
+    const responseError = data && typeof data === 'object' && 'error' in data ? String((data as { error?: unknown }).error ?? '') : '';
+    if (error || responseError) setErrorMsg(responseError || error?.message || 'Unable to generate insights.');
+    else await load();
+    setGenerating(false);
+  };
+
+  return (
+    <section>
+      <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground">Product Intelligence</div>
+          <h2 className="mt-1 font-display text-2xl font-bold text-foreground">Products surfaced by AI</h2>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex border border-border bg-background p-0.5" aria-label="Sort products">
+            {([['newest', 'Newest'], ['visible', 'Most visible']] as [ProductSort, string][]).map(([value, label]) => (
+              <Button key={value} type="button" variant="ghost" size="sm" onClick={() => setSort(value)} className={cn('h-7 rounded-sm px-3 text-[10px] font-mono-ui uppercase', sort === value && 'bg-foreground text-background hover:bg-foreground hover:text-background')}>
+                {label}
+              </Button>
+            ))}
           </div>
+          {isAdmin && (
+            <Button type="button" variant="outline" size="sm" onClick={handleGenerate} disabled={generating || !clientId} className="h-8 rounded-sm text-[10px] font-mono-ui uppercase">
+              <RefreshCw className={cn('h-3.5 w-3.5', generating && 'animate-spin')} />
+              {generating ? 'Generating…' : 'Generate insights'}
+            </Button>
+          )}
         </div>
-      )}
+      </div>
 
-      <ol className="divide-y divide-border">
-        {visible.map((p, idx) => {
-          const pct = Math.round((p.visibility ?? 0) * 100);
-          const isTop = idx === 0;
-          const initial = (p.name?.trim()?.[0] ?? '?').toUpperCase();
-          const tier = rankTier(idx, expanded);
-          const tierClass =
-            tier.tone === 'top'
-              ? 'text-foreground border-transparent'
-              : 'text-muted-foreground border-border bg-muted/40';
-          const tierStyle =
-            tier.tone === 'top'
-              ? { backgroundColor: `${accent}1A`, color: accent }
-              : undefined;
-          return (
-            <li key={p.product_id}>
-              <button
-                type="button"
-                onClick={() => setSelected(p)}
-                className={`w-full grid grid-cols-[120px_44px_1fr_auto] gap-4 items-center px-6 py-3 text-left hover:bg-muted/40 transition-colors ${isTop ? 'bg-muted/30' : ''}`}
-              >
-                <div>
-                  <span
-                    className={`inline-block px-2 py-0.5 rounded-sm border text-[10px] font-mono font-semibold uppercase tracking-[0.12em] ${tierClass}`}
-                    style={tierStyle}
-                  >
-                    {tier.label}
-                  </span>
-                </div>
-                {p.image_url ? (
-                  <img src={p.image_url} alt="" className="h-10 w-10 rounded object-cover bg-muted" loading="lazy" />
-                ) : (
-                  <div className="h-10 w-10 rounded bg-muted flex items-center justify-center text-sm font-semibold text-muted-foreground">
-                    {initial}
-                  </div>
-                )}
-                <div className="min-w-0">
-                  <div className={`truncate text-sm ${isTop ? 'font-semibold text-foreground' : 'font-medium text-foreground'}`}>
-                    {p.name}
-                  </div>
-                  <div className="mt-1.5 flex items-center gap-3">
-                    <div className="h-1.5 flex-1 max-w-[260px] rounded-full bg-muted overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all"
-                        style={{ width: `${pct}%`, backgroundColor: accent }}
-                      />
-                    </div>
-                    <div className="text-[11px] font-mono tabular-nums text-muted-foreground w-10 text-right">
-                      {pct}%
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4 text-[11px] font-mono uppercase tracking-wider text-muted-foreground whitespace-nowrap">
-                  <span>{positionTier(p.avg_position)}</span>
-                  <span>{(p.mention_count ?? 0).toLocaleString()} mentions</span>
-                </div>
-              </button>
-            </li>
-          );
-        })}
-      </ol>
+      {errorMsg && <div className="mb-4 border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">{errorMsg}</div>}
 
-      {hasMore && (
-        <div className="px-6 py-3 border-t border-border">
-          <button
-            type="button"
-            onClick={() => setExpanded(e => !e)}
-            className="inline-flex items-center gap-1 text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {expanded ? <>Show less <ChevronUp className="h-3 w-3" /></> : <>Show all {filteredRows.length} products <ChevronDown className="h-3 w-3" /></>}
-          </button>
+      {loading ? (
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-[540px] w-full" />)}
         </div>
-      )}
+      ) : sortedRows.length > 0 ? (
+        <div className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-2">
+          {sortedRows.map((product) => <ProductCard key={product.product_id} product={product} accent={accent} onOpen={() => setSelected(product)} />)}
+        </div>
+      ) : !errorMsg ? (
+        <div className="border border-dashed border-border px-6 py-16 text-center text-sm text-muted-foreground">No product intelligence is available yet.</div>
+      ) : null}
 
-      <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
+      <Sheet open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
         <SheetContent side="right" className="w-screen sm:max-w-3xl overflow-y-auto">
           {selected && <ProductDetailSheetBody product={selected} clientId={clientId} accent={accent} />}
         </SheetContent>
@@ -844,7 +948,7 @@ const ProductIntelligenceTab = () => {
 
   return (
     <div className="px-6 py-8 space-y-6 bg-background">
-      <AiShoppingVisibilitySection clientId={activeClientId} accent={accent} />
+      <ProductCardsSection clientId={activeClientId} accent={accent} />
       <GeoSummaryCard clientId={activeClientId} />
     </div>
   );
