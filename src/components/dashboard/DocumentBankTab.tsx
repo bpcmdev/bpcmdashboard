@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FileText, FileSpreadsheet, FileImage, FileVideo, FileArchive, File as FileIcon,
-  Download, Upload, AtSign, Tags, Search, Check, X, Loader2,
+  Download, Upload, AtSign, Tags, Search, Check, X, Loader2, Trash2, UserPlus, Mail,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAdmin } from '@/hooks/useAdmin';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Switch } from '@/components/ui/switch';
 import DataStateWrapper from './DataStateWrapper';
 import PaginationControls from './PaginationControls';
 
@@ -142,6 +144,7 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
   const [clientUsers, setClientUsers] = useState<ClientUser[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [recipientsOpen, setRecipientsOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
@@ -262,14 +265,23 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
           <h2 className="font-display text-xl md:text-2xl font-bold mt-1">Shared files</h2>
         </div>
         {isAdmin && (
-          <button
-            onClick={() => setUploadOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono-ui font-semibold tracking-[0.12em] uppercase text-background"
-            style={{ backgroundColor: accent }}
-          >
-            <Upload className="w-3 h-3" />
-            Upload document
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setRecipientsOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono-ui font-semibold tracking-[0.12em] uppercase border border-border hover:bg-muted"
+            >
+              <UserPlus className="w-3 h-3" />
+              Manage recipients
+            </button>
+            <button
+              onClick={() => setUploadOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono-ui font-semibold tracking-[0.12em] uppercase text-background"
+              style={{ backgroundColor: accent }}
+            >
+              <Upload className="w-3 h-3" />
+              Upload document
+            </button>
+          </div>
         )}
       </div>
 
@@ -380,21 +392,32 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
                     </div>
 
                     {/* Row actions */}
+                    <TooltipProvider delayDuration={150}>
                     <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        onClick={() => handleDownload(doc)}
-                        title="Download"
-                        className="p-1.5 border border-border hover:bg-muted"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                      </button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={() => handleDownload(doc)}
+                            aria-label="Download"
+                            className="p-1.5 border border-border hover:bg-muted"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>Download</TooltipContent>
+                      </Tooltip>
 
                       <Popover>
-                        <PopoverTrigger asChild>
-                          <button title="Change status" className="p-1.5 border border-border hover:bg-muted">
-                            <Check className="w-3.5 h-3.5" />
-                          </button>
-                        </PopoverTrigger>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <PopoverTrigger asChild>
+                              <button aria-label="Change status" className="p-1.5 border border-border hover:bg-muted">
+                                <Check className="w-3.5 h-3.5" />
+                              </button>
+                            </PopoverTrigger>
+                          </TooltipTrigger>
+                          <TooltipContent>Change status</TooltipContent>
+                        </Tooltip>
                         <PopoverContent align="end" className="w-44 p-1">
                           {STATUS_VALUES.map(s => (
                             <button
@@ -409,11 +432,16 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
                       </Popover>
 
                       <Popover>
-                        <PopoverTrigger asChild>
-                          <button title="Edit tags" className="p-1.5 border border-border hover:bg-muted">
-                            <Tags className="w-3.5 h-3.5" />
-                          </button>
-                        </PopoverTrigger>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <PopoverTrigger asChild>
+                              <button aria-label="Edit tags" className="p-1.5 border border-border hover:bg-muted">
+                                <Tags className="w-3.5 h-3.5" />
+                              </button>
+                            </PopoverTrigger>
+                          </TooltipTrigger>
+                          <TooltipContent>Edit tags</TooltipContent>
+                        </Tooltip>
                         <PopoverContent align="end" className="w-56 p-1 max-h-72 overflow-y-auto">
                           {clientTags.length === 0 ? (
                             <div className="px-2 py-2 text-xs text-muted-foreground">No tags yet</div>
@@ -438,6 +466,7 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
                         onSend={(userId, message) => handleMention(doc, userId, message)}
                       />
                     </div>
+                    </TooltipProvider>
                   </div>
                 );
               })}
@@ -462,6 +491,15 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
           clientTags={clientTags}
           accent={accent}
           onUploaded={() => { setPage(0); void fetchDocs(); }}
+        />
+      )}
+
+      {isAdmin && (
+        <RecipientsDialog
+          open={recipientsOpen}
+          onOpenChange={setRecipientsOpen}
+          clientId={clientId}
+          accent={accent}
         />
       )}
     </div>
@@ -508,6 +546,9 @@ function MentionButton({
               {userId === u.id && <Check className="w-3 h-3" />}
             </button>
           ))}
+        </div>
+        <div className="text-[10px] leading-snug text-muted-foreground">
+          Dashboard users only — use Manage recipients to notify external addresses.
         </div>
         <textarea
           value={message}
@@ -699,6 +740,202 @@ function UploadDialog({
               style={{ backgroundColor: accent }}
             >
               Upload
+            </button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ── Notification recipients (admin only) ──────────────────────── */
+interface RecipientRow {
+  id: string;
+  email: string;
+  full_name: string | null;
+  notes: string | null;
+  notify_status_changes: boolean | null;
+  notify_mentions: boolean | null;
+  is_active: boolean | null;
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+function RecipientsDialog({
+  open, onOpenChange, clientId, accent,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  clientId: string | null;
+  accent: string;
+}) {
+  const [rows, setRows] = useState<RecipientRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+
+  const [email, setEmail] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [notes, setNotes] = useState('');
+  const [notifyStatus, setNotifyStatus] = useState(true);
+  const [notifyMentions, setNotifyMentions] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!clientId) return;
+    setLoading(true);
+    const { data, error } = await supabase.rpc('notification_recipients_list', { p_client_id: clientId });
+    if (error) setErr('Could not load recipients.');
+    else { setErr(null); setRows((data as RecipientRow[]) ?? []); }
+    setLoading(false);
+  }, [clientId]);
+
+  useEffect(() => { if (open) void load(); }, [open, load]);
+
+  const add = async () => {
+    if (!clientId) return;
+    const addr = email.trim().toLowerCase();
+    if (!EMAIL_RE.test(addr)) { setErr('Please enter a valid email address.'); return; }
+    setSaving(true);
+    const { error } = await supabase.from('notification_recipients').insert({
+      client_id: clientId,
+      email: addr,
+      full_name: fullName.trim() || null,
+      notes: notes.trim() || null,
+      notify_status_changes: notifyStatus,
+      notify_mentions: notifyMentions,
+    });
+    setSaving(false);
+    if (error) {
+      setErr(error.code === '23505' || /duplicate key|unique/i.test(error.message)
+        ? 'This address is already a recipient for this client'
+        : `Could not add that recipient: ${error.message}`);
+      return;
+    }
+    setErr(null);
+    setEmail(''); setFullName(''); setNotes('');
+    setNotifyStatus(true); setNotifyMentions(true);
+    void load();
+  };
+
+  const patch = async (row: RecipientRow, updates: Partial<RecipientRow>) => {
+    setRows(prev => prev.map(r => (r.id === row.id ? { ...r, ...updates } : r)));
+    const { error } = await supabase.from('notification_recipients').update(updates).eq('id', row.id);
+    if (error) { setErr('Could not save that change.'); void load(); }
+  };
+
+  const remove = async (row: RecipientRow) => {
+    setRows(prev => prev.filter(r => r.id !== row.id));
+    const { error } = await supabase.from('notification_recipients').delete().eq('id', row.id);
+    if (error) { setErr('Could not remove that recipient.'); void load(); }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="font-mono-ui text-[11px] tracking-[0.16em] uppercase">Notification recipients</DialogTitle>
+        </DialogHeader>
+
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          These people receive email notifications for this client without needing a dashboard login.
+          Dashboard users are notified automatically.
+        </p>
+
+        {err && <div className="border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive">{err}</div>}
+
+        {/* List */}
+        <div className="border border-border divide-y divide-border">
+          {loading ? (
+            <div className="flex items-center gap-2 p-4 text-xs text-muted-foreground">
+              <Loader2 className="w-3 h-3 animate-spin" /> Loading…
+            </div>
+          ) : rows.length === 0 ? (
+            <div className="p-6 text-center text-xs text-muted-foreground">No external recipients yet.</div>
+          ) : rows.map(r => (
+            <div key={r.id} className={`flex flex-wrap items-center gap-3 p-3 ${r.is_active === false ? 'opacity-55' : ''}`}>
+              <div className="min-w-[160px] flex-1">
+                <div className="text-sm font-semibold truncate">{r.full_name || r.email}</div>
+                <div className="text-xs text-muted-foreground truncate flex items-center gap-1">
+                  <Mail className="w-3 h-3 opacity-60" />{r.email}
+                </div>
+                {r.notes && <div className="text-[11px] text-muted-foreground mt-0.5 truncate">{r.notes}</div>}
+              </div>
+
+              <label className="flex items-center gap-1.5 text-[10px] font-mono-ui tracking-[0.1em] uppercase text-muted-foreground">
+                <Switch
+                  checked={!!r.notify_status_changes}
+                  onCheckedChange={(v) => void patch(r, { notify_status_changes: v })}
+                />
+                Status changes
+              </label>
+
+              <label className="flex items-center gap-1.5 text-[10px] font-mono-ui tracking-[0.1em] uppercase text-muted-foreground">
+                <Switch
+                  checked={!!r.notify_mentions}
+                  onCheckedChange={(v) => void patch(r, { notify_mentions: v })}
+                />
+                Mentions
+              </label>
+
+              <label className="flex items-center gap-1.5 text-[10px] font-mono-ui tracking-[0.1em] uppercase text-muted-foreground">
+                <Switch
+                  checked={r.is_active !== false}
+                  onCheckedChange={(v) => void patch(r, { is_active: v })}
+                />
+                {r.is_active === false ? 'Inactive' : 'Active'}
+              </label>
+
+              <button
+                onClick={() => void remove(r)}
+                aria-label="Remove recipient"
+                className="p-1.5 border border-border hover:bg-muted text-destructive"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* Add form */}
+        <div className="border border-border p-3 space-y-3">
+          <div className="font-mono-ui text-[10px] tracking-[0.14em] uppercase text-muted-foreground">Add recipient</div>
+          <div className="grid gap-3 md:grid-cols-2">
+            <input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="email@example.com"
+              maxLength={255}
+              className="w-full border border-border bg-transparent p-2 text-xs outline-none"
+            />
+            <input
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="Full name (optional)"
+              maxLength={120}
+              className="w-full border border-border bg-transparent p-2 text-xs outline-none"
+            />
+          </div>
+          <input
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Notes (optional) — e.g. Hermès outside counsel"
+            maxLength={280}
+            className="w-full border border-border bg-transparent p-2 text-xs outline-none"
+          />
+          <div className="flex flex-wrap items-center gap-4">
+            <label className="flex items-center gap-1.5 text-[10px] font-mono-ui tracking-[0.1em] uppercase text-muted-foreground">
+              <Switch checked={notifyStatus} onCheckedChange={setNotifyStatus} /> Status changes
+            </label>
+            <label className="flex items-center gap-1.5 text-[10px] font-mono-ui tracking-[0.1em] uppercase text-muted-foreground">
+              <Switch checked={notifyMentions} onCheckedChange={setNotifyMentions} /> Mentions
+            </label>
+            <button
+              onClick={() => void add()}
+              disabled={saving || !email.trim()}
+              className="ml-auto px-3 py-1.5 text-[10px] font-mono-ui font-semibold tracking-[0.12em] uppercase text-background disabled:opacity-40"
+              style={{ backgroundColor: accent }}
+            >
+              {saving ? 'Adding…' : 'Add recipient'}
             </button>
           </div>
         </div>
