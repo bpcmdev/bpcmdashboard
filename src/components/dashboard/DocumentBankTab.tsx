@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FileText, FileSpreadsheet, FileImage, FileVideo, FileArchive, File as FileIcon,
-  Download, Upload, AtSign, Tags, Search, Check, X, Loader2, Trash2, UserPlus, Mail,
+  Download, Upload, AtSign, Tags, Search, Check, X, Loader2, Trash2, UserPlus, Mail, Archive, Undo2,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -155,6 +155,12 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
   const [recipientsOpen, setRecipientsOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
+  const [showArchived, setShowArchived] = useState(false);
+  const [archivedDocs, setArchivedDocs] = useState<DocRow[]>([]);
+  const [archivedLoading, setArchivedLoading] = useState(false);
+  const [archivedError, setArchivedError] = useState(false);
+  const [deleteDoc, setDeleteDoc] = useState<DocRow | null>(null);
+
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(searchText.trim()), 300);
     return () => clearTimeout(t);
@@ -205,6 +211,45 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
   }, [clientId, debouncedSearch, selectedTagIds, selectedStatus, page]);
 
   useEffect(() => { void fetchDocs(); }, [fetchDocs]);
+
+  const fetchArchived = useCallback(async () => {
+    if (!clientId) return;
+    setArchivedLoading(true);
+    const { data, error: err } = await supabase
+      .from('documents')
+      .select('id, title, description, storage_path, file_name, file_size, mime_type, status, version, created_at, updated_at')
+      .eq('client_id', clientId)
+      .eq('archived', true)
+      .order('updated_at', { ascending: false });
+    if (err) {
+      setArchivedError(true);
+      setArchivedDocs([]);
+      setArchivedLoading(false);
+      return;
+    }
+    const rows = (data as DocRow[]) ?? [];
+    const tagMap = new Map<string, TagRow[]>();
+    if (rows.length) {
+      const { data: etags } = await supabase
+        .from('entity_tags')
+        .select('entity_id, tag_id')
+        .eq('client_id', clientId)
+        .eq('entity_type', 'document')
+        .in('entity_id', rows.map(r => r.id));
+      for (const et of (etags as { entity_id: string; tag_id: string }[]) ?? []) {
+        const tag = clientTags.find(t => t.id === et.tag_id);
+        if (!tag) continue;
+        const list = tagMap.get(et.entity_id) ?? [];
+        list.push(tag);
+        tagMap.set(et.entity_id, list);
+      }
+    }
+    setArchivedError(false);
+    setArchivedDocs(rows.map(r => ({ ...r, tags: tagMap.get(r.id) ?? [] })));
+    setArchivedLoading(false);
+  }, [clientId, clientTags]);
+
+  useEffect(() => { if (showArchived) void fetchArchived(); }, [showArchived, fetchArchived]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -266,6 +311,27 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
     return true;
   };
 
+  const handleArchive = async (doc: DocRow) => {
+    const { error } = await supabase.from('documents').update({ archived: true }).eq('id', doc.id);
+    setDeleteDoc(null);
+    if (error) {
+      setNotice('Could not delete that document.');
+    } else {
+      setNotice(`"${doc.title}" deleted. An admin can restore it from Archived Documents.`);
+      if (showArchived) void fetchArchived(); else void fetchDocs();
+    }
+  };
+
+  const handleRestore = async (doc: DocRow) => {
+    const { error } = await supabase.from('documents').update({ archived: false }).eq('id', doc.id);
+    if (error) {
+      setNotice('Could not restore that document.');
+    } else {
+      setArchivedDocs(prev => prev.filter(d => d.id !== doc.id));
+      setNotice(`"${doc.title}" restored to Document Bank. The file was kept, so it's fully usable right away.`);
+    }
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-4">
       {/* Header row */}
@@ -276,6 +342,14 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
         </div>
         {isAdmin && (
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowArchived(v => !v)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono-ui font-semibold tracking-[0.12em] uppercase border border-border ${showArchived ? 'text-background' : 'hover:bg-muted'}`}
+              style={showArchived ? { backgroundColor: accent, borderColor: 'transparent' } : undefined}
+            >
+              <Archive className="w-3 h-3" />
+              {showArchived ? 'Hide archived' : 'View archived'}
+            </button>
             <button
               onClick={() => setRecipientsOpen(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono-ui font-semibold tracking-[0.12em] uppercase border border-border hover:bg-muted"
@@ -303,6 +377,7 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
       )}
 
       {/* Filter bar */}
+      {!showArchived && (
       <div className="border border-border bg-card p-3 flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-2 border border-border px-2 py-1.5 flex-1 min-w-[200px]">
           <Search className="w-3 h-3 opacity-50" />
@@ -363,8 +438,76 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
           ))}
         </div>
       </div>
+      )}
 
       {/* Document list */}
+      {isAdmin && showArchived ? (
+        <div className="border border-border bg-card">
+          <DataStateWrapper loading={archivedLoading} error={archivedError} skeletonCount={3} skeletonHeight="h-16">
+            {archivedDocs.length === 0 ? (
+              <div className="py-16 text-center text-sm text-muted-foreground">No archived documents.</div>
+            ) : (
+              <div className="divide-y divide-border">
+                {archivedDocs.map(doc => {
+                  const Icon = fileIconFor(doc.mime_type);
+                  return (
+                    <div key={doc.id} className="flex items-start gap-3 p-3 md:p-4 hover:bg-muted/30 transition-colors">
+                      <Icon className="w-5 h-5 mt-0.5 shrink-0 opacity-60" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-sm truncate">{doc.title}</span>
+                          {doc.version ? (
+                            <span className="text-[10px] font-mono-ui tracking-wider uppercase text-muted-foreground">v{doc.version}</span>
+                          ) : null}
+                          <StatusChip status={doc.status} />
+                        </div>
+                        <div className="text-xs text-muted-foreground truncate mt-0.5">
+                          {doc.file_name}
+                          {doc.file_size ? ` · ${fmtSize(doc.file_size)}` : ''}
+                        </div>
+                        {doc.description && (
+                          <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{doc.description}</div>
+                        )}
+                        {(doc.tags ?? []).length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1.5">
+                            {(doc.tags ?? []).map(t => <TagPill key={t.id} tag={t} />)}
+                          </div>
+                        )}
+                        <div className="text-[10px] font-mono-ui tracking-wider uppercase text-muted-foreground mt-1.5">
+                          Archived {relativeDate(doc.updated_at || doc.created_at)}
+                        </div>
+                      </div>
+                      <TooltipProvider delayDuration={150}>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={() => handleDownload(doc)}
+                                aria-label="Download"
+                                className="p-1.5 border border-border hover:bg-muted"
+                              >
+                                <Download className="w-3.5 h-3.5" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Download</TooltipContent>
+                          </Tooltip>
+                          <button
+                            onClick={() => void handleRestore(doc)}
+                            className="flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-mono-ui font-semibold tracking-[0.12em] uppercase border border-border hover:bg-muted"
+                          >
+                            <Undo2 className="w-3 h-3" />
+                            Restore
+                          </button>
+                        </div>
+                      </TooltipProvider>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </DataStateWrapper>
+        </div>
+      ) : (
       <DataStateWrapper loading={loading} error={error} skeletonCount={5} skeletonHeight="h-16">
         <div className="border border-border bg-card">
           {docs.length === 0 ? (
@@ -475,6 +618,21 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
                         targets={mentionTargets}
                         onSend={(target, message) => handleMention(doc, target, message)}
                       />
+
+                      {isAdmin && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={() => setDeleteDoc(doc)}
+                              aria-label="Delete"
+                              className="p-1.5 border border-border hover:bg-muted text-destructive"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>Delete</TooltipContent>
+                        </Tooltip>
+                      )}
                     </div>
                     </TooltipProvider>
                   </div>
@@ -491,6 +649,35 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
           </div>
         </div>
       </DataStateWrapper>
+      )}
+
+      {isAdmin && deleteDoc && (
+        <Dialog open onOpenChange={(v) => { if (!v) setDeleteDoc(null); }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="font-mono-ui text-[11px] tracking-[0.16em] uppercase">Delete document</DialogTitle>
+            </DialogHeader>
+            <p className="text-xs leading-relaxed">
+              Delete '{deleteDoc.title}'? This removes it from Document Bank. An admin can restore it from Archived Documents.
+            </p>
+            <div className="flex justify-end gap-2 pt-1">
+              <button
+                onClick={() => setDeleteDoc(null)}
+                className="px-3 py-1.5 text-[10px] font-mono-ui tracking-[0.12em] uppercase border border-border hover:bg-muted"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => void handleArchive(deleteDoc)}
+                className="px-3 py-1.5 text-[10px] font-mono-ui font-semibold tracking-[0.12em] uppercase text-background"
+                style={{ backgroundColor: accent }}
+              >
+                Delete
+              </button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {isAdmin && (
         <UploadDialog
