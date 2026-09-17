@@ -43,6 +43,14 @@ interface ClientUser {
   email?: string | null;
 }
 
+interface MentionTarget {
+  target_kind: 'user' | 'external';
+  user_id: string | null;
+  email: string | null;
+  display_name: string | null;
+}
+
+
 const PAGE_SIZE = 25;
 
 const STATUS_FILTERS = ['All', 'Draft', 'In Review', 'Approved', 'Final'] as const;
@@ -93,7 +101,7 @@ const relativeDate = (iso: string | null) => {
   return `${Math.round(months / 12)}y ago`;
 };
 
-const userLabel = (u: ClientUser) => u.full_name || u.name || u.email || 'User';
+const targetLabel = (t: MentionTarget) => t.display_name || t.email || 'Recipient';
 
 /* ── Small pieces ──────────────────────────────────────────────── */
 function StatusChip({ status }: { status: string | null }) {
@@ -141,7 +149,7 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
   const [selectedStatus, setSelectedStatus] = useState<string>('All');
 
   const [clientTags, setClientTags] = useState<TagRow[]>([]);
-  const [clientUsers, setClientUsers] = useState<ClientUser[]>([]);
+  const [mentionTargets, setMentionTargets] = useState<MentionTarget[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [recipientsOpen, setRecipientsOpen] = useState(false);
@@ -164,12 +172,12 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
   useEffect(() => {
     if (!clientId) return;
     (async () => {
-      const [tagsRes, usersRes] = await Promise.all([
+      const [tagsRes, targetsRes] = await Promise.all([
         supabase.from('client_tags').select('id, name, color').eq('client_id', clientId),
-        supabase.rpc('client_users', { p_client_id: clientId }),
+        supabase.rpc('mention_targets', { p_client_id: clientId }),
       ]);
       setClientTags((tagsRes.data as TagRow[]) ?? []);
-      setClientUsers((usersRes.data as ClientUser[]) ?? []);
+      setMentionTargets((targetsRes.data as MentionTarget[]) ?? []);
     })();
   }, [clientId]);
 
@@ -240,17 +248,19 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
     }
   };
 
-  const handleMention = async (doc: DocRow, recipientId: string, message: string) => {
+  const handleMention = async (doc: DocRow, target: MentionTarget, message: string) => {
     if (!clientId) return false;
-    const { error: err } = await supabase.rpc('create_mention', {
+    const base = {
       p_client_id: clientId,
-      p_recipient_id: recipientId,
       p_actor_id: currentUserId,
       p_entity_type: 'document',
       p_entity_id: doc.id,
       p_entity_title: doc.title,
       p_message: message,
-    });
+    };
+    const { error: err } = target.target_kind === 'user'
+      ? await supabase.rpc('create_mention', { ...base, p_recipient_id: target.user_id })
+      : await supabase.rpc('create_mention_external', { ...base, p_recipient_email: target.email });
     if (err) { setNotice('Could not send that mention.'); return false; }
     setNotice('Mention sent.');
     return true;
@@ -462,8 +472,8 @@ const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: Documen
                       </Popover>
 
                       <MentionButton
-                        users={clientUsers}
-                        onSend={(userId, message) => handleMention(doc, userId, message)}
+                        targets={mentionTargets}
+                        onSend={(target, message) => handleMention(doc, target, message)}
                       />
                     </div>
                     </TooltipProvider>
