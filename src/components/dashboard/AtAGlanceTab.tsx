@@ -1128,6 +1128,7 @@ const AtAGlanceTab = () => {
   const [error, setError]       = useState(false);
   const [assetKey, setAssetKey] = useState(0);
   const [clientUsers, setClientUsers] = useState<ClientUser[]>([]);
+  const [mentionTargets, setMentionTargets] = useState<MentionTarget[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
 
@@ -1136,12 +1137,17 @@ const AtAGlanceTab = () => {
   }, []);
 
   useEffect(() => {
-    if (!clientId) { setClientUsers([]); return; }
+    if (!clientId) { setClientUsers([]); setMentionTargets([]); return; }
     let cancelled = false;
     supabase.rpc('client_users', { p_client_id: clientId }).then(({ data, error: err }) => {
       if (cancelled) return;
       if (err) { console.error('[AtAGlance] client_users failed', err); return; }
       setClientUsers((data as ClientUser[]) ?? []);
+    });
+    supabase.rpc('mention_targets', { p_client_id: clientId }).then(({ data, error: err }) => {
+      if (cancelled) return;
+      if (err) { console.error('[AtAGlance] mention_targets failed', err); return; }
+      setMentionTargets((data as MentionTarget[]) ?? []);
     });
     return () => { cancelled = true; };
   }, [clientId]);
@@ -1165,17 +1171,19 @@ const AtAGlanceTab = () => {
     await reloadAssets();
   }, [reloadAssets]);
 
-  const handleMention = useCallback(async (row: AssetRow, userId: string, message: string) => {
+  const handleMention = useCallback(async (row: AssetRow, target: MentionTarget, message: string) => {
     if (!clientId) return false;
-    const { error: err } = await supabase.rpc('create_mention', {
+    const base = {
       p_client_id: clientId,
-      p_recipient_id: userId,
       p_actor_id: currentUserId,
       p_entity_type: 'asset',
       p_entity_id: row.id,
       p_entity_title: row.launch,
       p_message: message || null,
-    });
+    };
+    const { error: err } = target.target_kind === 'user'
+      ? await supabase.rpc('create_mention', { ...base, p_recipient_id: target.user_id })
+      : await supabase.rpc('create_mention_external', { ...base, p_recipient_email: target.email });
     if (err) { console.error('[AtAGlance] create_mention failed', err); return false; }
     return true;
   }, [clientId, currentUserId]);
@@ -1288,6 +1296,7 @@ const AtAGlanceTab = () => {
             isAdmin={isAdmin}
             availableTags={clientTags}
             clientUsers={clientUsers}
+            mentionTargets={mentionTargets}
             onStatusChange={handleStatusChange}
             onTagToggle={handleTagToggle}
             onMention={handleMention}
