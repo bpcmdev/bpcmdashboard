@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAdmin } from '@/hooks/useAdmin';
+import { useWeek } from '@/contexts/WeekContext';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -135,7 +136,10 @@ interface DocumentBankTabProps {
 
 const DocumentBankTab = ({ clientId: clientIdProp, accent: accentProp }: DocumentBankTabProps = {}) => {
   const { isAdmin, clientId: adminClientId, clientColor } = useAdmin();
-  const clientId = clientIdProp ?? adminClientId;
+  const { activeClientId } = useWeek();
+  // WeekContext's activeClientId reflects the header client switcher; the admin's
+  // own profile client is only a last-resort fallback.
+  const clientId = clientIdProp ?? activeClientId ?? adminClientId;
   const accent = accentProp || clientColor || 'hsl(225 70% 35%)';
 
   const [docs, setDocs] = useState<DocRow[]>([]);
