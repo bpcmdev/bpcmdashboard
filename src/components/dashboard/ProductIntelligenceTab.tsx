@@ -660,7 +660,18 @@ const percentNumber = (value: number | null | undefined): number => {
   return Math.abs(n) <= 1 ? n * 100 : n;
 };
 
-const objectArray = <T,>(value: unknown): T[] => Array.isArray(value) ? value as T[] : [];
+const objectArray = <T,>(value: unknown): T[] => {
+  if (Array.isArray(value)) return value as T[];
+  if (typeof value === 'string') {
+    try {
+      const parsed: unknown = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed as T[] : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
 
 const categoryNames = (categories: ProductCardRow['categories']): string[] => objectArray<string | ProductCategory>(categories)
   .map((category) => typeof category === 'string' ? category : category?.name ?? '')
@@ -668,7 +679,9 @@ const categoryNames = (categories: ProductCardRow['categories']): string[] => ob
 
 const ProductCard = ({ product, accent, onOpen }: { product: ProductCardRow; accent: string; onOpen: () => void }) => {
   const categories = categoryNames(product.categories);
-  const competitors = objectArray<ProductCardCompetitor>(product.competitors).slice(0, 5);
+  const competitors = objectArray<ProductCardCompetitor>(product.competitors)
+    .sort((a, b) => percentNumber(b.visibility) - percentNumber(a.visibility))
+    .slice(0, 5);
   const merchants = objectArray<ProductCardMerchant>(product.merchants).slice(0, 3);
   const queries = objectArray<ProductCardQuery | string>(product.top_queries).slice(0, 4);
   const press = objectArray<ProductCardPress>(product.recent_press).slice(0, 3);
@@ -686,7 +699,12 @@ const ProductCard = ({ product, accent, onOpen }: { product: ProductCardRow; acc
       role="button"
       tabIndex={0}
       onClick={onOpen}
-      onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') onOpen(); }}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onOpen();
+        }
+      }}
       className="group flex min-h-full cursor-pointer flex-col overflow-hidden border border-border bg-card transition-all duration-200 hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-[0_12px_30px_-18px_hsl(var(--foreground)/0.28)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <div className="p-5 sm:p-6 space-y-5">
