@@ -23,6 +23,13 @@ interface GlanceCard {
   week_start: string | null;
 }
 
+interface ClientUser {
+  id: string;
+  email?: string | null;
+  full_name?: string | null;
+  name?: string | null;
+}
+
 interface TagRow {
   id: string;
   name: string;
