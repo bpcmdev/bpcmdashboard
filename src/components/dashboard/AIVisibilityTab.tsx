@@ -17,6 +17,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { LinkPreviewTrigger } from './LinkPreviewDrawer';
 import PaginationControls from './PaginationControls';
 import BrandPerceptionSection from './BrandPerceptionSection';
+import CollapsibleSection from './CollapsibleSection';
 import { format, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -996,29 +997,33 @@ const CompetitiveAnalysisSection = ({
 
   return (
     <div className="bg-card border border-border p-5 space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h3 className="font-mono-ui text-[10px] tracking-[0.22em] uppercase text-muted-foreground">
-          Competitive Analysis
-        </h3>
-        <div className="flex gap-0 border border-border w-fit">
-          {options.map((opt) => (
-            <button
-              key={opt.key}
-              onClick={() => setView(opt.key)}
-              className={cn(
-                'px-3 py-1.5 text-[10px] font-semibold tracking-[0.1em] uppercase transition-colors',
-                view === opt.key ? 'text-white' : 'text-muted-foreground hover:text-foreground'
-              )}
-              style={view === opt.key ? { backgroundColor: accent } : undefined}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </div>
-      {view === 'model' && <ModelBrandMatrix rows={matrix} loading={loading.matrix} />}
-      {view === 'competitive' && <CompetitiveTable rows={summary} loading={loading.summary} />}
-      {view === 'platform' && <PerPlatformCompetitiveSov rows={platformCompetitive} loading={loading.platformCompetitive} />}
+      <CollapsibleSection
+        title="Competitive Analysis"
+        defaultOpen
+        titleClassName="font-mono-ui text-[10px] tracking-[0.22em] uppercase text-muted-foreground"
+        contentClassName="pt-4"
+        headerExtra={
+          <div className="flex gap-0 border border-border w-fit">
+            {options.map((opt) => (
+              <button
+                key={opt.key}
+                onClick={() => setView(opt.key)}
+                className={cn(
+                  'px-3 py-1.5 text-[10px] font-semibold tracking-[0.1em] uppercase transition-colors',
+                  view === opt.key ? 'text-white' : 'text-muted-foreground hover:text-foreground'
+                )}
+                style={view === opt.key ? { backgroundColor: accent } : undefined}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        }
+      >
+        {view === 'model' && <ModelBrandMatrix rows={matrix} loading={loading.matrix} />}
+        {view === 'competitive' && <CompetitiveTable rows={summary} loading={loading.summary} />}
+        {view === 'platform' && <PerPlatformCompetitiveSov rows={platformCompetitive} loading={loading.platformCompetitive} />}
+      </CollapsibleSection>
     </div>
   );
 };
@@ -1223,13 +1228,17 @@ const GapAnalysisSection = ({
   const [view, setView] = useState('SOURCE OPPORTUNITIES');
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground">Gap Analysis</h3>
-        <ViewToggle active={view} onToggle={setView} options={['SOURCE OPPORTUNITIES', 'COMPETITIVE GAP']} />
-      </div>
-      {view === 'SOURCE OPPORTUNITIES'
-        ? <SourceOpportunities clientId={clientId} p_start={p_start} p_end={p_end} />
-        : <CompetitiveGap rows={competitiveRows} clientName={clientName} />}
+      <CollapsibleSection
+        title="Gap Analysis"
+        defaultOpen
+        titleClassName="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground"
+        contentClassName="pt-3"
+        headerExtra={<ViewToggle active={view} onToggle={setView} options={['SOURCE OPPORTUNITIES', 'COMPETITIVE GAP']} />}
+      >
+        {view === 'SOURCE OPPORTUNITIES'
+          ? <SourceOpportunities clientId={clientId} p_start={p_start} p_end={p_end} />
+          : <CompetitiveGap rows={competitiveRows} clientName={clientName} />}
+      </CollapsibleSection>
     </div>
   );
 };
@@ -1294,27 +1303,31 @@ const ConversationIntelligence = ({
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-6 space-y-5">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-baseline gap-3">
-          <h3 className="text-base font-semibold text-slate-900" style={{ fontFamily: 'Playfair Display, serif' }}>
-            AI Conversation Intelligence
-          </h3>
+      <CollapsibleSection
+        title="AI Conversation Intelligence"
+        defaultOpen
+        titleClassName="text-base font-semibold text-slate-900"
+        contentClassName="pt-5"
+        titleSuffix={
           <span className="text-xs text-slate-500 tabular-nums" style={{ fontFamily: 'DM Mono, monospace' }}>
             {total} {total === 1 ? 'result' : 'results'}
           </span>
-        </div>
-        <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5">
-          {(['recent', 'mentioned'] as const).map(m => (
-            <button key={m} onClick={() => setMode(m)}
-              className={cn(
-                'px-3 py-1.5 text-[10px] font-semibold tracking-[0.05em] uppercase rounded-md transition-colors',
-                mode === m ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-              )}>
-              {m === 'recent' ? 'RECENT' : mentionedLabel}
-            </button>
-          ))}
-        </div>
-      </div>
+        }
+        headerExtra={
+          <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5">
+            {(['recent', 'mentioned'] as const).map(m => (
+              <button key={m} onClick={() => setMode(m)}
+                className={cn(
+                  'px-3 py-1.5 text-[10px] font-semibold tracking-[0.05em] uppercase rounded-md transition-colors',
+                  mode === m ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                )}>
+                {m === 'recent' ? 'RECENT' : mentionedLabel}
+              </button>
+            ))}
+          </div>
+        }
+      >
+
 
       {loading ? (
         <div className="space-y-2">
@@ -1883,30 +1896,34 @@ const SourcesAndQueriesSection = ({
 
   return (
     <div className="bg-card border border-border p-5 space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h3 className="font-mono-ui text-[10px] tracking-[0.22em] uppercase text-muted-foreground">
-          Sources & Queries
-        </h3>
-        <div className="flex gap-0 border border-border w-fit">
-          {options.map((opt) => (
-            <button
-              key={opt.key}
-              onClick={() => setView(opt.key)}
-              className={cn(
-                'px-3 py-1.5 text-[10px] font-semibold tracking-[0.1em] uppercase transition-colors',
-                view === opt.key ? 'text-white' : 'text-muted-foreground hover:text-foreground'
-              )}
-              style={view === opt.key ? { backgroundColor: accent } : undefined}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </div>
-      {view === 'domains' && <TopDomainsTable rows={domains} loading={loading.domains} />}
-      {view === 'urls' && <TopUrlsTable rows={urls} loading={loading.urls} />}
-      {view === 'queries' && <SearchQueriesTable rows={queries} loading={loading.queries} />}
-      {view === 'products' && <ShoppingTable rows={products} loading={loading.products} />}
+      <CollapsibleSection
+        title="Sources & Queries"
+        defaultOpen
+        titleClassName="font-mono-ui text-[10px] tracking-[0.22em] uppercase text-muted-foreground"
+        contentClassName="pt-4"
+        headerExtra={
+          <div className="flex gap-0 border border-border w-fit">
+            {options.map((opt) => (
+              <button
+                key={opt.key}
+                onClick={() => setView(opt.key)}
+                className={cn(
+                  'px-3 py-1.5 text-[10px] font-semibold tracking-[0.1em] uppercase transition-colors',
+                  view === opt.key ? 'text-white' : 'text-muted-foreground hover:text-foreground'
+                )}
+                style={view === opt.key ? { backgroundColor: accent } : undefined}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        }
+      >
+        {view === 'domains' && <TopDomainsTable rows={domains} loading={loading.domains} />}
+        {view === 'urls' && <TopUrlsTable rows={urls} loading={loading.urls} />}
+        {view === 'queries' && <SearchQueriesTable rows={queries} loading={loading.queries} />}
+        {view === 'products' && <ShoppingTable rows={products} loading={loading.products} />}
+      </CollapsibleSection>
     </div>
   );
 };
