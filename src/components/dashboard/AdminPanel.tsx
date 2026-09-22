@@ -1235,13 +1235,102 @@ export function TabAccessManager() {
     (async () => {
       const { data, error } = await supabase
         .from('clients')
-        .select('id, name, enabled_tabs')
+        .select('*')
         .order('name');
       if (error) console.error('[TabAccessManager] fetch error:', error);
-      setClients((data as TabAccessClient[]) ?? []);
+      const rows = (data as Record<string, unknown>[]) ?? [];
+      setRawRows(Object.fromEntries(rows.map(r => [String(r.id), r])));
+      setClients(rows.map(r => ({
+        id: String(r.id),
+        name: String(r.name ?? ''),
+        enabled_tabs: (r.enabled_tabs as string[] | null) ?? null,
+      })));
       setLoading(false);
     })();
   }, []);
+
+  /** Applies many client tab-access changes in ONE network request (bulk upsert). */
+  const applyBulk = async (updates: { id: string; enabled_tabs: string[] }[]) => {
+    if (updates.length === 0) return true;
+    const previous = clients.map(c => ({ id: c.id, enabled_tabs: c.enabled_tabs }));
+    const patch = new Map(updates.map(u => [u.id, u.enabled_tabs]));
+
+    // Optimistic update
+    setClients(prev => prev.map(c => patch.has(c.id) ? { ...c, enabled_tabs: patch.get(c.id)! } : c));
+
+    const payload = updates.map(u => ({ ...(rawRows[u.id] ?? { id: u.id }), enabled_tabs: u.enabled_tabs }));
+    const { error } = await supabase.from('clients').upsert(payload, { onConflict: 'id' });
+
+    if (error) {
+      console.error('[TabAccessManager] bulk update error:', error);
+      toast.error(`Failed to save tab access: ${error.message}`);
+      setClients(previous.map(p => ({ ...(clients.find(c => c.id === p.id) as TabAccessClient), enabled_tabs: p.enabled_tabs })));
+      return false;
+    }
+    setRawRows(prev => {
+      const next = { ...prev };
+      updates.forEach(u => { next[u.id] = { ...(next[u.id] ?? { id: u.id }), enabled_tabs: u.enabled_tabs }; });
+      return next;
+    });
+    return true;
+  };
+
+  /** Row-level: set every tab on/off for a single client in one request. */
+  const setRowAll = async (clientId: string, mode: 'all' | 'none') => {
+    const client = clients.find(c => c.id === clientId);
+    if (!client) return;
+    const previous = client.enabled_tabs ?? [];
+    const newTabs = mode === 'all' ? ALL_TAB_IDS.slice() : [];
+    setClients(prev => prev.map(c => c.id === clientId ? { ...c, enabled_tabs: newTabs } : c));
+    const { error } = await supabase.from('clients').update({ enabled_tabs: newTabs }).eq('id', clientId);
+    if (error) {
+      toast.error(`Failed to save: ${error.message}`);
+      setClients(prev => prev.map(c => c.id === clientId ? { ...c, enabled_tabs: previous } : c));
+      return;
+    }
+    toast.success(mode === 'all' ? `All tabs enabled for ${client.name}` : `All tabs disabled for ${client.name}`);
+  };
+
+  /** Column-level: set one tab on/off for every client in one request, with undo. */
+  const applyColumn = async (tabId: string, mode: 'all' | 'none') => {
+    const label = ALL_TABS.find(t => t.id === tabId)?.label ?? tabId;
+    const snapshot = clients.map(c => ({ id: c.id, enabled_tabs: (c.enabled_tabs ?? []).slice() }));
+    const updates = clients
+      .map(c => {
+        const current = c.enabled_tabs ?? [];
+        const has = current.includes(tabId);
+        if (mode === 'all' && has) return null;
+        if (mode === 'none' && !has) return null;
+        return {
+          id: c.id,
+          enabled_tabs: mode === 'all' ? [...current, tabId] : current.filter(t => t !== tabId),
+        };
+      })
+      .filter((u): u is { id: string; enabled_tabs: string[] } => u !== null);
+
+    setPendingColumn(null);
+    if (updates.length === 0) {
+      toast.info(`${label} is already ${mode === 'all' ? 'enabled' : 'disabled'} for every client`);
+      return;
+    }
+
+    setBulkBusy(true);
+    const ok = await applyBulk(updates);
+    setBulkBusy(false);
+    if (!ok) return;
+
+    toast.success(
+      `${label} ${mode === 'all' ? 'enabled' : 'disabled'} for ${updates.length} client${updates.length === 1 ? '' : 's'}`,
+      {
+        action: {
+          label: 'Undo',
+          onClick: () => { void applyBulk(snapshot); },
+        },
+        duration: 8000,
+      }
+    );
+  };
+
 
   const toggleTab = async (clientId: string, tabId: string, currentTabs: string[]) => {
     const newTabs = currentTabs.includes(tabId)
