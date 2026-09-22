@@ -1210,7 +1210,6 @@ interface TabAccessClient {
 
 export function TabAccessManager() {
   const [clients, setClients] = useState<TabAccessClient[]>([]);
-  const [rawRows, setRawRows] = useState<Record<string, Record<string, unknown>>>({});
   const [loading, setLoading] = useState(true);
   const [sourceClientId, setSourceClientId] = useState<string>('');
   const [targetClientIds, setTargetClientIds] = useState<string[]>([]);
@@ -1239,7 +1238,6 @@ export function TabAccessManager() {
         .order('name');
       if (error) console.error('[TabAccessManager] fetch error:', error);
       const rows = (data as Record<string, unknown>[]) ?? [];
-      setRawRows(Object.fromEntries(rows.map(r => [String(r.id), r])));
       setClients(rows.map(r => ({
         id: String(r.id),
         name: String(r.name ?? ''),
@@ -1249,7 +1247,7 @@ export function TabAccessManager() {
     })();
   }, []);
 
-  /** Applies many client tab-access changes in ONE network request (bulk upsert). */
+  /** Applies many client tab-access changes via plain UPDATEs (never inserts). */
   const applyBulk = async (updates: { id: string; enabled_tabs: string[] }[]) => {
     if (updates.length === 0) return true;
     const previous = new Map(clients.map(c => [c.id, c.enabled_tabs]));
@@ -1258,8 +1256,17 @@ export function TabAccessManager() {
     // Optimistic update
     setClients(prev => prev.map(c => patch.has(c.id) ? { ...c, enabled_tabs: patch.get(c.id)! } : c));
 
-    const payload = updates.map(u => ({ ...(rawRows[u.id] ?? { id: u.id }), enabled_tabs: u.enabled_tabs }));
-    const { error } = await supabase.from('clients').upsert(payload, { onConflict: 'id' });
+    // Plain UPDATE per existing row — the clients table has no INSERT policy,
+    // so upserting here would violate RLS the moment a row can't be matched.
+    const results = await Promise.all(
+      updates.map(u =>
+        supabase
+          .from('clients')
+          .update({ enabled_tabs: u.enabled_tabs })
+          .eq('id', u.id)
+      )
+    );
+    const error = results.find(r => r.error)?.error ?? null;
 
     if (error) {
       console.error('[TabAccessManager] bulk update error:', error);
@@ -1267,11 +1274,6 @@ export function TabAccessManager() {
       setClients(prev => prev.map(c => previous.has(c.id) ? { ...c, enabled_tabs: previous.get(c.id) ?? null } : c));
       return false;
     }
-    setRawRows(prev => {
-      const next = { ...prev };
-      updates.forEach(u => { next[u.id] = { ...(next[u.id] ?? { id: u.id }), enabled_tabs: u.enabled_tabs }; });
-      return next;
-    });
     return true;
   };
 
