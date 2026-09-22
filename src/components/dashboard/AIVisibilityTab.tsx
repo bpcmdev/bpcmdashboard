@@ -48,7 +48,7 @@ export const ViewToggle = ({
 type PeriodKey = 'day' | 'week' | 'month' | 'custom';
 type Platform =
   | 'all' | 'chatgpt' | 'perplexity' | 'google_ai' | 'google_ai_mode'
-  | 'gemini' | 'claude' | 'copilot' | 'rufus';
+  | 'gemini' | 'claude' | 'copilot';
 
 interface KpiRow {
   metric: 'visibility' | 'sentiment' | 'position' | 'share_of_voice';
@@ -160,7 +160,6 @@ const PLATFORM_LABEL_MAP: Record<string, string> = {
   gemini: 'Gemini',
   claude: 'Claude',
   copilot: 'Copilot',
-  rufus: 'Rufus',
 };
 const platformLabel = (p: string) => PLATFORM_LABEL_MAP[p] || p;
 const ALL_KNOWN_PLATFORMS = Object.keys(PLATFORM_LABEL_MAP);
@@ -175,7 +174,6 @@ const PLATFORM_PILL: Record<string, string> = {
   google_ai_mode: 'bg-[#6366f1] text-white',
   copilot: 'bg-[#0ea5e9] text-white',
   grok: 'bg-slate-800 text-white',
-  rufus: 'bg-[#d97706] text-white',
 };
 const platformPillCls = (p: string) => PLATFORM_PILL[p] || 'bg-slate-700 text-white';
 
