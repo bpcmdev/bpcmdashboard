@@ -415,3 +415,23 @@
   background: radial-gradient(circle, #93c5fd, transparent 70%);
   animation-delay: -8s;
 }
+
+/* Satori wordmark — gold gradient shimmer (login header) */
+.satori-gold {
+  background: linear-gradient(90deg, #d4af37 0%, #f4e5a1 50%, #d4af37 100%);
+  background-size: 200% auto;
+  background-position: 0% 0%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: satori-shimmer 3.5s ease-in-out infinite;
+}
+
+@keyframes satori-shimmer {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 200% 0%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .satori-gold { animation: none; }
+}
