@@ -1210,7 +1210,6 @@ interface TabAccessClient {
 
 export function TabAccessManager() {
   const [clients, setClients] = useState<TabAccessClient[]>([]);
-  const [rawRows, setRawRows] = useState<Record<string, Record<string, unknown>>>({});
   const [loading, setLoading] = useState(true);
   const [sourceClientId, setSourceClientId] = useState<string>('');
   const [targetClientIds, setTargetClientIds] = useState<string[]>([]);
