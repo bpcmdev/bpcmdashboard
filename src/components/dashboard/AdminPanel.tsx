@@ -17,7 +17,7 @@ import { CalendarIcon, Check, Pencil, Trash2, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { ALL_TABS } from '@/lib/dashboardTabs';
+import { ALL_TABS, ALL_TAB_IDS } from '@/lib/dashboardTabs';
 import { toast } from 'sonner';
 
 interface AdminPanelProps {
@@ -1210,11 +1210,14 @@ interface TabAccessClient {
 
 export function TabAccessManager() {
   const [clients, setClients] = useState<TabAccessClient[]>([]);
+  const [rawRows, setRawRows] = useState<Record<string, Record<string, unknown>>>({});
   const [loading, setLoading] = useState(true);
   const [sourceClientId, setSourceClientId] = useState<string>('');
   const [targetClientIds, setTargetClientIds] = useState<string[]>([]);
   const [copying, setCopying] = useState(false);
   const [savedFlash, setSavedFlash] = useState<Record<string, number>>({});
+  const [pendingColumn, setPendingColumn] = useState<{ tabId: string; mode: 'all' | 'none' } | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const flashSaved = (clientId: string, tabId: string) => {
     const key = `${clientId}:${tabId}`;
@@ -1232,13 +1235,102 @@ export function TabAccessManager() {
     (async () => {
       const { data, error } = await supabase
         .from('clients')
-        .select('id, name, enabled_tabs')
+        .select('*')
         .order('name');
       if (error) console.error('[TabAccessManager] fetch error:', error);
-      setClients((data as TabAccessClient[]) ?? []);
+      const rows = (data as Record<string, unknown>[]) ?? [];
+      setRawRows(Object.fromEntries(rows.map(r => [String(r.id), r])));
+      setClients(rows.map(r => ({
+        id: String(r.id),
+        name: String(r.name ?? ''),
+        enabled_tabs: (r.enabled_tabs as string[] | null) ?? null,
+      })));
       setLoading(false);
     })();
   }, []);
+
+  /** Applies many client tab-access changes in ONE network request (bulk upsert). */
+  const applyBulk = async (updates: { id: string; enabled_tabs: string[] }[]) => {
+    if (updates.length === 0) return true;
+    const previous = new Map(clients.map(c => [c.id, c.enabled_tabs]));
+    const patch = new Map(updates.map(u => [u.id, u.enabled_tabs]));
+
+    // Optimistic update
+    setClients(prev => prev.map(c => patch.has(c.id) ? { ...c, enabled_tabs: patch.get(c.id)! } : c));
+
+    const payload = updates.map(u => ({ ...(rawRows[u.id] ?? { id: u.id }), enabled_tabs: u.enabled_tabs }));
+    const { error } = await supabase.from('clients').upsert(payload, { onConflict: 'id' });
+
+    if (error) {
+      console.error('[TabAccessManager] bulk update error:', error);
+      toast.error(`Failed to save tab access: ${error.message}`);
+      setClients(prev => prev.map(c => previous.has(c.id) ? { ...c, enabled_tabs: previous.get(c.id) ?? null } : c));
+      return false;
+    }
+    setRawRows(prev => {
+      const next = { ...prev };
+      updates.forEach(u => { next[u.id] = { ...(next[u.id] ?? { id: u.id }), enabled_tabs: u.enabled_tabs }; });
+      return next;
+    });
+    return true;
+  };
+
+  /** Row-level: set every tab on/off for a single client in one request. */
+  const setRowAll = async (clientId: string, mode: 'all' | 'none') => {
+    const client = clients.find(c => c.id === clientId);
+    if (!client) return;
+    const previous = client.enabled_tabs ?? [];
+    const newTabs = mode === 'all' ? ALL_TAB_IDS.slice() : [];
+    setClients(prev => prev.map(c => c.id === clientId ? { ...c, enabled_tabs: newTabs } : c));
+    const { error } = await supabase.from('clients').update({ enabled_tabs: newTabs }).eq('id', clientId);
+    if (error) {
+      toast.error(`Failed to save: ${error.message}`);
+      setClients(prev => prev.map(c => c.id === clientId ? { ...c, enabled_tabs: previous } : c));
+      return;
+    }
+    toast.success(mode === 'all' ? `All tabs enabled for ${client.name}` : `All tabs disabled for ${client.name}`);
+  };
+
+  /** Column-level: set one tab on/off for every client in one request, with undo. */
+  const applyColumn = async (tabId: string, mode: 'all' | 'none') => {
+    const label = ALL_TABS.find(t => t.id === tabId)?.label ?? tabId;
+    const snapshot = clients.map(c => ({ id: c.id, enabled_tabs: (c.enabled_tabs ?? []).slice() }));
+    const updates = clients
+      .map(c => {
+        const current = c.enabled_tabs ?? [];
+        const has = current.includes(tabId);
+        if (mode === 'all' && has) return null;
+        if (mode === 'none' && !has) return null;
+        return {
+          id: c.id,
+          enabled_tabs: mode === 'all' ? [...current, tabId] : current.filter(t => t !== tabId),
+        };
+      })
+      .filter((u): u is { id: string; enabled_tabs: string[] } => u !== null);
+
+    setPendingColumn(null);
+    if (updates.length === 0) {
+      toast.info(`${label} is already ${mode === 'all' ? 'enabled' : 'disabled'} for every client`);
+      return;
+    }
+
+    setBulkBusy(true);
+    const ok = await applyBulk(updates);
+    setBulkBusy(false);
+    if (!ok) return;
+
+    toast.success(
+      `${label} ${mode === 'all' ? 'enabled' : 'disabled'} for ${updates.length} client${updates.length === 1 ? '' : 's'}`,
+      {
+        action: {
+          label: 'Undo',
+          onClick: () => { void applyBulk(snapshot); },
+        },
+        duration: 8000,
+      }
+    );
+  };
+
 
   const toggleTab = async (clientId: string, tabId: string, currentTabs: string[]) => {
     const newTabs = currentTabs.includes(tabId)
@@ -1378,11 +1470,58 @@ export function TabAccessManager() {
                 <th className="text-left py-2 pr-3 font-mono-ui text-[10px] tracking-[0.12em] uppercase text-muted-foreground sticky left-0 bg-white">
                   Client
                 </th>
-                {ALL_TABS.map(tab => (
-                  <th key={tab.id} className="px-2 py-2 font-mono-ui text-[9px] tracking-[0.1em] uppercase text-muted-foreground whitespace-nowrap">
-                    {tab.label}
-                  </th>
-                ))}
+                {ALL_TABS.map(tab => {
+                  const pending = pendingColumn?.tabId === tab.id ? pendingColumn : null;
+                  return (
+                    <th key={tab.id} className="px-2 py-2 align-top font-mono-ui text-[9px] tracking-[0.1em] uppercase text-muted-foreground whitespace-nowrap">
+                      <div className="flex flex-col items-center gap-1">
+                        <span>{tab.label}</span>
+                        {pending ? (
+                          <span className="inline-flex items-center gap-1 normal-case tracking-normal">
+                            <span className="text-[9px] text-foreground">
+                              {pending.mode === 'all' ? 'Enable' : 'Disable'} for all {clients.length}?
+                            </span>
+                            <button
+                              type="button"
+                              disabled={bulkBusy}
+                              onClick={() => applyColumn(tab.id, pending.mode)}
+                              className="text-[9px] font-semibold underline underline-offset-2 text-green-700 hover:text-green-800 disabled:opacity-50"
+                            >
+                              Confirm
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setPendingColumn(null)}
+                              className="text-[9px] underline underline-offset-2 text-muted-foreground hover:text-foreground"
+                            >
+                              Cancel
+                            </button>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setPendingColumn({ tabId: tab.id, mode: 'all' })}
+                              aria-label={`Enable ${tab.label} for all clients`}
+                              className="text-[9px] font-semibold underline underline-offset-2 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            >
+                              All
+                            </button>
+                            <span aria-hidden="true" className="text-black/20">/</span>
+                            <button
+                              type="button"
+                              onClick={() => setPendingColumn({ tabId: tab.id, mode: 'none' })}
+                              aria-label={`Disable ${tab.label} for all clients`}
+                              className="text-[9px] font-semibold underline underline-offset-2 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            >
+                              None
+                            </button>
+                          </span>
+                        )}
+                      </div>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
@@ -1390,7 +1529,30 @@ export function TabAccessManager() {
                 const tabs = client.enabled_tabs ?? [];
                 return (
                   <tr key={client.id} className="border-b border-black/5">
-                    <td className="py-2 pr-3 font-medium sticky left-0 bg-white whitespace-nowrap">{client.name}</td>
+                    <td className="py-2 pr-3 font-medium sticky left-0 bg-white whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <span>{client.name}</span>
+                        <span className="inline-flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setRowAll(client.id, 'all')}
+                            aria-label={`Enable all tabs for ${client.name}`}
+                            className="font-mono-ui text-[9px] uppercase tracking-[0.1em] underline underline-offset-2 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                          >
+                            All
+                          </button>
+                          <span aria-hidden="true" className="text-black/20">/</span>
+                          <button
+                            type="button"
+                            onClick={() => setRowAll(client.id, 'none')}
+                            aria-label={`Disable all tabs for ${client.name}`}
+                            className="font-mono-ui text-[9px] uppercase tracking-[0.1em] underline underline-offset-2 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                          >
+                            None
+                          </button>
+                        </span>
+                      </div>
+                    </td>
                     {ALL_TABS.map(tab => (
                       <td key={tab.id} className="px-2 py-2 text-center">
                         <div className="inline-flex items-center gap-1.5">
