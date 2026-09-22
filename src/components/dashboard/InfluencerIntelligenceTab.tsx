@@ -16,7 +16,7 @@ import { LinkPreviewTrigger } from './LinkPreviewDrawer';
 import AISummarySection from './AISummarySection';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format as formatDate, formatDistanceToNowStrict } from 'date-fns';
+import { formatDistanceToNowStrict } from 'date-fns';
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle,
 } from '@/components/ui/sheet';

@@ -20,8 +20,10 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Search, X, CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useWeek } from '@/contexts/WeekContext';
+import { useAdmin } from '@/hooks/useAdmin';
 import { supabase } from '@/lib/supabase';
 import PressHitsLog from './PressHitsLog';
+import AISummarySection from './AISummarySection';
 
 const EarnedMediaTab = () => {
   const [searchText, setSearchText] = useState('');
