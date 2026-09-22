@@ -349,8 +349,8 @@ const PlatformScoreCards = ({
 
   if (loading) {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-        {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-32 w-full" />)}
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+        {Array.from({ length: 7 }).map((_, i) => <Skeleton key={i} className="h-32 w-full" />)}
       </div>
     );
   }
@@ -358,7 +358,7 @@ const PlatformScoreCards = ({
   const tileBase = 'text-left bg-card border border-border p-3 cursor-pointer hover:border-foreground/30 hover:-translate-y-0.5 transition-all focus:outline-none focus:ring-2 focus:ring-foreground/20';
   return (
     <>
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
         {ALL_KNOWN_PLATFORMS.map(key => {
           const r = byPlatform.get(key);
           if (!r) {

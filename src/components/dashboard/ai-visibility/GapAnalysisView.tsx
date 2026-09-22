@@ -6,7 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 const PLATFORM_LABELS: Record<string, string> = {
   chatgpt: 'ChatGPT', perplexity: 'Perplexity', google_ai: 'Google AI',
-  gemini: 'Gemini', claude: 'Claude', rufus: 'Rufus',
+  gemini: 'Gemini', claude: 'Claude',
 };
 
 interface PlatformGap { platform: string; score: number; status: string; }
