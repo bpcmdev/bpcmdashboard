@@ -1252,7 +1252,7 @@ export function TabAccessManager() {
   /** Applies many client tab-access changes in ONE network request (bulk upsert). */
   const applyBulk = async (updates: { id: string; enabled_tabs: string[] }[]) => {
     if (updates.length === 0) return true;
-    const previous = clients.map(c => ({ id: c.id, enabled_tabs: c.enabled_tabs }));
+    const previous = new Map(clients.map(c => [c.id, c.enabled_tabs]));
     const patch = new Map(updates.map(u => [u.id, u.enabled_tabs]));
 
     // Optimistic update
