@@ -26,6 +26,8 @@ import PressHitsLog from './PressHitsLog';
 import AISummarySection from './AISummarySection';
 
 const EarnedMediaTab = () => {
+  const { isAdmin, clientColor } = useAdmin();
+  const accent = clientColor || '#1B2B8A';
   const [searchText, setSearchText] = useState('');
   const [tierFilter, setTierFilter] = useState('all');
   const [sentimentFilter, setSentimentFilter] = useState('all');
@@ -84,6 +86,9 @@ const EarnedMediaTab = () => {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
+      {activeClientId && (
+        <AISummarySection clientId={activeClientId} accent={accent} isAdmin={isAdmin} kind="earned_media" functionName="earned-media-summary" />
+      )}
       {/* Date scope controls */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="inline-flex border border-border bg-card">
