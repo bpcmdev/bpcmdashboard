@@ -66,7 +66,7 @@ const Login = () => {
         <div className="hidden md:flex md:w-3/5 flex-col justify-between p-8 md:p-12 lg:p-16">
           {/* Logo */}
           <div>
-            <h1 className="satori-gold text-[50px] font-bold tracking-[0.18em]">Satori</h1>
+            <h1 className="satori-gold text-[50px] font-bold tracking-[0.02em] uppercase">SATORI</h1>
             <p className="text-[13px] tracking-[0.22em] uppercase mt-1.5" style={{ color: '#93c5fd' }}>
               INTELLIGENCE PLATFORM
             </p>
