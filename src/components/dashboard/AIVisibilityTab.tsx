@@ -2058,6 +2058,7 @@ const GeoRecommendationsSection = ({
       setSuggestions(d.suggestions as GeoSuggestions);
       setGeneratedAt(d.generated_at ?? new Date().toISOString());
       setModelUsed(d.model_used ?? modelUsed);
+      setFallbackPeriod(null);
     }
   };
 
@@ -2072,6 +2073,11 @@ const GeoRecommendationsSection = ({
           {generatedAt && (
             <span className="text-[10px] text-muted-foreground">
               Generated {timeAgo(generatedAt)}{modelUsed ? ` · ${modelUsed}` : ''}
+              {fallbackPeriod && (
+                <span className="text-[hsl(var(--chart-gold))]">
+                  {' '}· Based on {format(fallbackPeriod.start, 'MMM d')} – {format(fallbackPeriod.end, 'MMM d')}
+                </span>
+              )}
             </span>
           )}
         </div>
