@@ -17,7 +17,7 @@ import { CalendarIcon, Check, Pencil, Trash2, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { ALL_TABS } from '@/lib/dashboardTabs';
+import { ALL_TABS, ALL_TAB_IDS } from '@/lib/dashboardTabs';
 import { toast } from 'sonner';
 
 interface AdminPanelProps {
