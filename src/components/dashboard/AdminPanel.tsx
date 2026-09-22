@@ -1264,7 +1264,7 @@ export function TabAccessManager() {
     if (error) {
       console.error('[TabAccessManager] bulk update error:', error);
       toast.error(`Failed to save tab access: ${error.message}`);
-      setClients(previous.map(p => ({ ...(clients.find(c => c.id === p.id) as TabAccessClient), enabled_tabs: p.enabled_tabs })));
+      setClients(prev => prev.map(c => previous.has(c.id) ? { ...c, enabled_tabs: previous.get(c.id) ?? null } : c));
       return false;
     }
     setRawRows(prev => {
