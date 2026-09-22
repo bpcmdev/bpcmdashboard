@@ -1238,7 +1238,6 @@ export function TabAccessManager() {
         .order('name');
       if (error) console.error('[TabAccessManager] fetch error:', error);
       const rows = (data as Record<string, unknown>[]) ?? [];
-      setRawRows(Object.fromEntries(rows.map(r => [String(r.id), r])));
       setClients(rows.map(r => ({
         id: String(r.id),
         name: String(r.name ?? ''),
@@ -1275,11 +1274,6 @@ export function TabAccessManager() {
       setClients(prev => prev.map(c => previous.has(c.id) ? { ...c, enabled_tabs: previous.get(c.id) ?? null } : c));
       return false;
     }
-    setRawRows(prev => {
-      const next = { ...prev };
-      updates.forEach(u => { next[u.id] = { ...(next[u.id] ?? { id: u.id }), enabled_tabs: u.enabled_tabs }; });
-      return next;
-    });
     return true;
   };
 
