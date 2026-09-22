@@ -1980,6 +1980,7 @@ const GeoRecommendationsSection = ({
   const [suggestions, setSuggestions] = useState<GeoSuggestions | null>(null);
   const [generatedAt, setGeneratedAt] = useState<string | null>(null);
   const [modelUsed, setModelUsed] = useState<string | null>(null);
+  const [fallbackPeriod, setFallbackPeriod] = useState<{ start: string; end: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -1989,29 +1990,51 @@ const GeoRecommendationsSection = ({
     setLoading(true);
     setErrorMsg(null);
     const run = async () => {
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('peec_geo_suggestions' as any)
-        .select('suggestions, model_used, generated_at')
+        .select('suggestions, model_used, generated_at, period_start, period_end')
         .eq('client_id', clientId)
         .eq('period_type', periodType)
         .eq('period_start', p_start)
         .eq('period_end', p_end)
         .maybeSingle();
+      // No playbook for the exact selected window — fall back to the most
+      // recent one for this client and period type so the section still shows
+      // something useful (labelled with the window it actually covers).
+      if (!data && !error) {
+        const fallback = await supabase
+          .from('peec_geo_suggestions' as any)
+          .select('suggestions, model_used, generated_at, period_start, period_end')
+          .eq('client_id', clientId)
+          .eq('period_type', periodType)
+          .order('generated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        data = fallback.data;
+        error = fallback.error;
+      }
       if (cancelled) return;
       if (error) {
         console.error('peec_geo_suggestions cache read failed:', error);
         setSuggestions(null);
         setGeneratedAt(null);
         setModelUsed(null);
+        setFallbackPeriod(null);
       } else if (data) {
         const d = data as any;
         setSuggestions((d.suggestions ?? null) as GeoSuggestions | null);
         setGeneratedAt(d.generated_at ?? null);
         setModelUsed(d.model_used ?? null);
+        setFallbackPeriod(
+          d.period_start && d.period_end && (d.period_start !== p_start || d.period_end !== p_end)
+            ? { start: d.period_start, end: d.period_end }
+            : null
+        );
       } else {
         setSuggestions(null);
         setGeneratedAt(null);
         setModelUsed(null);
+        setFallbackPeriod(null);
       }
       setLoading(false);
     };
@@ -2035,6 +2058,7 @@ const GeoRecommendationsSection = ({
       setSuggestions(d.suggestions as GeoSuggestions);
       setGeneratedAt(d.generated_at ?? new Date().toISOString());
       setModelUsed(d.model_used ?? modelUsed);
+      setFallbackPeriod(null);
     }
   };
 
@@ -2049,6 +2073,11 @@ const GeoRecommendationsSection = ({
           {generatedAt && (
             <span className="text-[10px] text-muted-foreground">
               Generated {timeAgo(generatedAt)}{modelUsed ? ` · ${modelUsed}` : ''}
+              {fallbackPeriod && (
+                <span className="text-[hsl(var(--chart-gold))]">
+                  {' '}· Based on {format(fallbackPeriod.start, 'MMM d')} – {format(fallbackPeriod.end, 'MMM d')}
+                </span>
+              )}
             </span>
           )}
         </div>
