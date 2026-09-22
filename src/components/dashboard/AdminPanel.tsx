@@ -1210,11 +1210,14 @@ interface TabAccessClient {
 
 export function TabAccessManager() {
   const [clients, setClients] = useState<TabAccessClient[]>([]);
+  const [rawRows, setRawRows] = useState<Record<string, Record<string, unknown>>>({});
   const [loading, setLoading] = useState(true);
   const [sourceClientId, setSourceClientId] = useState<string>('');
   const [targetClientIds, setTargetClientIds] = useState<string[]>([]);
   const [copying, setCopying] = useState(false);
   const [savedFlash, setSavedFlash] = useState<Record<string, number>>({});
+  const [pendingColumn, setPendingColumn] = useState<{ tabId: string; mode: 'all' | 'none' } | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const flashSaved = (clientId: string, tabId: string) => {
     const key = `${clientId}:${tabId}`;
