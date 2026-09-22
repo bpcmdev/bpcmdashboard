@@ -6,7 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 const PLATFORM_LABELS: Record<string, string> = {
   chatgpt: 'ChatGPT', perplexity: 'Perplexity', google_ai: 'Google AI',
-  gemini: 'Gemini', claude: 'Claude', rufus: 'Rufus',
+  gemini: 'Gemini', claude: 'Claude',
 };
 
 interface PlatformGap { platform: string; score: number; status: string; }
@@ -42,7 +42,7 @@ const GapAnalysisView = () => {
       const [visRes, sovRes] = await Promise.all([visQ, sovQ]);
       if (visRes.error) console.error(visRes.error);
       if (sovRes.error) console.error(sovRes.error);
-      setPlatforms((visRes.data ?? []).map(r => ({ platform: r.platform, score: r.visibility_score, status: r.status })));
+      setPlatforms((visRes.data ?? []).filter(r => r.platform !== 'rufus').map(r => ({ platform: r.platform, score: r.visibility_score, status: r.status })));
       setSovRows((sovRes.data ?? []).map(r => ({ brand: r.brand_name, pct: r.sov_pct, rank: r.rank })));
       setLoading(false);
     };

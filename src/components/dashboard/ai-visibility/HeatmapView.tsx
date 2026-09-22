@@ -9,7 +9,6 @@ const PLATFORMS = [
   { key: 'google_ai', label: 'Google AI' },
   { key: 'gemini', label: 'Gemini' },
   { key: 'claude', label: 'Claude' },
-  { key: 'rufus', label: 'Rufus' },
 ];
 
 interface VisRow {
