@@ -200,8 +200,6 @@ const KpiBar = () => {
       const sparkOf = (key: string) => histRows.map(r => Number(r[key]) || 0);
       const allZero = (arr: number[]) => arr.length === 0 || arr.every(v => !v);
 
-      const placementSpark = sparkOf('placement_count');
-      const emvSpark = sparkOf('emv_usd');
       const sentimentSpark = sparkOf('sentiment_score');
       const reachSpark = sparkOf('social_reach');
       const sovSpark = sparkOf('sov_pct');
@@ -235,6 +233,51 @@ const KpiBar = () => {
         tooltip: roiTracked
           ? `EMV generated per $1 billed · ${formatMoney(roiEmv ?? 0)} EMV ÷ ${formatMoney(roiBillings ?? 0)} billed`
           : 'Influencer ROI not yet tracked for this period',
+      };
+
+      // Press Placements + EMV come from kpi_press_secure (live Launchmetrics `placements`),
+      // not weekly_snapshots. No row / tracked=false => client has no Launchmetrics coverage.
+      const pressParams: Record<string, any> = { p_client_id: activeClientId };
+      if (!isAllTime && effectiveFrom && effectiveTo) {
+        pressParams.p_start = effectiveFrom;
+        pressParams.p_end = effectiveTo;
+      }
+      const { data: pressData } = await supabase.rpc('kpi_press_secure' as any, pressParams);
+      const pressRows = (Array.isArray(pressData) ? pressData : pressData ? [pressData] : []) as any[];
+      const trackedRows = pressRows.filter(r => r.tracked);
+      const pressTracked = trackedRows.length > 0;
+      const sumOf = (k: string) => trackedRows.reduce((s, r) => s + (Number(r[k]) || 0), 0);
+      const pCount = sumOf('placements');
+      const pValue = sumOf('ad_value');
+      const hasPrior = !isAllTime && trackedRows.some(r => r.prior_placements != null);
+      const deltaSuffix = isYTD ? 'vs prior period' : 'vs prior week';
+      const neutral = { delta: isAllTime ? 'all-time' : 'stable', deltaType: 'neutral' as const };
+      const latest = trackedRows.map(r => r.latest_published).filter(Boolean).sort().pop();
+
+      const placementTile: KpiCardProps = {
+        label: 'Press Placements',
+        value: String(pCount),
+        ...(hasPrior ? formatDelta(pCount - sumOf('prior_placements'), 'int', deltaSuffix) : neutral),
+        targetTab: 'EARNED MEDIA',
+        metricKey: 'placement_count',
+        sparkColor: accent,
+        notTracked: !pressTracked,
+        tooltip: pressTracked
+          ? `Launchmetrics placements${latest ? ` · latest ${latest}` : ''}`
+          : 'Earned media not yet tracked for this client',
+      };
+
+      const emvTile: KpiCardProps = {
+        label: 'Earned Media Value',
+        value: formatMoney(pValue),
+        ...(hasPrior ? formatDelta(pValue - sumOf('prior_ad_value'), 'currency', deltaSuffix) : neutral),
+        targetTab: 'EARNED MEDIA',
+        metricKey: 'emv_usd',
+        sparkColor: accent,
+        notTracked: !pressTracked,
+        tooltip: pressTracked
+          ? 'Launchmetrics MIV (Media Impact Value), sum of ad_value'
+          : 'Earned media not yet tracked for this client',
       };
 
       if (isAllTime || isYTD) {
