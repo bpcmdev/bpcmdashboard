@@ -130,11 +130,22 @@ const KpiCard = ({ label, value, delta, deltaType, targetTab, metricKey, onSelec
   );
 };
 
+const socialReachTile: KpiCardProps = {
+  label: 'Social Reach',
+  value: '—',
+  delta: 'Not yet tracked',
+  deltaType: 'neutral',
+  targetTab: 'INFLUENCER & SOCIAL',
+  metricKey: 'social_reach',
+  notTracked: true,
+  tooltip: 'Social reach not yet tracked for this client',
+};
+
 const fallbackKpis: KpiCardProps[] = [
   { label: 'Press Placements', value: '—', delta: '—', deltaType: 'neutral' },
   { label: 'Earned Media Value', value: '—', delta: '—', deltaType: 'neutral' },
   { label: 'Sentiment Score', value: '—', delta: '—', deltaType: 'neutral' },
-  { label: 'Social Reach', value: '—', delta: '—', deltaType: 'neutral' },
+  socialReachTile,
   { label: 'Share of Voice', value: '—', delta: '—', deltaType: 'neutral' },
   { label: 'Influencer ROI', value: '—', delta: '—', deltaType: 'neutral' },
 ];
@@ -198,7 +209,7 @@ const KpiBar = () => {
       // Always fetch trailing-8-weeks history for sparklines + "not yet tracked" detection.
       const histQuery = supabase
         .from('weekly_snapshots')
-        .select('week_start, placement_count, emv_usd, sentiment_score, social_reach, sov_pct, influencer_roi')
+        .select('week_start, sentiment_score, sov_pct')
         .eq('client_id', activeClientId)
         .order('week_start', { ascending: false })
         .limit(8);
@@ -208,9 +219,7 @@ const KpiBar = () => {
       const allZero = (arr: number[]) => arr.length === 0 || arr.every(v => !v);
 
       const sentimentSpark = sparkOf('sentiment_score');
-      const reachSpark = sparkOf('social_reach');
       const sovSpark = sparkOf('sov_pct');
-      const roiSpark = sparkOf('influencer_roi');
 
       const sentimentNotTracked = allZero(sentimentSpark);
       const sovNotTracked = allZero(sovSpark);
@@ -267,14 +276,20 @@ const KpiBar = () => {
       const pCount = sumOf('placements');
       const pValue = sumOf('ad_value');
       const hasPrior = !isAllTime && trackedRows.some(r => r.prior_placements != null);
+      const priorPlacementTotal = sumOf('prior_placements');
       const deltaSuffix = isYTD ? 'vs prior period' : 'vs prior week';
       const neutral = { delta: isAllTime ? 'all-time' : 'stable', deltaType: 'neutral' as const };
       const latest = trackedRows.map(r => r.latest_published).filter(Boolean).sort().pop();
+      const placementDelta = isAllTime
+        ? neutral
+        : priorPlacementTotal === 0
+        ? { delta: 'New', deltaType: 'positive' as const }
+        : formatDelta(pCount - priorPlacementTotal, 'int', deltaSuffix);
 
       const placementTile: KpiCardProps = {
         label: 'Press Placements',
         value: String(pCount),
-        ...(hasPrior ? formatDelta(pCount - sumOf('prior_placements'), 'int', deltaSuffix) : neutral),
+        ...placementDelta,
         targetTab: 'EARNED MEDIA',
         metricKey: 'placement_count',
         sparkColor: accent,
@@ -308,7 +323,10 @@ const KpiBar = () => {
       };
 
       if (isAllTime || isYTD) {
-        let q = supabase.from('weekly_snapshots').select('*').eq('client_id', activeClientId);
+        let q = supabase
+          .from('weekly_snapshots')
+          .select('week_start, sentiment_score, sov_pct')
+          .eq('client_id', activeClientId);
         if (isYTD) q = q.gte('week_start', ytdFrom);
         const { data, error: err } = await q;
         if (err) {
@@ -323,12 +341,10 @@ const KpiBar = () => {
           setLoading(false);
           return;
         }
-        const sum = (k: string) => rows.reduce((s, r) => s + (Number(r[k]) || 0), 0);
         const avg = (k: string) => {
           const vals = rows.map(r => Number(r[k])).filter(v => Number.isFinite(v) && v !== 0);
           return vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : 0;
         };
-        const reach = sum('social_reach');
         const sentiment = Math.round(avg('sentiment_score'));
         const sov = Number(avg('sov_pct').toFixed(1));
         const roi = Number(avg('influencer_roi').toFixed(1));
@@ -339,7 +355,7 @@ const KpiBar = () => {
           placementTile,
           emvTile,
           { label: 'Sentiment Score', value: `${sentiment}/100`, ...aggDelta, metricKey: 'sentiment_score', spark: sentimentNotTracked ? undefined : sentimentSpark, sparkColor: accent, notTracked: sentimentNotTracked },
-          { label: 'Social Reach', value: formatCount(reach), ...aggDelta, targetTab: 'INFLUENCER & SOCIAL', metricKey: 'social_reach', spark: reachSpark, sparkColor: accent },
+          socialReachTile,
           { label: 'Share of Voice', value: `${sov}%`, ...aggDelta, metricKey: 'sov_pct', spark: sovNotTracked ? undefined : sovSpark, sparkColor: accent, notTracked: sovNotTracked },
           roiTile,
         ]);
@@ -349,7 +365,7 @@ const KpiBar = () => {
 
       const query = supabase
         .from('weekly_snapshots')
-        .select('*')
+        .select('sentiment_score, mom_sentiment_delta, sov_pct, sov_delta_pts')
         .eq('week_start', selectedWeek)
         .eq('client_id', activeClientId)
         .limit(1);
@@ -373,14 +389,13 @@ const KpiBar = () => {
 
       const r = data as Record<string, any>;
       const sentimentDelta = formatDelta(r.mom_sentiment_delta ?? 0, 'points', 'MoM');
-      const reachDelta = formatDelta(r.wow_reach_delta ?? 0, 'compact');
       const sovDelta = formatDelta(r.sov_delta_pts ?? 0, 'points');
 
       setKpis([
         placementTile,
         emvTile,
         { label: 'Sentiment Score', value: `${r.sentiment_score ?? 0}/100`, ...sentimentDelta, metricKey: 'sentiment_score', spark: sentimentNotTracked ? undefined : sentimentSpark, sparkColor: accent, notTracked: sentimentNotTracked && !(r.sentiment_score) },
-        { label: 'Social Reach', value: formatCount(r.social_reach ?? 0), ...reachDelta, targetTab: 'INFLUENCER & SOCIAL', metricKey: 'social_reach', spark: reachSpark, sparkColor: accent },
+        socialReachTile,
         { label: 'Share of Voice', value: `${r.sov_pct ?? 0}%`, ...sovDelta, metricKey: 'sov_pct', spark: sovNotTracked ? undefined : sovSpark, sparkColor: accent, notTracked: sovNotTracked && !(r.sov_pct) },
         roiTile,
       ]);
