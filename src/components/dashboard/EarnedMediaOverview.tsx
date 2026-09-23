@@ -442,11 +442,10 @@ const EarnedMediaOverview = () => {
                           )}
                         </div>
                       </div>
-                      <div className="shrink-0 text-right">
-                        <p className="font-display text-sm font-bold tabular-nums">{formatMoney(num(p.miv))}</p>
+                      <div className="shrink-0 self-start text-right pt-0.5">
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <p className="text-[10px] text-muted-foreground tabular-nums cursor-help">
+                            <p className="text-xs text-muted-foreground tabular-nums cursor-help">
                               {formatReach(num(p.potential_reach))} reach
                             </p>
                           </TooltipTrigger>
