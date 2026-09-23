@@ -288,7 +288,7 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
   useEffect(() => {
     setActivePage(1);
     setDismissedPage(1);
-  }, [effectiveFrom, effectiveTo, isAllTime, activeClientId, rangeMode, corporateOnly]);
+  }, [effectiveFrom, effectiveTo, isAllTime, activeClientId, rangeMode, corporateOnly, sortKey]);
 
   const fetchPlacements = async () => {
     if (!isAllTime && (!effectiveFrom || !effectiveTo)) return;
@@ -299,7 +299,7 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
       let q = supabase
         .from('placements')
         .select('id, headline, url, outlet_name, outlet_tier, outlet_umv, author_name, published_at, placement_type, placed_by, sentiment, ad_value, impressions, tags, dismissed, category, product_name, print_clipping_url, print_cover_url, holding_company', { count: 'exact' })
-        .order('published_at', { ascending: false })
+        .order(sortKey, { ascending: false, nullsFirst: false })
         .eq('dismissed', dismissedFlag)
         .range(from, from + PAGE_SIZE - 1);
 
@@ -336,7 +336,7 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
 
   useEffect(() => {
     fetchPlacements();
-  }, [effectiveFrom, effectiveTo, isAllTime, refreshKey, activeClientId, rangeMode, corporateOnly, activePage, dismissedPage, showDismissed, isAdmin]);
+  }, [effectiveFrom, effectiveTo, isAllTime, refreshKey, activeClientId, rangeMode, corporateOnly, activePage, dismissedPage, showDismissed, isAdmin, sortKey]);
 
   const patchRow = (id: string, patch: Partial<Placement>) => {
     setPlacements((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
