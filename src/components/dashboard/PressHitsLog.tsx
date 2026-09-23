@@ -278,6 +278,8 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
   // Delete
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showDismissed, setShowDismissed] = useState(false);
+  // Sort: newest first by default, or by MIV (ad_value) descending
+  const [sortKey, setSortKey] = useState<'published_at' | 'ad_value'>('published_at');
 
   const updateAddForm = (field: string, value: any) => setAddForm(prev => ({ ...prev, [field]: value }));
   const updateEditForm = (field: string, value: any) => setEditForm(prev => ({ ...prev, [field]: value }));
