@@ -596,6 +596,43 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
           </div>
         </div>
 
+        {/* Column headers / sort */}
+        <div className="hidden md:flex items-center gap-3 px-3 pb-1 border-b border-border">
+          <span className="w-36 shrink-0 text-[10px] font-bold tracking-[0.15em] uppercase text-muted-foreground">Outlet</span>
+          <span className="flex-1 text-[10px] font-bold tracking-[0.15em] uppercase text-muted-foreground">Headline</span>
+          <button
+            type="button"
+            onClick={() => setSortKey('published_at')}
+            className={cn(
+              'shrink-0 text-[10px] font-bold tracking-[0.15em] uppercase transition-colors',
+              sortKey === 'published_at' ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            Date
+          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="w-14 shrink-0 text-right text-[10px] font-bold tracking-[0.15em] uppercase text-muted-foreground cursor-help">
+                Potential Reach
+              </span>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-[260px] text-xs">
+              Outlet audience size reported by Launchmetrics, not article views.
+            </TooltipContent>
+          </Tooltip>
+          <button
+            type="button"
+            onClick={() => setSortKey('ad_value')}
+            className={cn(
+              'w-16 shrink-0 text-right text-[10px] font-bold tracking-[0.15em] uppercase transition-colors',
+              sortKey === 'ad_value' ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+            )}
+            title="Sort by MIV"
+          >
+            MIV
+          </button>
+        </div>
+
         {/* List */}
         {loading ? (
           <div className="space-y-2">
@@ -785,7 +822,7 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </TooltipProvider>
   );
 };
 
