@@ -192,13 +192,40 @@ const EarnedMediaOverview = () => {
   const pressPct = Math.round((pressMiv / mivBase) * 100);
   const socialPct = Math.max(0, 100 - pressPct);
 
-  const weekly = arr(summary.weekly).map((w: any) => ({
-    week: formatDay(w.week_start),
-    press_miv: num(w.press_miv),
-    social_miv: num(w.social_miv),
-    press_count: num(w.press_count),
-    social_count: num(w.social_count),
-  }));
+  const weekly = arr(summary.weekly)
+    .map((w: any) => ({
+      week_start: String(w.week_start ?? '').slice(0, 10),
+      week: formatDay(w.week_start),
+      press_miv: num(w.press_miv),
+      social_miv: num(w.social_miv),
+      press_count: num(w.press_count),
+      social_count: num(w.social_count),
+    }))
+    .filter((w) => w.week_start)
+    .sort((a, b) => a.week_start.localeCompare(b.week_start));
+
+  // Monthly press-coverage buckets: sum weekly press_count into calendar months.
+  // Only months with actual placements render — no empty months, no prior-year comparison.
+  const monthMap = new Map<string, { key: string; label: string; placements: number }>();
+  weekly.forEach((w) => {
+    const d = new Date(w.week_start + 'T00:00:00');
+    if (Number.isNaN(d.getTime())) return;
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const entry = monthMap.get(key) ?? {
+      key,
+      label: d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }).replace(' ', ' ’'),
+      placements: 0,
+    };
+    entry.placements += w.press_count;
+    monthMap.set(key, entry);
+  });
+  const monthlyCoverage = Array.from(monthMap.values())
+    .sort((a, b) => a.key.localeCompare(b.key))
+    .filter((m) => m.placements > 0);
+
+  // Trailing 8 weeks of placements — show only what exists, no zero-padding.
+  const weekly8 = weekly.slice(-8).map((w) => ({ week: w.week, placements: w.press_count }));
+  const showCoverageCharts = weekly.length > 0;
 
   const tierMix = arr(summary.tier_mix)
     .map((r: any) => ({ tier: num(r.tier), count: num(r.count), miv: num(r.miv) }))
