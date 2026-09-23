@@ -302,8 +302,6 @@ const KpiBar = () => {
           const vals = rows.map(r => Number(r[k])).filter(v => Number.isFinite(v) && v !== 0);
           return vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : 0;
         };
-        const placements = sum('placement_count');
-        const emv = sum('emv_usd');
         const reach = sum('social_reach');
         const sentiment = Math.round(avg('sentiment_score'));
         const sov = Number(avg('sov_pct').toFixed(1));
@@ -349,8 +347,6 @@ const KpiBar = () => {
       }
 
       const r = data as Record<string, any>;
-      const placementDelta = formatDelta(r.wow_placement_delta ?? 0, 'int');
-      const emvDelta = formatDelta(r.wow_emv_delta ?? 0, 'currency');
       const sentimentDelta = formatDelta(r.mom_sentiment_delta ?? 0, 'points', 'MoM');
       const reachDelta = formatDelta(r.wow_reach_delta ?? 0, 'compact');
       const sovDelta = formatDelta(r.sov_delta_pts ?? 0, 'points');
