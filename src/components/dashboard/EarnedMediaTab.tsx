@@ -1,61 +1,28 @@
 import { useState, useEffect } from 'react';
 import { format, parseISO } from 'date-fns';
-import PlacementVolumeChart from './PlacementVolumeChart';
 import ShareOfVoiceTable from './ShareOfVoiceTable';
 import SentimentBreakdown from './SentimentBreakdown';
-import CoverageByTier from './CoverageByTier';
-import TopPlacements from './TopPlacements';
-import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import EarnedMediaOverview from './EarnedMediaOverview';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Search, X, CalendarIcon } from 'lucide-react';
+import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useWeek } from '@/contexts/WeekContext';
 import { useAdmin } from '@/hooks/useAdmin';
-import { supabase } from '@/lib/supabase';
 import PressHitsLog from './PressHitsLog';
 import AISummarySection from './AISummarySection';
 
 const EarnedMediaTab = () => {
   const { isAdmin, clientColor } = useAdmin();
   const accent = clientColor || '#1B2B8A';
-  const [searchText, setSearchText] = useState('');
-  const [tierFilter, setTierFilter] = useState('all');
-  const [sentimentFilter, setSentimentFilter] = useState('all');
-  const [typeFilter, setTypeFilter] = useState('all');
   const [corporateOnly, setCorporateOnly] = useState(false);
-  const [hasSentimentData, setHasSentimentData] = useState(false);
 
   const {
     rangeMode, setRangeMode, rangeFrom, rangeTo, setRangeFrom, setRangeTo,
-    selectedWeek, activeClientId, refreshKey,
+    selectedWeek, activeClientId,
   } = useWeek();
-
-  // The sentiment filter is only meaningful if any placement actually carries a
-  // sentiment value — it is null across the board on the current data tier.
-  useEffect(() => {
-    let cancelled = false;
-    const check = async () => {
-      let query = supabase.from('placements').select('id').not('sentiment', 'is', null).limit(1);
-      if (activeClientId) query = query.eq('client_id', activeClientId);
-      const { data } = await query;
-      if (!cancelled) {
-        setHasSentimentData((data ?? []).length > 0);
-        if ((data ?? []).length === 0) setSentimentFilter('all');
-      }
-    };
-    check();
-    return () => { cancelled = true; };
-  }, [activeClientId, refreshKey]);
 
   // When entering Range mode for the first time, seed dates from the active week.
   useEffect(() => {
