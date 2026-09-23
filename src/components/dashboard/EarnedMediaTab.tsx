@@ -42,14 +42,6 @@ const EarnedMediaTab = () => {
     ? `${format(fromDate, 'MMM d')} – ${format(toDate, 'MMM d, yyyy')}`
     : null;
 
-  const hasFilters = searchText || tierFilter !== 'all' || sentimentFilter !== 'all' || typeFilter !== 'all';
-
-  const clearFilters = () => {
-    setSearchText('');
-    setTierFilter('all');
-    setSentimentFilter('all');
-    setTypeFilter('all');
-  };
 
   return (
     <div className="p-4 md:p-6 space-y-6">
