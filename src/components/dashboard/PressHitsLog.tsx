@@ -568,7 +568,7 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
   };
 
   return (
-    <>
+    <TooltipProvider>
       <div className="bg-card p-4 md:p-5 border border-border space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
