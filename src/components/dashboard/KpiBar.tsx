@@ -184,17 +184,24 @@ const KpiBar = () => {
 
   useEffect(() => {
     if (!selectedWeek) return;
+    // Client scope is mandatory: without it, RLS-admin sessions read EVERY client's
+    // rows and the tiles show cross-client totals. Stay in the loading state until
+    // the active client resolves.
+    if (!activeClientId) {
+      setLoading(true);
+      return;
+    }
     const fetchKpis = async () => {
       setLoading(true);
       setError(false);
 
       // Always fetch trailing-8-weeks history for sparklines + "not yet tracked" detection.
-      let histQuery = supabase
+      const histQuery = supabase
         .from('weekly_snapshots')
         .select('week_start, placement_count, emv_usd, sentiment_score, social_reach, sov_pct, influencer_roi')
+        .eq('client_id', activeClientId)
         .order('week_start', { ascending: false })
         .limit(8);
-      if (activeClientId) histQuery = histQuery.eq('client_id', activeClientId);
       const { data: hist } = await histQuery;
       const histRows = ((hist ?? []) as Record<string, any>[]).slice().reverse(); // oldest → newest
       const sparkOf = (key: string) => histRows.map(r => Number(r[key]) || 0);
@@ -215,8 +222,11 @@ const KpiBar = () => {
         roiParams.p_start = effectiveFrom;
         roiParams.p_end = effectiveTo;
       }
+      console.log('[KpiBar] activeClientId', activeClientId, 'roiParams', roiParams);
       const { data: roiData } = await supabase.rpc('ct_influencer_roi_secure' as any, roiParams);
-      const roiRow = Array.isArray(roiData) ? (roiData[0] ?? null) : (roiData ?? null);
+      const roiRowsAll = (Array.isArray(roiData) ? roiData : roiData ? [roiData] : []) as any[];
+      const roiScoped = roiRowsAll.filter(r => r?.client_id == null || r.client_id === activeClientId);
+      const roiRow = roiScoped[0] ?? null;
       const roiEmv = roiRow ? Number(roiRow.emv) : null;
       const roiBillings = roiRow ? Number(roiRow.billings) : null;
       const roiVal = roiRow && roiRow.roi != null ? Number(roiRow.roi) : null;
@@ -242,8 +252,15 @@ const KpiBar = () => {
         pressParams.p_start = effectiveFrom;
         pressParams.p_end = effectiveTo;
       }
+      console.log('[KpiBar] activeClientId', activeClientId, 'pressParams', pressParams);
       const { data: pressData } = await supabase.rpc('kpi_press_secure' as any, pressParams);
-      const pressRows = (Array.isArray(pressData) ? pressData : pressData ? [pressData] : []) as any[];
+      const pressRowsAll = (Array.isArray(pressData) ? pressData : pressData ? [pressData] : []) as any[];
+      // Defensive: if the RPC ever returns rows for other clients, keep only ours
+      // so the tiles never sum cross-client totals.
+      const pressRows = pressRowsAll.filter(r => r?.client_id == null || r.client_id === activeClientId);
+      if (pressRowsAll.length !== pressRows.length) {
+        console.warn('[KpiBar] kpi_press_secure returned rows for other clients', { returned: pressRowsAll.length, kept: pressRows.length });
+      }
       const trackedRows = pressRows.filter(r => r.tracked);
       const pressTracked = trackedRows.length > 0;
       const sumOf = (k: string) => trackedRows.reduce((s, r) => s + (Number(r[k]) || 0), 0);
@@ -291,8 +308,7 @@ const KpiBar = () => {
       };
 
       if (isAllTime || isYTD) {
-        let q = supabase.from('weekly_snapshots').select('*');
-        if (activeClientId) q = q.eq('client_id', activeClientId);
+        let q = supabase.from('weekly_snapshots').select('*').eq('client_id', activeClientId);
         if (isYTD) q = q.gte('week_start', ytdFrom);
         const { data, error: err } = await q;
         if (err) {
@@ -331,15 +347,14 @@ const KpiBar = () => {
         return;
       }
 
-      let query = supabase
+      const query = supabase
         .from('weekly_snapshots')
         .select('*')
         .eq('week_start', selectedWeek)
+        .eq('client_id', activeClientId)
         .limit(1);
 
-      if (activeClientId) {
-        query = query.eq('client_id', activeClientId);
-      }
+
 
       const { data, error: err } = await query.maybeSingle();
 
