@@ -19,6 +19,8 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { formatMoney } from '@/lib/format';
 import PaginationControls from './PaginationControls';
 
 const PAGE_SIZE = 10;

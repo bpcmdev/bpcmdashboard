@@ -179,88 +179,16 @@ const EarnedMediaTab = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-6">
-        <div className="stagger-in section-card md:col-span-3 p-5 md:p-6 border" style={{ '--stagger-delay': '0ms' } as React.CSSProperties}>
-          <PlacementVolumeChart corporateOnly={corporateOnly} />
-        </div>
-        <div className="stagger-in section-card md:col-span-2 p-5 md:p-6 border" style={{ '--stagger-delay': '80ms' } as React.CSSProperties}>
-          <ShareOfVoiceTable />
-        </div>
-      </div>
+      {/* Sections 1–7: one RPC-backed overview */}
+      <EarnedMediaOverview />
+
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-6">
         <div className="stagger-in section-card md:col-span-3 p-5 md:p-6 border" style={{ '--stagger-delay': '160ms' } as React.CSSProperties}>
           <SentimentBreakdown />
         </div>
         <div className="stagger-in section-card md:col-span-2 p-5 md:p-6 border" style={{ '--stagger-delay': '240ms' } as React.CSSProperties}>
-          <CoverageByTier corporateOnly={corporateOnly} />
+          <ShareOfVoiceTable />
         </div>
-      </div>
-
-      {/* Search & Filter controls */}
-      <div className="stagger-in section-card p-5 md:p-6 border space-y-4" style={{ '--stagger-delay': '320ms' } as React.CSSProperties}>
-        <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
-          <div className="relative flex-1 w-full md:w-auto">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search headlines or outlets..."
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              className="pl-9 text-xs"
-            />
-          </div>
-          <div className="flex flex-wrap gap-2 w-full md:w-auto">
-            <Select value={tierFilter} onValueChange={setTierFilter}>
-              <SelectTrigger className="w-full md:w-[130px] text-xs">
-                <SelectValue placeholder="Tier" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all" className="text-xs">All Tiers</SelectItem>
-                <SelectItem value="1" className="text-xs">Tier 1</SelectItem>
-                <SelectItem value="2" className="text-xs">Tier 2</SelectItem>
-                <SelectItem value="3" className="text-xs">Tier 3</SelectItem>
-              </SelectContent>
-            </Select>
-            {hasSentimentData && (
-              <Select value={sentimentFilter} onValueChange={setSentimentFilter}>
-                <SelectTrigger className="w-full md:w-[130px] text-xs">
-                  <SelectValue placeholder="Sentiment" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all" className="text-xs">All Sentiment</SelectItem>
-                  <SelectItem value="positive" className="text-xs">Positive</SelectItem>
-                  <SelectItem value="neutral" className="text-xs">Neutral</SelectItem>
-                  <SelectItem value="negative" className="text-xs">Negative</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-full md:w-[130px] text-xs">
-                <SelectValue placeholder="Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all" className="text-xs">All Types</SelectItem>
-                <SelectItem value="earned" className="text-xs">Earned</SelectItem>
-                <SelectItem value="newswire" className="text-xs">Newswire</SelectItem>
-                <SelectItem value="contributed" className="text-xs">Contributed</SelectItem>
-              </SelectContent>
-            </Select>
-            {hasFilters && (
-              <button
-                onClick={clearFilters}
-                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors px-2"
-              >
-                <X className="w-3 h-3" />
-                Clear
-              </button>
-            )}
-          </div>
-        </div>
-        <TopPlacements
-          searchText={searchText}
-          tierFilter={tierFilter}
-          sentimentFilter={sentimentFilter}
-          typeFilter={typeFilter}
-        />
       </div>
 
       {/* All Press Hits Running Log */}
