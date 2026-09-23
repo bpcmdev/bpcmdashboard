@@ -192,13 +192,40 @@ const EarnedMediaOverview = () => {
   const pressPct = Math.round((pressMiv / mivBase) * 100);
   const socialPct = Math.max(0, 100 - pressPct);
 
-  const weekly = arr(summary.weekly).map((w: any) => ({
-    week: formatDay(w.week_start),
-    press_miv: num(w.press_miv),
-    social_miv: num(w.social_miv),
-    press_count: num(w.press_count),
-    social_count: num(w.social_count),
-  }));
+  const weekly = arr(summary.weekly)
+    .map((w: any) => ({
+      week_start: String(w.week_start ?? '').slice(0, 10),
+      week: formatDay(w.week_start),
+      press_miv: num(w.press_miv),
+      social_miv: num(w.social_miv),
+      press_count: num(w.press_count),
+      social_count: num(w.social_count),
+    }))
+    .filter((w) => w.week_start)
+    .sort((a, b) => a.week_start.localeCompare(b.week_start));
+
+  // Monthly press-coverage buckets: sum weekly press_count into calendar months.
+  // Only months with actual placements render — no empty months, no prior-year comparison.
+  const monthMap = new Map<string, { key: string; label: string; placements: number }>();
+  weekly.forEach((w) => {
+    const d = new Date(w.week_start + 'T00:00:00');
+    if (Number.isNaN(d.getTime())) return;
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const entry = monthMap.get(key) ?? {
+      key,
+      label: d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }).replace(' ', ' ’'),
+      placements: 0,
+    };
+    entry.placements += w.press_count;
+    monthMap.set(key, entry);
+  });
+  const monthlyCoverage = Array.from(monthMap.values())
+    .sort((a, b) => a.key.localeCompare(b.key))
+    .filter((m) => m.placements > 0);
+
+  // Trailing 8 weeks of placements — show only what exists, no zero-padding.
+  const weekly8 = weekly.slice(-8).map((w) => ({ week: w.week, placements: w.press_count }));
+  const showCoverageCharts = weekly.length > 0;
 
   const tierMix = arr(summary.tier_mix)
     .map((r: any) => ({ tier: num(r.tier), count: num(r.count), miv: num(r.miv) }))
@@ -277,6 +304,91 @@ const EarnedMediaOverview = () => {
                 </p>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* 3b — COVERAGE VOLUME CHARTS (monthly + trailing 8 weeks) */}
+        {showCoverageCharts && (monthlyCoverage.length > 0 || weekly8.length > 0) && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+            {monthlyCoverage.length > 0 && (
+              <div className="section-card border p-5 md:p-6">
+                <SectionTitle>Press Coverage — Monthly</SectionTitle>
+                <div className="h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={monthlyCoverage} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                      <CartesianGrid vertical={false} stroke="hsl(var(--border))" />
+                      <XAxis
+                        dataKey="label"
+                        tick={{ fontSize: 10 }}
+                        stroke="hsl(var(--muted-foreground))"
+                      />
+                      <YAxis
+                        allowDecimals={false}
+                        tick={{ fontSize: 10 }}
+                        stroke="hsl(var(--muted-foreground))"
+                        width={40}
+                      />
+                      <ReTooltip
+                        cursor={{ fill: 'hsl(var(--muted) / 0.5)' }}
+                        contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', fontSize: 11 }}
+                        formatter={(value: any) => [formatCount(num(value)), 'Placements']}
+                      />
+                      <Bar
+                        dataKey="placements"
+                        fill={PRESS_COLOR}
+                        radius={[2, 2, 0, 0]}
+                        animationBegin={80}
+                        animationDuration={700}
+                        animationEasing="ease-out"
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-3">
+                  Press placements grouped by calendar month.
+                </p>
+              </div>
+            )}
+
+            {weekly8.length > 0 && (
+              <div className="section-card border p-5 md:p-6">
+                <SectionTitle>Placement Volume — 8 Weeks</SectionTitle>
+                <div className="h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={weekly8} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                      <CartesianGrid vertical={false} stroke="hsl(var(--border))" />
+                      <XAxis
+                        dataKey="week"
+                        tick={{ fontSize: 10 }}
+                        stroke="hsl(var(--muted-foreground))"
+                      />
+                      <YAxis
+                        allowDecimals={false}
+                        tick={{ fontSize: 10 }}
+                        stroke="hsl(var(--muted-foreground))"
+                        width={40}
+                      />
+                      <ReTooltip
+                        cursor={{ fill: 'hsl(var(--muted) / 0.5)' }}
+                        contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', fontSize: 11 }}
+                        formatter={(value: any) => [formatCount(num(value)), 'Placements']}
+                      />
+                      <Bar
+                        dataKey="placements"
+                        fill={PRESS_COLOR}
+                        radius={[2, 2, 0, 0]}
+                        animationBegin={120}
+                        animationDuration={700}
+                        animationEasing="ease-out"
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-3">
+                  Placements per week, trailing 8 weeks of available data.
+                </p>
+              </div>
+            )}
           </div>
         )}
 
