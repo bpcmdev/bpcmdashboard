@@ -312,8 +312,8 @@ const KpiBar = () => {
         const aggDelta = { delta: `${rows.length} weeks ${periodLabel}`, deltaType: 'neutral' as const };
 
         setKpis([
-          { label: 'Press Placements', value: String(placements), ...aggDelta, targetTab: 'EARNED MEDIA', metricKey: 'placement_count', spark: placementSpark, sparkColor: accent },
-          { label: 'Earned Media Value', value: formatMoney(emv), ...aggDelta, targetTab: 'EARNED MEDIA', metricKey: 'emv_usd', spark: emvSpark, sparkColor: accent },
+          placementTile,
+          emvTile,
           { label: 'Sentiment Score', value: `${sentiment}/100`, ...aggDelta, metricKey: 'sentiment_score', spark: sentimentNotTracked ? undefined : sentimentSpark, sparkColor: accent, notTracked: sentimentNotTracked },
           { label: 'Social Reach', value: formatCount(reach), ...aggDelta, targetTab: 'INFLUENCER & SOCIAL', metricKey: 'social_reach', spark: reachSpark, sparkColor: accent },
           { label: 'Share of Voice', value: `${sov}%`, ...aggDelta, metricKey: 'sov_pct', spark: sovNotTracked ? undefined : sovSpark, sparkColor: accent, notTracked: sovNotTracked },
@@ -356,8 +356,8 @@ const KpiBar = () => {
       const sovDelta = formatDelta(r.sov_delta_pts ?? 0, 'points');
 
       setKpis([
-        { label: 'Press Placements', value: String(r.placement_count ?? 0), ...placementDelta, targetTab: 'EARNED MEDIA', metricKey: 'placement_count', spark: placementSpark, sparkColor: accent },
-        { label: 'Earned Media Value', value: formatMoney(r.emv_usd ?? 0), ...emvDelta, targetTab: 'EARNED MEDIA', metricKey: 'emv_usd', spark: emvSpark, sparkColor: accent },
+        placementTile,
+        emvTile,
         { label: 'Sentiment Score', value: `${r.sentiment_score ?? 0}/100`, ...sentimentDelta, metricKey: 'sentiment_score', spark: sentimentNotTracked ? undefined : sentimentSpark, sparkColor: accent, notTracked: sentimentNotTracked && !(r.sentiment_score) },
         { label: 'Social Reach', value: formatCount(r.social_reach ?? 0), ...reachDelta, targetTab: 'INFLUENCER & SOCIAL', metricKey: 'social_reach', spark: reachSpark, sparkColor: accent },
         { label: 'Share of Voice', value: `${r.sov_pct ?? 0}%`, ...sovDelta, metricKey: 'sov_pct', spark: sovNotTracked ? undefined : sovSpark, sparkColor: accent, notTracked: sovNotTracked && !(r.sov_pct) },
