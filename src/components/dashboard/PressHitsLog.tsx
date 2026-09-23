@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { X, ExternalLink, Plus, AlertCircle, Pencil, Trash2, CalendarIcon, RotateCcw, Image as ImageIcon } from 'lucide-react';
+import { X, ExternalLink, AlertCircle, Pencil, Trash2, CalendarIcon, RotateCcw, Image as ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Switch } from '@/components/ui/switch';
@@ -265,11 +265,6 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
   const [activeCount, setActiveCount] = useState(0);
   const [dismissedCount, setDismissedCount] = useState(0);
 
-  // Add form
-  const [addForm, setAddForm] = useState(defaultFormValues());
-  const [submitting, setSubmitting] = useState(false);
-  const [showAddForm, setShowAddForm] = useState(false);
-
   // Edit
   const [editItem, setEditItem] = useState<Placement | null>(null);
   const [editForm, setEditForm] = useState(defaultFormValues());
@@ -281,7 +276,6 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
   // Sort: newest first by default, or by MIV (ad_value) descending
   const [sortKey, setSortKey] = useState<'published_at' | 'ad_value'>('published_at');
 
-  const updateAddForm = (field: string, value: any) => setAddForm(prev => ({ ...prev, [field]: value }));
   const updateEditForm = (field: string, value: any) => setEditForm(prev => ({ ...prev, [field]: value }));
 
   // Reset both lists to page 1 whenever scope changes
@@ -377,39 +371,6 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
       return;
     }
     await fetchPlacements();
-  };
-
-  const handleAdd = async () => {
-    if (!addForm.outletName.trim() || !addForm.headline.trim()) {
-      toast.error('Outlet name and headline are required.');
-      return;
-    }
-    setSubmitting(true);
-
-    let weekQuery = supabase.from('weekly_snapshots').select('id').eq('week_start', selectedWeek);
-    if (activeClientId) weekQuery = weekQuery.eq('client_id', activeClientId);
-    const { data: weekRow } = await weekQuery.maybeSingle();
-
-    if (!weekRow) {
-      toast.error('No weekly snapshot found for this week.');
-      setSubmitting(false);
-      return;
-    }
-
-    const payload = { ...formToPayload(addForm), client_id: activeClientId, week_id: weekRow.id };
-    const { data: inserted, error } = await supabase.from('placements').insert(payload).select('id').single();
-
-    if (error) {
-      toast.error('Failed to add placement.');
-      console.error(error);
-    } else {
-      logActivity({ client_id: activeClientId, action: 'created', entity_type: 'placement', entity_id: inserted?.id, entity_title: payload.headline, metadata: { outlet_name: payload.outlet_name } });
-      toast.success('Hit added successfully.');
-      setAddForm(defaultFormValues());
-      setShowAddForm(false);
-      await fetchPlacements();
-    }
-    setSubmitting(false);
   };
 
   const handleEdit = async () => {
@@ -587,12 +548,6 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
                 {activeCount} hit{activeCount !== 1 ? 's' : ''}
               </span>
             )}
-            {isAdmin && (
-              <Button size="sm" variant="outline" className="text-xs gap-1" onClick={() => setShowAddForm(!showAddForm)}>
-                <Plus className="w-3.5 h-3.5" />
-                ADD HIT
-              </Button>
-            )}
           </div>
         </div>
 
@@ -676,21 +631,6 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
           </>
         )}
 
-        {/* Add form — admin only */}
-        {isAdmin && showAddForm && (
-          <div className="border-t border-border pt-4 space-y-3">
-            <PlacementForm values={addForm} onChange={updateAddForm} />
-            <div className="flex items-center justify-between">
-              <p className="text-[10px] text-muted-foreground max-w-lg">
-                Paste any article URL missed by the API — it will appear at the top of the log and open in the article preview.
-              </p>
-              <Button size="sm" onClick={handleAdd} disabled={submitting} className="text-xs gap-1">
-                <Plus className="w-3.5 h-3.5" />
-                {submitting ? 'Adding…' : 'ADD HIT'}
-              </Button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Preview panel */}

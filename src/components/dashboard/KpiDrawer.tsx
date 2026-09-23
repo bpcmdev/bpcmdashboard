@@ -36,6 +36,8 @@ interface TopItem {
   secondary?: string;
   metric: string;
   url?: string;
+  badge?: string;
+  date?: string;
 }
 
 const FORMATTERS: Record<KpiMetricKey, (n: number) => string> = {
@@ -64,6 +66,11 @@ function fmtWeekLabel(weekStart: string | null | undefined): string {
 
 function toIsoDate(d: Date | null): string | null {
   return isValidDate(d) ? d.toISOString().split('T')[0] : null;
+}
+
+function fmtDate(value: string | null | undefined): string | undefined {
+  const d = safeDate(value);
+  return d ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : undefined;
 }
 
 const KpiDrawer = ({ open, onOpenChange, metric, label, targetTab }: KpiDrawerProps) => {
@@ -136,21 +143,25 @@ const KpiDrawer = ({ open, onOpenChange, metric, label, targetTab }: KpiDrawerPr
         const dateTo = !isAllTime ? effectiveTo : null;
 
         if (metric === 'placement_count' || metric === 'emv_usd') {
-          let placeQ = supabase
-            .from('placements')
-            .select('id, headline, outlet_name, outlet_umv, url, published_at')
-            .eq('client_id', activeClientId)
-            .order(metric === 'emv_usd' ? 'ad_value' : 'outlet_umv', { ascending: false })
-            .limit(5);
-          if (dateFrom && dateTo) placeQ = placeQ.gte('published_at', dateFrom).lte('published_at', dateTo);
-          const { data: placements } = await placeQ;
+          // Same source as the Earned Media tab: pre-filtered (synced, not
+          // dismissed) and pre-sorted by MIV descending.
+          const rpcParams: Record<string, unknown> = { p_client_id: activeClientId };
+          if (dateFrom && dateTo) {
+            rpcParams.p_start = dateFrom;
+            rpcParams.p_end = dateTo;
+          }
+          const { data: summaryData } = await supabase.rpc('earned_media_summary_secure', rpcParams);
           if (cancelled) return;
-          const items: TopItem[] = ((placements ?? []) as any[]).map((p) => ({
-            id: p.id,
+          const summary = Array.isArray(summaryData) ? summaryData[0] : summaryData;
+          const topPress = Array.isArray(summary?.top_press) ? summary.top_press : [];
+          const items: TopItem[] = topPress.map((p: any, i: number) => ({
+            id: p.id ?? `press-${i}`,
             primary: p.headline ?? '—',
-            secondary: p.outlet_name ?? undefined,
-            metric: p.outlet_umv ? `${formatCount(p.outlet_umv)} reach` : '—',
+            secondary: p.outlet ?? p.outlet_name ?? undefined,
+            metric: formatMoney(Number(p.ad_value ?? p.miv) || 0),
             url: p.url || undefined,
+            badge: Number(p.tier) >= 1 ? `TIER ${Number(p.tier)}` : 'UNRATED',
+            date: fmtDate(p.published_at),
           }));
           setTopItems(items);
           setTopLabel('Top Press Placements');
@@ -325,6 +336,16 @@ const KpiDrawer = ({ open, onOpenChange, metric, label, targetTab }: KpiDrawerPr
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-foreground truncate">{it.primary}</p>
                       {it.secondary && <p className="text-[11px] text-muted-foreground truncate">{it.secondary}</p>}
+                      {(it.badge || it.date) && (
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {it.badge && (
+                            <span className="text-[9px] font-bold tracking-wider px-1.5 py-0.5 border border-black/10 text-muted-foreground">
+                              {it.badge}
+                            </span>
+                          )}
+                          {it.date && <span className="text-[10px] text-muted-foreground">{it.date}</span>}
+                        </div>
+                      )}
                     </div>
                     <span className="font-display text-sm font-bold tabular-nums shrink-0">{it.metric}</span>
                   </LinkPreviewTrigger>
