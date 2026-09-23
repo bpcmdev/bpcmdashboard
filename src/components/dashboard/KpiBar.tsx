@@ -200,8 +200,6 @@ const KpiBar = () => {
       const sparkOf = (key: string) => histRows.map(r => Number(r[key]) || 0);
       const allZero = (arr: number[]) => arr.length === 0 || arr.every(v => !v);
 
-      const placementSpark = sparkOf('placement_count');
-      const emvSpark = sparkOf('emv_usd');
       const sentimentSpark = sparkOf('sentiment_score');
       const reachSpark = sparkOf('social_reach');
       const sovSpark = sparkOf('sov_pct');
@@ -237,6 +235,51 @@ const KpiBar = () => {
           : 'Influencer ROI not yet tracked for this period',
       };
 
+      // Press Placements + EMV come from kpi_press_secure (live Launchmetrics `placements`),
+      // not weekly_snapshots. No row / tracked=false => client has no Launchmetrics coverage.
+      const pressParams: Record<string, any> = { p_client_id: activeClientId };
+      if (!isAllTime && effectiveFrom && effectiveTo) {
+        pressParams.p_start = effectiveFrom;
+        pressParams.p_end = effectiveTo;
+      }
+      const { data: pressData } = await supabase.rpc('kpi_press_secure' as any, pressParams);
+      const pressRows = (Array.isArray(pressData) ? pressData : pressData ? [pressData] : []) as any[];
+      const trackedRows = pressRows.filter(r => r.tracked);
+      const pressTracked = trackedRows.length > 0;
+      const sumOf = (k: string) => trackedRows.reduce((s, r) => s + (Number(r[k]) || 0), 0);
+      const pCount = sumOf('placements');
+      const pValue = sumOf('ad_value');
+      const hasPrior = !isAllTime && trackedRows.some(r => r.prior_placements != null);
+      const deltaSuffix = isYTD ? 'vs prior period' : 'vs prior week';
+      const neutral = { delta: isAllTime ? 'all-time' : 'stable', deltaType: 'neutral' as const };
+      const latest = trackedRows.map(r => r.latest_published).filter(Boolean).sort().pop();
+
+      const placementTile: KpiCardProps = {
+        label: 'Press Placements',
+        value: String(pCount),
+        ...(hasPrior ? formatDelta(pCount - sumOf('prior_placements'), 'int', deltaSuffix) : neutral),
+        targetTab: 'EARNED MEDIA',
+        metricKey: 'placement_count',
+        sparkColor: accent,
+        notTracked: !pressTracked,
+        tooltip: pressTracked
+          ? `Launchmetrics placements${latest ? ` · latest ${latest}` : ''}`
+          : 'Earned media not yet tracked for this client',
+      };
+
+      const emvTile: KpiCardProps = {
+        label: 'Earned Media Value',
+        value: formatMoney(pValue),
+        ...(hasPrior ? formatDelta(pValue - sumOf('prior_ad_value'), 'currency', deltaSuffix) : neutral),
+        targetTab: 'EARNED MEDIA',
+        metricKey: 'emv_usd',
+        sparkColor: accent,
+        notTracked: !pressTracked,
+        tooltip: pressTracked
+          ? 'Launchmetrics MIV (Media Impact Value), sum of ad_value'
+          : 'Earned media not yet tracked for this client',
+      };
+
       if (isAllTime || isYTD) {
         let q = supabase.from('weekly_snapshots').select('*');
         if (activeClientId) q = q.eq('client_id', activeClientId);
@@ -259,8 +302,6 @@ const KpiBar = () => {
           const vals = rows.map(r => Number(r[k])).filter(v => Number.isFinite(v) && v !== 0);
           return vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : 0;
         };
-        const placements = sum('placement_count');
-        const emv = sum('emv_usd');
         const reach = sum('social_reach');
         const sentiment = Math.round(avg('sentiment_score'));
         const sov = Number(avg('sov_pct').toFixed(1));
@@ -269,8 +310,8 @@ const KpiBar = () => {
         const aggDelta = { delta: `${rows.length} weeks ${periodLabel}`, deltaType: 'neutral' as const };
 
         setKpis([
-          { label: 'Press Placements', value: String(placements), ...aggDelta, targetTab: 'EARNED MEDIA', metricKey: 'placement_count', spark: placementSpark, sparkColor: accent },
-          { label: 'Earned Media Value', value: formatMoney(emv), ...aggDelta, targetTab: 'EARNED MEDIA', metricKey: 'emv_usd', spark: emvSpark, sparkColor: accent },
+          placementTile,
+          emvTile,
           { label: 'Sentiment Score', value: `${sentiment}/100`, ...aggDelta, metricKey: 'sentiment_score', spark: sentimentNotTracked ? undefined : sentimentSpark, sparkColor: accent, notTracked: sentimentNotTracked },
           { label: 'Social Reach', value: formatCount(reach), ...aggDelta, targetTab: 'INFLUENCER & SOCIAL', metricKey: 'social_reach', spark: reachSpark, sparkColor: accent },
           { label: 'Share of Voice', value: `${sov}%`, ...aggDelta, metricKey: 'sov_pct', spark: sovNotTracked ? undefined : sovSpark, sparkColor: accent, notTracked: sovNotTracked },
@@ -306,15 +347,13 @@ const KpiBar = () => {
       }
 
       const r = data as Record<string, any>;
-      const placementDelta = formatDelta(r.wow_placement_delta ?? 0, 'int');
-      const emvDelta = formatDelta(r.wow_emv_delta ?? 0, 'currency');
       const sentimentDelta = formatDelta(r.mom_sentiment_delta ?? 0, 'points', 'MoM');
       const reachDelta = formatDelta(r.wow_reach_delta ?? 0, 'compact');
       const sovDelta = formatDelta(r.sov_delta_pts ?? 0, 'points');
 
       setKpis([
-        { label: 'Press Placements', value: String(r.placement_count ?? 0), ...placementDelta, targetTab: 'EARNED MEDIA', metricKey: 'placement_count', spark: placementSpark, sparkColor: accent },
-        { label: 'Earned Media Value', value: formatMoney(r.emv_usd ?? 0), ...emvDelta, targetTab: 'EARNED MEDIA', metricKey: 'emv_usd', spark: emvSpark, sparkColor: accent },
+        placementTile,
+        emvTile,
         { label: 'Sentiment Score', value: `${r.sentiment_score ?? 0}/100`, ...sentimentDelta, metricKey: 'sentiment_score', spark: sentimentNotTracked ? undefined : sentimentSpark, sparkColor: accent, notTracked: sentimentNotTracked && !(r.sentiment_score) },
         { label: 'Social Reach', value: formatCount(r.social_reach ?? 0), ...reachDelta, targetTab: 'INFLUENCER & SOCIAL', metricKey: 'social_reach', spark: reachSpark, sparkColor: accent },
         { label: 'Share of Voice', value: `${r.sov_pct ?? 0}%`, ...sovDelta, metricKey: 'sov_pct', spark: sovNotTracked ? undefined : sovSpark, sparkColor: accent, notTracked: sovNotTracked && !(r.sov_pct) },
