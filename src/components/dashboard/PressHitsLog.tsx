@@ -19,6 +19,8 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { formatMoney } from '@/lib/format';
 import PaginationControls from './PaginationControls';
 
 const PAGE_SIZE = 10;
@@ -276,6 +278,8 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
   // Delete
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showDismissed, setShowDismissed] = useState(false);
+  // Sort: newest first by default, or by MIV (ad_value) descending
+  const [sortKey, setSortKey] = useState<'published_at' | 'ad_value'>('published_at');
 
   const updateAddForm = (field: string, value: any) => setAddForm(prev => ({ ...prev, [field]: value }));
   const updateEditForm = (field: string, value: any) => setEditForm(prev => ({ ...prev, [field]: value }));
@@ -284,7 +288,7 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
   useEffect(() => {
     setActivePage(1);
     setDismissedPage(1);
-  }, [effectiveFrom, effectiveTo, isAllTime, activeClientId, rangeMode, corporateOnly]);
+  }, [effectiveFrom, effectiveTo, isAllTime, activeClientId, rangeMode, corporateOnly, sortKey]);
 
   const fetchPlacements = async () => {
     if (!isAllTime && (!effectiveFrom || !effectiveTo)) return;
@@ -295,7 +299,7 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
       let q = supabase
         .from('placements')
         .select('id, headline, url, outlet_name, outlet_tier, outlet_umv, author_name, published_at, placement_type, placed_by, sentiment, ad_value, impressions, tags, dismissed, category, product_name, print_clipping_url, print_cover_url, holding_company', { count: 'exact' })
-        .order('published_at', { ascending: false })
+        .order(sortKey, { ascending: false, nullsFirst: false })
         .eq('dismissed', dismissedFlag)
         .range(from, from + PAGE_SIZE - 1);
 
@@ -332,7 +336,7 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
 
   useEffect(() => {
     fetchPlacements();
-  }, [effectiveFrom, effectiveTo, isAllTime, refreshKey, activeClientId, rangeMode, corporateOnly, activePage, dismissedPage, showDismissed, isAdmin]);
+  }, [effectiveFrom, effectiveTo, isAllTime, refreshKey, activeClientId, rangeMode, corporateOnly, activePage, dismissedPage, showDismissed, isAdmin, sortKey]);
 
   const patchRow = (id: string, patch: Partial<Placement>) => {
     setPlacements((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
@@ -486,8 +490,11 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
         <span className="text-[11px] text-muted-foreground shrink-0 hidden md:inline">
           {p.published_at ? formatDate(p.published_at) : ''}
         </span>
-        <span className="text-[11px] text-muted-foreground shrink-0 w-12 text-right">
+        <span className="text-[11px] text-muted-foreground shrink-0 w-14 text-right tabular-nums">
           {formatReach(p.outlet_umv)}
+        </span>
+        <span className="text-[11px] shrink-0 w-16 text-right tabular-nums font-semibold">
+          {p.ad_value ? formatMoney(p.ad_value) : <span className="text-muted-foreground">—</span>}
         </span>
         {p.print_clipping_url && (
           <button
@@ -561,7 +568,7 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
   };
 
   return (
-    <>
+    <TooltipProvider>
       <div className="bg-card p-4 md:p-5 border border-border space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -587,6 +594,43 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
               </Button>
             )}
           </div>
+        </div>
+
+        {/* Column headers / sort */}
+        <div className="hidden md:flex items-center gap-3 px-3 pb-1 border-b border-border">
+          <span className="w-36 shrink-0 text-[10px] font-bold tracking-[0.15em] uppercase text-muted-foreground">Outlet</span>
+          <span className="flex-1 text-[10px] font-bold tracking-[0.15em] uppercase text-muted-foreground">Headline</span>
+          <button
+            type="button"
+            onClick={() => setSortKey('published_at')}
+            className={cn(
+              'shrink-0 text-[10px] font-bold tracking-[0.15em] uppercase transition-colors',
+              sortKey === 'published_at' ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            Date
+          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="w-14 shrink-0 text-right text-[10px] font-bold tracking-[0.15em] uppercase text-muted-foreground cursor-help">
+                Potential Reach
+              </span>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-[260px] text-xs">
+              Outlet audience size reported by Launchmetrics, not article views.
+            </TooltipContent>
+          </Tooltip>
+          <button
+            type="button"
+            onClick={() => setSortKey('ad_value')}
+            className={cn(
+              'w-16 shrink-0 text-right text-[10px] font-bold tracking-[0.15em] uppercase transition-colors',
+              sortKey === 'ad_value' ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+            )}
+            title="Sort by MIV"
+          >
+            MIV
+          </button>
         </div>
 
         {/* List */}
@@ -778,7 +822,7 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </TooltipProvider>
   );
 };
 

@@ -1,61 +1,28 @@
 import { useState, useEffect } from 'react';
 import { format, parseISO } from 'date-fns';
-import PlacementVolumeChart from './PlacementVolumeChart';
 import ShareOfVoiceTable from './ShareOfVoiceTable';
 import SentimentBreakdown from './SentimentBreakdown';
-import CoverageByTier from './CoverageByTier';
-import TopPlacements from './TopPlacements';
-import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import EarnedMediaOverview from './EarnedMediaOverview';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Search, X, CalendarIcon } from 'lucide-react';
+import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useWeek } from '@/contexts/WeekContext';
 import { useAdmin } from '@/hooks/useAdmin';
-import { supabase } from '@/lib/supabase';
 import PressHitsLog from './PressHitsLog';
 import AISummarySection from './AISummarySection';
 
 const EarnedMediaTab = () => {
   const { isAdmin, clientColor } = useAdmin();
   const accent = clientColor || '#1B2B8A';
-  const [searchText, setSearchText] = useState('');
-  const [tierFilter, setTierFilter] = useState('all');
-  const [sentimentFilter, setSentimentFilter] = useState('all');
-  const [typeFilter, setTypeFilter] = useState('all');
   const [corporateOnly, setCorporateOnly] = useState(false);
-  const [hasSentimentData, setHasSentimentData] = useState(false);
 
   const {
     rangeMode, setRangeMode, rangeFrom, rangeTo, setRangeFrom, setRangeTo,
-    selectedWeek, activeClientId, refreshKey,
+    selectedWeek, activeClientId,
   } = useWeek();
-
-  // The sentiment filter is only meaningful if any placement actually carries a
-  // sentiment value — it is null across the board on the current data tier.
-  useEffect(() => {
-    let cancelled = false;
-    const check = async () => {
-      let query = supabase.from('placements').select('id').not('sentiment', 'is', null).limit(1);
-      if (activeClientId) query = query.eq('client_id', activeClientId);
-      const { data } = await query;
-      if (!cancelled) {
-        setHasSentimentData((data ?? []).length > 0);
-        if ((data ?? []).length === 0) setSentimentFilter('all');
-      }
-    };
-    check();
-    return () => { cancelled = true; };
-  }, [activeClientId, refreshKey]);
 
   // When entering Range mode for the first time, seed dates from the active week.
   useEffect(() => {
@@ -75,14 +42,6 @@ const EarnedMediaTab = () => {
     ? `${format(fromDate, 'MMM d')} – ${format(toDate, 'MMM d, yyyy')}`
     : null;
 
-  const hasFilters = searchText || tierFilter !== 'all' || sentimentFilter !== 'all' || typeFilter !== 'all';
-
-  const clearFilters = () => {
-    setSearchText('');
-    setTierFilter('all');
-    setSentimentFilter('all');
-    setTypeFilter('all');
-  };
 
   return (
     <div className="p-4 md:p-6 space-y-6">
@@ -179,88 +138,16 @@ const EarnedMediaTab = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-6">
-        <div className="stagger-in section-card md:col-span-3 p-5 md:p-6 border" style={{ '--stagger-delay': '0ms' } as React.CSSProperties}>
-          <PlacementVolumeChart corporateOnly={corporateOnly} />
-        </div>
-        <div className="stagger-in section-card md:col-span-2 p-5 md:p-6 border" style={{ '--stagger-delay': '80ms' } as React.CSSProperties}>
-          <ShareOfVoiceTable />
-        </div>
-      </div>
+      {/* Sections 1–7: one RPC-backed overview */}
+      <EarnedMediaOverview />
+
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-6">
         <div className="stagger-in section-card md:col-span-3 p-5 md:p-6 border" style={{ '--stagger-delay': '160ms' } as React.CSSProperties}>
           <SentimentBreakdown />
         </div>
         <div className="stagger-in section-card md:col-span-2 p-5 md:p-6 border" style={{ '--stagger-delay': '240ms' } as React.CSSProperties}>
-          <CoverageByTier corporateOnly={corporateOnly} />
+          <ShareOfVoiceTable />
         </div>
-      </div>
-
-      {/* Search & Filter controls */}
-      <div className="stagger-in section-card p-5 md:p-6 border space-y-4" style={{ '--stagger-delay': '320ms' } as React.CSSProperties}>
-        <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
-          <div className="relative flex-1 w-full md:w-auto">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search headlines or outlets..."
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              className="pl-9 text-xs"
-            />
-          </div>
-          <div className="flex flex-wrap gap-2 w-full md:w-auto">
-            <Select value={tierFilter} onValueChange={setTierFilter}>
-              <SelectTrigger className="w-full md:w-[130px] text-xs">
-                <SelectValue placeholder="Tier" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all" className="text-xs">All Tiers</SelectItem>
-                <SelectItem value="1" className="text-xs">Tier 1</SelectItem>
-                <SelectItem value="2" className="text-xs">Tier 2</SelectItem>
-                <SelectItem value="3" className="text-xs">Tier 3</SelectItem>
-              </SelectContent>
-            </Select>
-            {hasSentimentData && (
-              <Select value={sentimentFilter} onValueChange={setSentimentFilter}>
-                <SelectTrigger className="w-full md:w-[130px] text-xs">
-                  <SelectValue placeholder="Sentiment" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all" className="text-xs">All Sentiment</SelectItem>
-                  <SelectItem value="positive" className="text-xs">Positive</SelectItem>
-                  <SelectItem value="neutral" className="text-xs">Neutral</SelectItem>
-                  <SelectItem value="negative" className="text-xs">Negative</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-full md:w-[130px] text-xs">
-                <SelectValue placeholder="Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all" className="text-xs">All Types</SelectItem>
-                <SelectItem value="earned" className="text-xs">Earned</SelectItem>
-                <SelectItem value="newswire" className="text-xs">Newswire</SelectItem>
-                <SelectItem value="contributed" className="text-xs">Contributed</SelectItem>
-              </SelectContent>
-            </Select>
-            {hasFilters && (
-              <button
-                onClick={clearFilters}
-                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors px-2"
-              >
-                <X className="w-3 h-3" />
-                Clear
-              </button>
-            )}
-          </div>
-        </div>
-        <TopPlacements
-          searchText={searchText}
-          tierFilter={tierFilter}
-          sentimentFilter={sentimentFilter}
-          typeFilter={typeFilter}
-        />
       </div>
 
       {/* All Press Hits Running Log */}

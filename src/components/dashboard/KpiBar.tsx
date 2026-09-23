@@ -267,16 +267,26 @@ const KpiBar = () => {
           : 'Earned media not yet tracked for this client',
       };
 
+      // Earned Media Value = press MIV (ad_value) + social MIV, both from Launchmetrics.
+      const socialMiv = sumOf('social_miv');
+      const emvTotal = pValue + socialMiv;
+      const priorEmvTotal = sumOf('prior_ad_value') + sumOf('prior_social_miv');
+      const emvDelta = !hasPrior
+        ? neutral
+        : priorEmvTotal === 0
+        ? { delta: 'New', deltaType: 'positive' as const }
+        : formatDelta(emvTotal - priorEmvTotal, 'currency', deltaSuffix);
+
       const emvTile: KpiCardProps = {
         label: 'Earned Media Value',
-        value: formatMoney(pValue),
-        ...(hasPrior ? formatDelta(pValue - sumOf('prior_ad_value'), 'currency', deltaSuffix) : neutral),
+        value: formatMoney(emvTotal),
+        ...emvDelta,
         targetTab: 'EARNED MEDIA',
         metricKey: 'emv_usd',
         sparkColor: accent,
         notTracked: !pressTracked,
         tooltip: pressTracked
-          ? 'Launchmetrics MIV (Media Impact Value), sum of ad_value'
+          ? `Press ${formatMoney(pValue)} · Social ${formatMoney(socialMiv)} (Launchmetrics MIV)`
           : 'Earned media not yet tracked for this client',
       };
 
