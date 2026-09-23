@@ -490,8 +490,11 @@ const PressHitsLog = ({ corporateOnly = false }: { corporateOnly?: boolean } = {
         <span className="text-[11px] text-muted-foreground shrink-0 hidden md:inline">
           {p.published_at ? formatDate(p.published_at) : ''}
         </span>
-        <span className="text-[11px] text-muted-foreground shrink-0 w-12 text-right">
+        <span className="text-[11px] text-muted-foreground shrink-0 w-14 text-right tabular-nums">
           {formatReach(p.outlet_umv)}
+        </span>
+        <span className="text-[11px] shrink-0 w-16 text-right tabular-nums font-semibold">
+          {p.ad_value ? formatMoney(p.ad_value) : <span className="text-muted-foreground">—</span>}
         </span>
         {p.print_clipping_url && (
           <button
