@@ -48,6 +48,9 @@ interface LeftyPost {
   shares: number | null;
   meta_id: string | null;
   caption_excerpt: string | null;
+  thumbnail_url: string | null;
+  thumbnail_fallback_url: string | null;
+  saves: number | null;
 }
 
 interface Partnership {
@@ -314,6 +317,81 @@ const uniqueByPost = (arr: LeftyPost[]) => {
   return arr.filter(p => { const k = p.post_id ?? p.id; if (seen.has(k)) return false; seen.add(k); return true; });
 };
 
+// Content Spotlight card: post image with thumbnail_url → thumbnail_fallback_url
+// fallback; falls back to the plain card layout if both are null or fail to load.
+const ContentSpotlightCard = ({ p }: { p: LeftyPost }) => {
+  const [src, setSrc] = useState<string | null>(p.thumbnail_url ?? p.thumbnail_fallback_url);
+  const [failed, setFailed] = useState(false);
+  const hasImage = !!(src && !failed);
+  return (
+    <LinkPreviewTrigger
+      url={p.post_link ?? undefined}
+      meta={[
+        { label: 'Author', value: p.author_name ?? '—' },
+        { label: 'Campaign', value: p.campaign_name ?? '—' },
+        { label: 'Network', value: normalizeNetwork(p.network) },
+        { label: 'EMV', value: formatMoney(p.emv ?? 0) },
+        { label: 'Reach', value: formatReach(p.reach ?? 0) },
+      ]}
+      className={`block bg-card border border-black/10 p-5 text-left hover:border-[#1B2B8A]/40 hover:-translate-y-0.5 transition-all group ${hasImage ? 'overflow-hidden' : ''}`}
+    >
+      {hasImage && (
+        <div className="aspect-[4/5] w-full overflow-hidden">
+          <img
+            src={src ?? undefined}
+            alt={p.author_name ?? 'Post'}
+            loading="lazy"
+            className="w-full h-full object-cover"
+            onError={() => {
+              if (src !== p.thumbnail_fallback_url && p.thumbnail_fallback_url) {
+                setSrc(p.thumbnail_fallback_url);
+              } else {
+                setFailed(true);
+              }
+            }}
+          />
+        </div>
+      )}
+      <div className={hasImage ? '-mx-5 -mt-5 p-5' : ''}>
+        <div className="flex items-start justify-between gap-2 mb-3">
+          <div className="min-w-0 flex-1">
+            <p className="font-bold text-sm text-foreground truncate">{p.author_name ?? '—'}</p>
+            <p className="text-[11px] text-muted-foreground truncate">{p.campaign_name ?? '—'}</p>
+          </div>
+          <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-foreground shrink-0 mt-0.5" />
+        </div>
+        <div className="flex items-center gap-2 mb-3">
+          <NetworkBadge network={p.network ?? ''} />
+          <span className="font-mono-ui text-[9px] tracking-[0.12em] uppercase text-muted-foreground">
+            {postTypeOf(p.post_link)}
+          </span>
+        </div>
+        {p.caption_excerpt && (
+          <p className="text-[12px] italic text-muted-foreground mb-3 line-clamp-3">
+            "{p.caption_excerpt.length > 140 ? p.caption_excerpt.slice(0, 140).trimEnd() + '…' : p.caption_excerpt}"
+          </p>
+        )}
+        <div className={`grid grid-cols-2 ${p.saves != null ? 'md:grid-cols-3' : ''} gap-3 pt-3 border-t border-black/[0.06]`}>
+          <div>
+            <p className="font-mono-ui text-[8px] tracking-[0.18em] uppercase text-muted-foreground">Reach</p>
+            <p className="font-display text-lg font-bold tabular-nums">{formatReach(p.reach ?? 0)}</p>
+          </div>
+          <div>
+            <p className="font-mono-ui text-[8px] tracking-[0.18em] uppercase text-muted-foreground">EMV</p>
+            <p className="font-display text-lg font-bold tabular-nums" style={{ color: GOLD }}>{formatMoney(p.emv ?? 0)}</p>
+          </div>
+          {p.saves != null && (
+            <div>
+              <p className="font-mono-ui text-[8px] tracking-[0.18em] uppercase text-muted-foreground">Saves</p>
+              <p className="font-display text-lg font-bold tabular-nums">{formatCount(p.saves)}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </LinkPreviewTrigger>
+  );
+};
+
 // ---------- main tab ----------
 const InfluencerIntelligenceTab = () => {
   const { activeClientId, refreshKey, isAllTime, effectiveFrom, effectiveTo } = useWeek();
@@ -356,7 +434,7 @@ const InfluencerIntelligenceTab = () => {
       const PAGE = 1000;
       const CONCURRENCY = 8;
       const MAX_ROWS = 100000;
-      const POST_COLS = 'id, post_id, campaign_name, network, author_name, followers, impressions, reach, emv, engagement_rate, post_link, posted_at, likes, comments, views, shares, meta_id, caption_excerpt';
+      const POST_COLS = 'id, post_id, campaign_name, network, author_name, followers, impressions, reach, emv, engagement_rate, post_link, posted_at, likes, comments, views, shares, meta_id, caption_excerpt, thumbnail_url, thumbnail_fallback_url, saves';
 
       const buildPostsQuery = (cols: string, opts?: { count: 'exact'; head: true }) => {
         let q = supabase.from('lefty_posts').select(cols, opts).eq('client_id', activeClientId);
@@ -1228,47 +1306,7 @@ const InfluencerIntelligenceTab = () => {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {topPostsGrid.map((p) => (
-                    <LinkPreviewTrigger
-                      key={p.id}
-                      url={p.post_link ?? undefined}
-                      meta={[
-                        { label: 'Author', value: p.author_name ?? '—' },
-                        { label: 'Campaign', value: p.campaign_name ?? '—' },
-                        { label: 'Network', value: normalizeNetwork(p.network) },
-                        { label: 'EMV', value: formatMoney(p.emv ?? 0) },
-                        { label: 'Reach', value: formatReach(p.reach ?? 0) },
-                      ]}
-                      className="block bg-card border border-black/10 p-5 text-left hover:border-[#1B2B8A]/40 hover:-translate-y-0.5 transition-all group"
-                    >
-                      <div className="flex items-start justify-between gap-2 mb-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="font-bold text-sm text-foreground truncate">{p.author_name ?? '—'}</p>
-                          <p className="text-[11px] text-muted-foreground truncate">{p.campaign_name ?? '—'}</p>
-                        </div>
-                        <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-foreground shrink-0 mt-0.5" />
-                      </div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <NetworkBadge network={p.network ?? ''} />
-                        <span className="font-mono-ui text-[9px] tracking-[0.12em] uppercase text-muted-foreground">
-                          {postTypeOf(p.post_link)}
-                        </span>
-                      </div>
-                      {p.caption_excerpt && (
-                        <p className="text-[12px] italic text-muted-foreground mb-3 line-clamp-3">
-                          "{p.caption_excerpt.length > 140 ? p.caption_excerpt.slice(0, 140).trimEnd() + '…' : p.caption_excerpt}"
-                        </p>
-                      )}
-                      <div className="grid grid-cols-2 gap-3 pt-3 border-t border-black/[0.06]">
-                        <div>
-                          <p className="font-mono-ui text-[8px] tracking-[0.18em] uppercase text-muted-foreground">Reach</p>
-                          <p className="font-display text-lg font-bold tabular-nums">{formatReach(p.reach ?? 0)}</p>
-                        </div>
-                        <div>
-                          <p className="font-mono-ui text-[8px] tracking-[0.18em] uppercase text-muted-foreground">EMV</p>
-                          <p className="font-display text-lg font-bold tabular-nums" style={{ color: GOLD }}>{formatMoney(p.emv ?? 0)}</p>
-                        </div>
-                      </div>
-                    </LinkPreviewTrigger>
+                    <ContentSpotlightCard key={p.id} p={p} />
                   ))}
                 </div>
               )}
