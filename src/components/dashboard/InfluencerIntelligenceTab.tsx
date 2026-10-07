@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  Line, ComposedChart, BarChart, Bar, LabelList, Cell,
+  Line, ComposedChart, BarChart, Bar, LabelList, Cell, LineChart,
 } from 'recharts';
 import { ChevronDown, ChevronUp, ExternalLink, Search, X, Instagram, Youtube, Twitter, Music2, Globe } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
@@ -16,7 +16,7 @@ import { LinkPreviewTrigger } from './LinkPreviewDrawer';
 import AISummarySection from './AISummarySection';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { formatDistanceToNowStrict } from 'date-fns';
+import { formatDistanceToNowStrict, format, parseISO } from 'date-fns';
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle,
 } from '@/components/ui/sheet';
@@ -1274,6 +1274,8 @@ const InfluencerIntelligenceTab = () => {
               )}
             </section>
 
+            {activeClientId && <CreatorShareOfVoiceSection clientId={activeClientId} accent={accent} />}
+
             {/* 7. Inbound Creator Discovery */}
             {activeClientId && <InboundCreatorsSection clientId={activeClientId} accent={accent} />}
           </>
@@ -1530,6 +1532,150 @@ const relativeDate = (v: string | null | undefined) => {
   const d = new Date(v);
   if (isNaN(d.getTime())) return '—';
   return formatDistanceToNowStrict(d, { addSuffix: true });
+};
+
+interface KinSovBrand {
+  brand: string; is_own: boolean; emv: number; impressions: number; posts: number;
+  emv_share: number; impressions_share: number; rank: number; prior_emv_share: number | null;
+}
+interface KinSov {
+  panel_name: string; category: string;
+  period: { from: string; to: string; months: number; includes_partial_month: boolean };
+  prior_period: { from: string; to: string };
+  brands: KinSovBrand[];
+  own: { brand: string; emv_share: number; rank: number; prior_emv_share: number | null; delta_pts: number | null; brand_count: number } | null;
+  trend: { month: string; shares: Record<string, number> }[];
+  views: { category: string; label: string }[];
+}
+
+const SOV_DASHES = ['6 3', '2 3', '10 4 2 4'];
+
+const CreatorShareOfVoiceSection = ({ clientId, accent }: { clientId: string; accent: string }) => {
+  const { isAllTime, effectiveFrom, effectiveTo } = useWeek();
+  const [category, setCategory] = useState('');
+  const [data, setData] = useState<KinSov | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    (async () => {
+      const { data: d, error } = await supabase.rpc('kin_share_of_voice_secure' as any, {
+        p_client_id: clientId, p_category: category,
+        ...(isAllTime ? {} : { p_start: effectiveFrom, p_end: effectiveTo }),
+      });
+      if (cancelled) return;
+      setData(error ? null : ((d as unknown as KinSov) ?? null));
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [clientId, category, isAllTime, effectiveFrom, effectiveTo]);
+
+  const brands = useMemo(() => [...(data?.brands ?? [])].sort((a, b) => a.rank - b.rank), [data]);
+  const topComps = useMemo(() => brands.filter(b => !b.is_own).slice(0, 3).map(b => b.brand), [brands]);
+  const trendData = useMemo(() => (data?.trend ?? []).map(t => ({ month: t.month, ...t.shares })), [data]);
+
+  if (loading) {
+    return (
+      <section className="animate-fade-in">
+        <div className="flex items-baseline justify-between mb-4"><span className="section-label">Creator Share of Voice</span></div>
+        <Skeleton className="h-[280px] w-full" />
+      </section>
+    );
+  }
+  if (!data || brands.length === 0) return null;
+
+  const own = data.own;
+  const leader = brands[0];
+  const maxShare = Math.max(...brands.map(b => Number(b.emv_share) || 0), 0.0001);
+  const fmtMonth = (s: string) => { try { return format(parseISO(s.length === 7 ? `${s}-01` : s), 'MMM yyyy'); } catch { return s; } };
+  const fmtShort = (s: string) => { try { return format(parseISO(`${s}-01`), 'MMM yy'); } catch { return s; } };
+  const activeCat = category || data.category || '';
+
+  return (
+    <section className="animate-fade-in">
+      <div className="flex items-start justify-between gap-4 mb-4 flex-wrap">
+        <div>
+          <span className="section-label">Creator Share of Voice</span>
+          <p className="text-xs text-muted-foreground mt-1">
+            {`Share of creator EMV across Kin's ${data.panel_name} industry panel · ${fmtMonth(data.period.from)} – ${fmtMonth(data.period.to)}`}
+            {data.period.includes_partial_month ? ' (current month to date)' : ''}
+          </p>
+        </div>
+        {data.views?.length > 0 && (
+          <div className="inline-flex border border-black/[0.08] bg-white">
+            {data.views.map(v => {
+              const on = v.category === activeCat;
+              return (
+                <button key={v.category} onClick={() => setCategory(v.category)}
+                  className={`font-mono-ui text-[10px] tracking-[0.14em] uppercase px-3 py-1.5 transition-colors ${on ? 'text-white' : 'text-muted-foreground hover:text-foreground'}`}
+                  style={on ? { backgroundColor: accent } : undefined}>
+                  {v.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="border border-black/[0.08] bg-white px-4 py-3">
+          <p className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground">{own ? `${own.brand} share` : 'Share'}</p>
+          <p className="font-display text-xl font-bold tabular-nums" style={{ color: accent }}>{own ? `${own.emv_share}%` : '—'}</p>
+          {own && own.delta_pts != null && (
+            <p className={`text-[11px] tabular-nums ${own.delta_pts > 0 ? 'text-emerald-600' : own.delta_pts < 0 ? 'text-red-600' : 'text-muted-foreground'}`}>
+              {`${own.delta_pts > 0 ? '+' : ''}${own.delta_pts} pts vs prior period`}
+            </p>
+          )}
+        </div>
+        <div className="border border-black/[0.08] bg-white px-4 py-3">
+          <p className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground">Rank</p>
+          <p className="font-display text-xl font-bold tabular-nums">{own ? `#${own.rank} of ${own.brand_count}` : '—'}</p>
+        </div>
+        <div className="border border-black/[0.08] bg-white px-4 py-3">
+          <p className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground">Category leader</p>
+          <p className="font-display text-xl font-bold truncate">{leader.brand}</p>
+          <p className="text-[11px] text-muted-foreground tabular-nums">{leader.emv_share}%</p>
+        </div>
+      </div>
+
+      <div className="border border-black/[0.08] bg-white px-4 py-3 mb-6 space-y-2">
+        {brands.map(b => (
+          <div key={b.brand} className={`grid grid-cols-[28px_minmax(0,160px)_1fr_auto] items-center gap-3 text-sm ${b.is_own ? 'font-bold' : ''}`}>
+            <span className="font-mono-ui text-[10px] text-muted-foreground tabular-nums">{b.rank}</span>
+            <span className="truncate">{b.brand}</span>
+            <div className="h-2 bg-black/[0.04]">
+              <div className="h-full" style={{ width: `${((Number(b.emv_share) || 0) / maxShare) * 100}%`, backgroundColor: b.is_own ? accent : 'rgba(0,0,0,0.25)' }} />
+            </div>
+            <span className="text-xs tabular-nums text-right whitespace-nowrap">
+              {`${b.emv_share}%`} <span className="text-muted-foreground font-normal">· {formatMoney(b.emv)} · {formatCount(b.posts)} posts</span>
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {trendData.length > 0 && (
+        <div className="border border-black/[0.08] bg-white px-4 py-3 mb-3">
+          <ResponsiveContainer width="100%" height={220}>
+            <LineChart data={trendData} margin={{ top: 8, right: 12, left: -8, bottom: 0 }}>
+              <CartesianGrid stroke="rgba(0,0,0,0.05)" vertical={false} />
+              <XAxis dataKey="month" tickFormatter={fmtShort} tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis tickFormatter={(v) => `${v}%`} tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+              <Tooltip labelFormatter={(l) => fmtShort(String(l))} formatter={(v: number, n: string) => [`${v}% share`, n]} />
+              {own && <Line type="monotone" dataKey={own.brand} stroke={accent} strokeWidth={3} dot={false} />}
+              {topComps.map((c, i) => (
+                <Line key={c} type="monotone" dataKey={c} stroke="rgba(0,0,0,0.4)" strokeWidth={1.25} strokeDasharray={SOV_DASHES[i]} dot={false} />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      <p className="text-[11px] text-muted-foreground">
+        Source: Kin industry panel (independent creator benchmark, EMV as calculated by Kin). Data is monthly, so the selected dates are rounded to whole months.
+      </p>
+    </section>
+  );
 };
 
 const InboundCreatorsSection = ({ clientId, accent }: { clientId: string; accent: string }) => {
