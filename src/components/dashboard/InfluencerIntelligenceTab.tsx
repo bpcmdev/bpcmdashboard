@@ -483,7 +483,7 @@ const InfluencerIntelligenceTab = () => {
 
   const monthly = useMemo(() => {
     const map = new Map<string, { posts: number; reach: number; emv: number; authors: Set<string>; engSum: number; engN: number }>();
-    posts.forEach(p => {
+    uniquePosts.forEach(p => {
       if (!p.posted_at) return;
       const k = monthKey(p.posted_at);
       const cur = map.get(k) ?? { posts: 0, reach: 0, emv: 0, authors: new Set(), engSum: 0, engN: 0 };
@@ -497,7 +497,7 @@ const InfluencerIntelligenceTab = () => {
       map.set(k, cur);
     });
     return map;
-  }, [posts]);
+  }, [uniquePosts]);
 
   const spark = (metric: 'posts' | 'reach' | 'emv' | 'authors' | 'eng'): number[] =>
     sixMonthKeys.map(k => {
@@ -518,13 +518,13 @@ const InfluencerIntelligenceTab = () => {
     };
     const distinctAuthors = (arr: LeftyPost[]) => new Set(arr.map(p => p.author_name).filter(Boolean)).size;
     return {
-      posts: { cur: filteredPosts.length, prior: priorPosts.length },
-      reach: { cur: sumReach(filteredPosts), prior: sumReach(priorPosts) },
-      emv: { cur: sumEmv(filteredPosts), prior: sumEmv(priorPosts) },
-      eng: { cur: avgEng(filteredPosts), prior: avgEng(priorPosts) },
-      authors: { cur: distinctAuthors(filteredPosts), prior: distinctAuthors(priorPosts) },
+      posts: { cur: uniqueFilteredPosts.length, prior: priorPosts.length },
+      reach: { cur: sumReach(uniqueFilteredPosts), prior: sumReach(priorPosts) },
+      emv: { cur: sumEmv(uniqueFilteredPosts), prior: sumEmv(priorPosts) },
+      eng: { cur: avgEng(uniqueFilteredPosts), prior: avgEng(priorPosts) },
+      authors: { cur: distinctAuthors(uniqueFilteredPosts), prior: distinctAuthors(priorPosts) },
     };
-  }, [filteredPosts, priorPosts]);
+  }, [uniqueFilteredPosts, priorPosts]);
 
   // Engagement helper (likes + comments + shares; views tracked separately)
   const engagementsOf = (p: LeftyPost) => (p.likes ?? 0) + (p.comments ?? 0) + (p.shares ?? 0);
@@ -532,14 +532,14 @@ const InfluencerIntelligenceTab = () => {
   // Engagement breakdown totals (from filtered posts, no row caps)
   const engagementTotals = useMemo(() => {
     let likes = 0, comments = 0, views = 0, shares = 0;
-    filteredPosts.forEach(p => {
+    uniqueFilteredPosts.forEach(p => {
       likes += p.likes ?? 0;
       comments += p.comments ?? 0;
       views += p.views ?? 0;
       shares += p.shares ?? 0;
     });
     return { likes, comments, views, shares, engagements: likes + comments + shares };
-  }, [filteredPosts]);
+  }, [uniqueFilteredPosts]);
 
   // Monthly series for chart (filtered).
   // Prefers lefty_monthly_perf when neutral filters, otherwise computes from posts.
@@ -560,7 +560,7 @@ const InfluencerIntelligenceTab = () => {
       }));
     } else {
       const map = new Map<string, { posts: number; reach: number; emv: number; engagements: number }>();
-      filteredPosts.forEach(p => {
+      uniqueFilteredPosts.forEach(p => {
         if (!p.posted_at) return;
         const k = monthKey(p.posted_at);
         const cur = map.get(k) ?? { posts: 0, reach: 0, emv: 0, engagements: 0 };
@@ -588,7 +588,7 @@ const InfluencerIntelligenceTab = () => {
       const r = byKey.get(k) ?? { key: k, posts: 0, reach: 0, emv: 0, engagements: 0 };
       return { month: monthLabel(k), key: k, ...r };
     });
-  }, [filteredPosts, monthlyPerf, network, selectedCampaigns, isAllTime, effectiveFrom, effectiveTo]);
+  }, [uniqueFilteredPosts, monthlyPerf, network, selectedCampaigns, isAllTime, effectiveFrom, effectiveTo]);
 
   // Campaign aggregates (from filtered posts)
   const campaignAgg = useMemo(() => {
@@ -668,7 +668,7 @@ const InfluencerIntelligenceTab = () => {
   // Influencer leaderboard (enriched with lefty_influencers profile via meta_id)
   const influencers = useMemo(() => {
     const map = new Map<string, { name: string; metaId: string | null; postsFollowers: number; posts: number; reach: number; emv: number; engSum: number; engN: number; postsList: LeftyPost[] }>();
-    filteredPosts.forEach(p => {
+    uniqueFilteredPosts.forEach(p => {
       const name = (p.author_name ?? '').trim();
       if (!name) return;
       const cur = map.get(name) ?? { name, metaId: null, postsFollowers: 0, posts: 0, reach: 0, emv: 0, engSum: 0, engN: 0, postsList: [] };
@@ -689,11 +689,11 @@ const InfluencerIntelligenceTab = () => {
         return { ...x, followers, profile, avgEng: x.engN > 0 ? (x.engSum / x.engN) * 100 : 0 };
       })
       .sort((a, b) => b.emv - a.emv);
-  }, [filteredPosts, influencerProfiles]);
+  }, [uniqueFilteredPosts, influencerProfiles]);
 
   const topPostsGrid = useMemo(
-    () => [...filteredPosts].sort((a, b) => (b.emv ?? 0) - (a.emv ?? 0)).slice(0, 12),
-    [filteredPosts]
+    () => [...uniqueFilteredPosts].sort((a, b) => (b.emv ?? 0) - (a.emv ?? 0)).slice(0, 12),
+    [uniqueFilteredPosts]
   );
 
   const activePartnerships = partnerships.filter(p => p.status !== 'past');
