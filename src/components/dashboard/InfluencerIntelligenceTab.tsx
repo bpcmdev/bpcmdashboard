@@ -1305,61 +1305,9 @@ const InfluencerIntelligenceTab = () => {
                 <p className="text-xs text-muted-foreground py-8 text-center">No posts in the selected window.</p>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {topPostsGrid.map((p) => {
-                    const hasImage = !!(p.thumbnail_url || p.thumbnail_fallback_url);
-                    return (
-                      <LinkPreviewTrigger
-                        key={p.id}
-                        url={p.post_link ?? undefined}
-                        meta={[
-                          { label: 'Author', value: p.author_name ?? '—' },
-                          { label: 'Campaign', value: p.campaign_name ?? '—' },
-                          { label: 'Network', value: normalizeNetwork(p.network) },
-                          { label: 'EMV', value: formatMoney(p.emv ?? 0) },
-                          { label: 'Reach', value: formatReach(p.reach ?? 0) },
-                        ]}
-                        className={`block bg-card border border-black/10 p-5 text-left hover:border-[#1B2B8A]/40 hover:-translate-y-0.5 transition-all group ${hasImage ? 'overflow-hidden' : ''}`}
-                      >
-                        <PostImage post={p} />
-                        <div className={hasImage ? '-mx-5 -mt-5 p-5' : ''}>
-                          <div className="flex items-start justify-between gap-2 mb-3">
-                            <div className="min-w-0 flex-1">
-                              <p className="font-bold text-sm text-foreground truncate">{p.author_name ?? '—'}</p>
-                              <p className="text-[11px] text-muted-foreground truncate">{p.campaign_name ?? '—'}</p>
-                            </div>
-                            <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-foreground shrink-0 mt-0.5" />
-                          </div>
-                          <div className="flex items-center gap-2 mb-3">
-                            <NetworkBadge network={p.network ?? ''} />
-                            <span className="font-mono-ui text-[9px] tracking-[0.12em] uppercase text-muted-foreground">
-                              {postTypeOf(p.post_link)}
-                            </span>
-                          </div>
-                          {p.caption_excerpt && (
-                            <p className="text-[12px] italic text-muted-foreground mb-3 line-clamp-3">
-                              "{p.caption_excerpt.length > 140 ? p.caption_excerpt.slice(0, 140).trimEnd() + '…' : p.caption_excerpt}"
-                            </p>
-                          )}
-                          <div className={`grid grid-cols-2 ${p.saves != null ? 'md:grid-cols-3' : ''} gap-3 pt-3 border-t border-black/[0.06]`}>
-                            <div>
-                              <p className="font-mono-ui text-[8px] tracking-[0.18em] uppercase text-muted-foreground">Reach</p>
-                              <p className="font-display text-lg font-bold tabular-nums">{formatReach(p.reach ?? 0)}</p>
-                            </div>
-                            <div>
-                              <p className="font-mono-ui text-[8px] tracking-[0.18em] uppercase text-muted-foreground">EMV</p>
-                              <p className="font-display text-lg font-bold tabular-nums" style={{ color: GOLD }}>{formatMoney(p.emv ?? 0)}</p>
-                            </div>
-                            {p.saves != null && (
-                              <div>
-                                <p className="font-mono-ui text-[8px] tracking-[0.18em] uppercase text-muted-foreground">Saves</p>
-                                <p className="font-display text-lg font-bold tabular-nums">{formatCount(p.saves)}</p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </LinkPreviewTrigger>
-                    );
-                  })}
+                  {topPostsGrid.map((p) => (
+                    <ContentSpotlightCard key={p.id} p={p} />
+                  ))}
                 </div>
               )}
             </section>
