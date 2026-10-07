@@ -31,6 +31,7 @@ const GREY = 'rgba(0,0,0,0.5)';
 // ---------- types ----------
 interface LeftyPost {
   id: string;
+  post_id: string | null;
   campaign_name: string | null;
   network: string | null;
   author_name: string | null;
@@ -307,6 +308,12 @@ const NetworkBadge = ({ network }: { network: string }) => {
   return <span className="font-mono-ui text-[9px] tracking-[0.12em] uppercase px-2 py-0.5 bg-foreground text-background">{n}</span>;
 };
 
+// Deduplicate posts that appear once per campaign in lefty_posts.
+const uniqueByPost = (arr: LeftyPost[]) => {
+  const seen = new Set<string>();
+  return arr.filter(p => { const k = p.post_id ?? p.id; if (seen.has(k)) return false; seen.add(k); return true; });
+};
+
 // ---------- main tab ----------
 const InfluencerIntelligenceTab = () => {
   const { activeClientId, refreshKey, isAllTime, effectiveFrom, effectiveTo } = useWeek();
@@ -349,7 +356,7 @@ const InfluencerIntelligenceTab = () => {
       const PAGE = 1000;
       const CONCURRENCY = 8;
       const MAX_ROWS = 100000;
-      const POST_COLS = 'id, campaign_name, network, author_name, followers, impressions, reach, emv, engagement_rate, post_link, posted_at, likes, comments, views, shares, meta_id, caption_excerpt';
+      const POST_COLS = 'id, post_id, campaign_name, network, author_name, followers, impressions, reach, emv, engagement_rate, post_link, posted_at, likes, comments, views, shares, meta_id, caption_excerpt';
 
       const buildPostsQuery = (cols: string, opts?: { count: 'exact'; head: true }) => {
         let q = supabase.from('lefty_posts').select(cols, opts).eq('client_id', activeClientId);
@@ -457,6 +464,8 @@ const InfluencerIntelligenceTab = () => {
       return true;
     });
   }, [posts, network, selectedCampaigns]);
+  const uniquePosts = useMemo(() => uniqueByPost(posts), [posts]);
+  const uniqueFilteredPosts = useMemo(() => uniqueByPost(filteredPosts), [filteredPosts]);
   // No client-side prior-period comparison — global week selector drives the window.
   const priorPosts: LeftyPost[] = [];
 
