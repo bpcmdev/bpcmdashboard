@@ -48,6 +48,9 @@ interface LeftyPost {
   shares: number | null;
   meta_id: string | null;
   caption_excerpt: string | null;
+  thumbnail_url: string | null;
+  thumbnail_fallback_url: string | null;
+  saves: number | null;
 }
 
 interface Partnership {
@@ -314,6 +317,30 @@ const uniqueByPost = (arr: LeftyPost[]) => {
   return arr.filter(p => { const k = p.post_id ?? p.id; if (seen.has(k)) return false; seen.add(k); return true; });
 };
 
+// Post image with fallback: primary thumbnail, then fallback URL, then nothing.
+const PostImage = ({ post }: { post: LeftyPost }) => {
+  const [src, setSrc] = useState<string | null>(post.thumbnail_url ?? post.thumbnail_fallback_url);
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) return null;
+  return (
+    <div className="aspect-[4/5] w-full overflow-hidden">
+      <img
+        src={src}
+        alt={post.author_name ?? 'Post'}
+        loading="lazy"
+        className="w-full h-full object-cover"
+        onError={() => {
+          if (src !== post.thumbnail_fallback_url && post.thumbnail_fallback_url) {
+            setSrc(post.thumbnail_fallback_url);
+          } else {
+            setFailed(true);
+          }
+        }}
+      />
+    </div>
+  );
+};
+
 // ---------- main tab ----------
 const InfluencerIntelligenceTab = () => {
   const { activeClientId, refreshKey, isAllTime, effectiveFrom, effectiveTo } = useWeek();
@@ -356,7 +383,7 @@ const InfluencerIntelligenceTab = () => {
       const PAGE = 1000;
       const CONCURRENCY = 8;
       const MAX_ROWS = 100000;
-      const POST_COLS = 'id, post_id, campaign_name, network, author_name, followers, impressions, reach, emv, engagement_rate, post_link, posted_at, likes, comments, views, shares, meta_id, caption_excerpt';
+      const POST_COLS = 'id, post_id, campaign_name, network, author_name, followers, impressions, reach, emv, engagement_rate, post_link, posted_at, likes, comments, views, shares, meta_id, caption_excerpt, thumbnail_url, thumbnail_fallback_url, saves';
 
       const buildPostsQuery = (cols: string, opts?: { count: 'exact'; head: true }) => {
         let q = supabase.from('lefty_posts').select(cols, opts).eq('client_id', activeClientId);
