@@ -322,6 +322,31 @@ const KpiBar = () => {
           : 'Earned media not yet tracked for this client',
       };
 
+      const reachParams: Record<string, any> = { p_client_id: activeClientId };
+      if (!isAllTime && effectiveFrom && effectiveTo) { reachParams.p_start = effectiveFrom; reachParams.p_end = effectiveTo; }
+      const { data: reachData } = await supabase.rpc('kpi_social_reach_secure' as any, reachParams);
+      const reachRows = (Array.isArray(reachData) ? reachData : reachData ? [reachData] : []) as any[];
+      const reachRow = reachRows.find(r => r?.client_id === activeClientId) ?? null;
+      const reachTracked = !!reachRow?.tracked;
+      const reachVal = reachTracked ? Number(reachRow.reach) || 0 : 0;
+      const priorReach = reachRow?.prior_reach == null ? null : Number(reachRow.prior_reach);
+      const reachDelta = !reachTracked || priorReach == null
+        ? neutral
+        : priorReach === 0 ? { delta: 'New', deltaType: 'positive' as const }
+        : formatDelta(reachVal - priorReach, 'compact', deltaSuffix);
+      const reachTile: KpiCardProps = reachTracked ? {
+        label: 'Social Reach',
+        value: formatCount(reachVal),
+        ...reachDelta,
+        targetTab: 'INFLUENCER & SOCIAL',
+        metricKey: 'social_reach',
+        spark: Array.isArray(reachRow.spark) ? reachRow.spark.map(Number) : undefined,
+        sparkColor: accent,
+        tooltip: reachRow.source === 'kin'
+          ? `Creator content reach from Kin (impressions) · ${Number(reachRow.posts).toLocaleString()} posts · Campaigns ${formatCount(Number(reachRow.campaign_reach) || 0)} · Organic ${formatCount(Number(reachRow.organic_reach) || 0)}`
+          : `Influencer reach from Lefty · ${Number(reachRow.posts).toLocaleString()} posts`,
+      } : socialReachTile;
+
       if (isAllTime || isYTD) {
         let q = supabase
           .from('weekly_snapshots')
@@ -355,7 +380,7 @@ const KpiBar = () => {
           placementTile,
           emvTile,
           { label: 'Sentiment Score', value: `${sentiment}/100`, ...aggDelta, metricKey: 'sentiment_score', spark: sentimentNotTracked ? undefined : sentimentSpark, sparkColor: accent, notTracked: sentimentNotTracked },
-          socialReachTile,
+          reachTile,
           { label: 'Share of Voice', value: `${sov}%`, ...aggDelta, metricKey: 'sov_pct', spark: sovNotTracked ? undefined : sovSpark, sparkColor: accent, notTracked: sovNotTracked },
           roiTile,
         ]);
@@ -395,7 +420,7 @@ const KpiBar = () => {
         placementTile,
         emvTile,
         { label: 'Sentiment Score', value: `${r.sentiment_score ?? 0}/100`, ...sentimentDelta, metricKey: 'sentiment_score', spark: sentimentNotTracked ? undefined : sentimentSpark, sparkColor: accent, notTracked: sentimentNotTracked && !(r.sentiment_score) },
-        socialReachTile,
+        reachTile,
         { label: 'Share of Voice', value: `${r.sov_pct ?? 0}%`, ...sovDelta, metricKey: 'sov_pct', spark: sovNotTracked ? undefined : sovSpark, sparkColor: accent, notTracked: sovNotTracked && !(r.sov_pct) },
         roiTile,
       ]);
