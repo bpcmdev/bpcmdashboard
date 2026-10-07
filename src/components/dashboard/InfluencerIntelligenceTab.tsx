@@ -1537,13 +1537,14 @@ const relativeDate = (v: string | null | undefined) => {
 interface KinSovBrand {
   brand: string; is_own: boolean; emv: number; impressions: number; posts: number;
   emv_share: number; impressions_share: number; rank: number; prior_emv_share: number | null;
+  avg_monthly_creators?: number | null; retention_pct?: number | null; emv_per_creator_month?: number | null;
 }
 interface KinSov {
   panel_name: string; category: string;
   period: { from: string; to: string; months: number; includes_partial_month: boolean };
   prior_period: { from: string; to: string };
   brands: KinSovBrand[];
-  own: { brand: string; emv_share: number; rank: number; prior_emv_share: number | null; delta_pts: number | null; brand_count: number } | null;
+  own: { brand: string; emv_share: number; rank: number; prior_emv_share: number | null; delta_pts: number | null; brand_count: number; avg_monthly_creators?: number | null; peer_median_creators?: number | null; retention_pct?: number | null; peer_median_retention_pct?: number | null } | null;
   trend: { month: string; shares: Record<string, number> }[];
   views: { category: string; label: string }[];
 }
@@ -1618,7 +1619,7 @@ const CreatorShareOfVoiceSection = ({ clientId, accent }: { clientId: string; ac
         )}
       </div>
 
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div className="border border-black/[0.08] bg-white px-4 py-3">
           <p className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground">{own ? `${own.brand} share` : 'Share'}</p>
           <p className="font-display text-xl font-bold tabular-nums" style={{ color: accent }}>{own ? `${own.emv_share}%` : '—'}</p>
@@ -1633,25 +1634,51 @@ const CreatorShareOfVoiceSection = ({ clientId, accent }: { clientId: string; ac
           <p className="font-display text-xl font-bold tabular-nums">{own ? `#${own.rank} of ${own.brand_count}` : '—'}</p>
         </div>
         <div className="border border-black/[0.08] bg-white px-4 py-3">
-          <p className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground">Category leader</p>
-          <p className="font-display text-xl font-bold truncate">{leader.brand}</p>
-          <p className="text-[11px] text-muted-foreground tabular-nums">{leader.emv_share}%</p>
+          <p className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground">Creators / month</p>
+          <p className="font-display text-xl font-bold tabular-nums">{own?.avg_monthly_creators != null ? formatCount(own.avg_monthly_creators) : '—'}</p>
+          {own?.peer_median_creators != null && <p className="text-[11px] text-muted-foreground tabular-nums">Peer median {formatCount(own.peer_median_creators)}</p>}
+        </div>
+        <div className="border border-black/[0.08] bg-white px-4 py-3">
+          <p className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground">Creator retention</p>
+          <p className="font-display text-xl font-bold tabular-nums">{own?.retention_pct != null ? `${own.retention_pct}%` : '—'}</p>
+          {own?.peer_median_retention_pct != null && <p className="text-[11px] text-muted-foreground tabular-nums">Peer median {own.peer_median_retention_pct}%</p>}
         </div>
       </div>
 
-      <div className="border border-black/[0.08] bg-white px-4 py-3 mb-6 space-y-2">
-        {brands.map(b => (
-          <div key={b.brand} className={`grid grid-cols-[28px_minmax(0,160px)_1fr_auto] items-center gap-3 text-sm ${b.is_own ? 'font-bold' : ''}`}>
-            <span className="font-mono-ui text-[10px] text-muted-foreground tabular-nums">{b.rank}</span>
-            <span className="truncate">{b.brand}</span>
-            <div className="h-2 bg-black/[0.04]">
-              <div className="h-full" style={{ width: `${((Number(b.emv_share) || 0) / maxShare) * 100}%`, backgroundColor: b.is_own ? accent : 'rgba(0,0,0,0.25)' }} />
-            </div>
-            <span className="text-xs tabular-nums text-right whitespace-nowrap">
-              {`${b.emv_share}%`} <span className="text-muted-foreground font-normal">· {formatMoney(b.emv)} · {formatCount(b.posts)} posts</span>
-            </span>
-          </div>
-        ))}
+      <div className="border border-black/[0.08] bg-white px-4 py-3 mb-6 overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground text-left">
+              <th className="py-2 pr-2 w-8 font-normal">#</th>
+              <th className="py-2 pr-3 font-normal">Brand</th>
+              <th className="py-2 pr-3 font-normal min-w-[160px]">Share</th>
+              <th className="py-2 pr-3 font-normal text-right">EMV</th>
+              <th className="py-2 pr-3 font-normal text-right">Creators/mo</th>
+              <th className="py-2 pr-3 font-normal text-right">Retention</th>
+              <th className="py-2 font-normal text-right">EMV per creator</th>
+            </tr>
+          </thead>
+          <tbody>
+            {brands.map(b => (
+              <tr key={b.brand} className={`border-t border-black/[0.05] ${b.is_own ? 'font-bold' : ''}`}>
+                <td className="py-2 pr-2 font-mono-ui text-[10px] text-muted-foreground tabular-nums">{b.rank}</td>
+                <td className="py-2 pr-3 truncate max-w-[180px]">{b.brand}</td>
+                <td className="py-2 pr-3">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 flex-1 bg-black/[0.04]">
+                      <div className="h-full" style={{ width: `${((Number(b.emv_share) || 0) / maxShare) * 100}%`, backgroundColor: b.is_own ? accent : 'rgba(0,0,0,0.25)' }} />
+                    </div>
+                    <span className="text-xs tabular-nums w-12 text-right">{`${b.emv_share}%`}</span>
+                  </div>
+                </td>
+                <td className="py-2 pr-3 text-right tabular-nums text-xs">{formatMoney(b.emv)}</td>
+                <td className="py-2 pr-3 text-right tabular-nums text-xs">{b.avg_monthly_creators != null ? formatCount(b.avg_monthly_creators) : '—'}</td>
+                <td className="py-2 pr-3 text-right tabular-nums text-xs">{b.retention_pct != null ? `${b.retention_pct}%` : '—'}</td>
+                <td className="py-2 text-right tabular-nums text-xs">{b.emv_per_creator_month != null ? formatMoney(b.emv_per_creator_month) : '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       {trendData.length > 0 && (
@@ -1672,7 +1699,7 @@ const CreatorShareOfVoiceSection = ({ clientId, accent }: { clientId: string; ac
       )}
 
       <p className="text-[11px] text-muted-foreground">
-        Source: Kin industry panel (independent creator benchmark, EMV as calculated by Kin). Data is monthly, so the selected dates are rounded to whole months.
+        Source: Kin industry panel (independent creator benchmark, EMV as calculated by Kin). Monthly data, so selected dates are rounded to whole months. Retention = share of a brand's creators who post again the following quarter.
       </p>
     </section>
   );
