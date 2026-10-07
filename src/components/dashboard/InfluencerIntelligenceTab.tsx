@@ -1484,6 +1484,8 @@ interface LaunchmetricsSummary {
   inbound_creators: number | null;
   activated_creators: number | null;
   inbound_miv: number | null;
+  activation_source?: 'kin' | 'lefty' | null;
+  tracked_not_activated?: number | null;
 }
 
 interface InboundCreator {
@@ -1584,14 +1586,19 @@ const InboundCreatorsSection = ({ clientId, accent }: { clientId: string; accent
   // Hide the entire section when the client has no tracked mentions.
   if (!summary || !Number(summary.total_mentions)) return null;
 
+  const platform = summary.activation_source === 'kin' ? 'Kin' : 'Lefty';
+
   const sorted = [...creators].sort((a, b) =>
     mivSort === 'desc' ? (b.total_miv ?? 0) - (a.total_miv ?? 0) : (a.total_miv ?? 0) - (b.total_miv ?? 0)
   );
 
   const stats = [
     { label: 'Inbound Creators', value: formatCount(summary.inbound_creators) },
-    { label: 'Activated in Lefty', value: formatCount(summary.activated_creators) },
+    { label: `Activated in ${platform}`, value: formatCount(summary.activated_creators) },
     { label: 'Inbound MIV', value: formatMoney(summary.inbound_miv) },
+    ...(summary.activation_source === 'kin'
+      ? [{ label: 'Tracked in Kin, not activated', value: formatCount(summary.tracked_not_activated) }]
+      : []),
   ];
 
   return (
@@ -1601,7 +1608,7 @@ const InboundCreatorsSection = ({ clientId, accent }: { clientId: string; accent
       </div>
       <p className="text-xs text-muted-foreground mb-4">Organic mentions from creators outside your activated campaigns.</p>
 
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className={summary.activation_source === 'kin' ? 'grid grid-cols-2 md:grid-cols-4 gap-4 mb-6' : 'grid grid-cols-3 gap-4 mb-6'}>
         {stats.map(s => (
           <div key={s.label} className="border border-black/[0.08] bg-white px-4 py-3">
             <p className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground">{s.label}</p>
@@ -1654,7 +1661,7 @@ const InboundCreatorsSection = ({ clientId, accent }: { clientId: string; accent
                     </span>
                     {c.in_lefty && (
                       <span className="ml-1.5 font-mono-ui text-[8px] tracking-[0.12em] uppercase px-1.5 py-0.5 border border-black/15 text-muted-foreground whitespace-nowrap">
-                        Also in Lefty
+                        Activated in {platform}
                       </span>
                     )}
                   </td>
