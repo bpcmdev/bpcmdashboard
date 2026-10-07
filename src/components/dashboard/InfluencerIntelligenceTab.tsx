@@ -347,28 +347,38 @@ const InfluencerIntelligenceTab = () => {
       setLoading(true);
       setError(false);
       const PAGE = 1000;
-      const all: LeftyPost[] = [];
-      let from = 0;
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
-        let q = supabase
-          .from('lefty_posts')
-          .select('id, campaign_name, network, author_name, followers, impressions, reach, emv, engagement_rate, post_link, posted_at, likes, comments, views, shares, meta_id, caption_excerpt')
-          .eq('client_id', activeClientId);
+      const CONCURRENCY = 8;
+      const MAX_ROWS = 100000;
+      const POST_COLS = 'id, campaign_name, network, author_name, followers, impressions, reach, emv, engagement_rate, post_link, posted_at, likes, comments, views, shares, meta_id, caption_excerpt';
+
+      const buildPostsQuery = (cols: string, opts?: { count: 'exact'; head: true }) => {
+        let q = supabase.from('lefty_posts').select(cols, opts).eq('client_id', activeClientId);
         if (!isAllTime) {
           q = q.gte('posted_at', effectiveFrom).lte('posted_at', `${effectiveTo}T23:59:59.999Z`);
         }
-        const { data, error: err } = await q
-          .order('posted_at', { ascending: false })
-          .range(from, from + PAGE - 1);
-        if (cancelled) return;
-        if (err) { setError(true); setLoading(false); return; }
-        const batch = (data as LeftyPost[]) ?? [];
-        all.push(...batch);
-        if (batch.length < PAGE) break;
-        from += PAGE;
-        if (from > 100000) break;
-      }
+        return q;
+      };
+
+      const fetchPosts = async (): Promise<LeftyPost[] | null> => {
+        const { count, error: cErr } = await buildPostsQuery('id', { count: 'exact', head: true });
+        if (cErr) return null;
+        const total = Math.min(count ?? 0, MAX_ROWS);
+        const ranges: [number, number][] = [];
+        for (let from = 0; from < total; from += PAGE) ranges.push([from, Math.min(from + PAGE, total) - 1]);
+        const pages: LeftyPost[][] = new Array(ranges.length);
+        for (let i = 0; i < ranges.length; i += CONCURRENCY) {
+          if (cancelled) return null;
+          const group = ranges.slice(i, i + CONCURRENCY);
+          const results = await Promise.all(group.map(([a, b]) =>
+            buildPostsQuery(POST_COLS).order('posted_at', { ascending: false }).range(a, b)
+          ));
+          for (let j = 0; j < results.length; j++) {
+            if (results[j].error) return null;
+            pages[i + j] = ((results[j].data as unknown) as LeftyPost[]) ?? [];
+          }
+        }
+        return pages.flat();
+      };
 
       let pq = supabase
         .from('partnerships')
@@ -379,7 +389,6 @@ const InfluencerIntelligenceTab = () => {
           .or(`start_date.is.null,start_date.lte.${effectiveTo}`)
           .or(`end_date.is.null,end_date.gte.${effectiveFrom}`);
       }
-      const { data: pData } = await pq.order('created_at', { ascending: false });
 
       // Lefty monthly rollup — filter by month_start within window.
       let mq = supabase
@@ -389,22 +398,36 @@ const InfluencerIntelligenceTab = () => {
       if (!isAllTime) {
         mq = mq.gte('month_start', effectiveFrom).lte('month_start', effectiveTo);
       }
-      const { data: mpData } = await mq.order('month_start', { ascending: true });
+
+      const [all, { data: pData }, { data: mpData }] = await Promise.all([
+        fetchPosts(),
+        pq.order('created_at', { ascending: false }),
+        mq.order('month_start', { ascending: true }),
+      ]);
+      if (cancelled) return;
+      if (!all) { setError(true); setLoading(false); return; }
 
       // Influencer profiles keyed by meta_id
       const metaIds = Array.from(new Set(all.map(p => p.meta_id).filter((x): x is string => !!x)));
       let profiles: LeftyInfluencer[] = [];
       if (metaIds.length > 0) {
         const CHUNK = 200;
-        for (let i = 0; i < metaIds.length; i += CHUNK) {
-          const slice = metaIds.slice(i, i + CHUNK);
-          const { data: infData } = await supabase
-            .from('lefty_influencers')
-            .select('meta_id, name, instagram_url, tiktok_url, youtube_url, x_url, followers, blended_eng_rate, static_eng_rate, video_eng_rate, emv, est_reach')
-            .in('meta_id', slice);
-          if (infData) profiles = profiles.concat(infData as LeftyInfluencer[]);
+        const slices: string[][] = [];
+        for (let i = 0; i < metaIds.length; i += CHUNK) slices.push(metaIds.slice(i, i + CHUNK));
+        for (let i = 0; i < slices.length; i += CONCURRENCY) {
+          if (cancelled) return;
+          const results = await Promise.all(slices.slice(i, i + CONCURRENCY).map(slice =>
+            supabase
+              .from('lefty_influencers')
+              .select('meta_id, name, instagram_url, tiktok_url, youtube_url, x_url, followers, blended_eng_rate, static_eng_rate, video_eng_rate, emv, est_reach')
+              .in('meta_id', slice)
+          ));
+          results.forEach(({ data: infData }) => {
+            if (infData) profiles = profiles.concat(infData as LeftyInfluencer[]);
+          });
         }
       }
+
 
       if (cancelled) return;
       setPosts(all);
