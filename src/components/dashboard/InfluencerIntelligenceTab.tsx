@@ -1528,6 +1528,7 @@ const CreatorShareOfVoiceSection = ({ clientId, accent }: { clientId: string; ac
 
   return (
     <section className="animate-fade-in">
+      <div className={loading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
       <div className="flex items-start justify-between gap-4 mb-4 flex-wrap">
         <div>
           <span className="section-label">Creator Share of Voice</span>
