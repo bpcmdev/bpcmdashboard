@@ -1509,18 +1509,14 @@ const CreatorShareOfVoiceSection = ({ clientId, accent }: { clientId: string; ac
     return () => { cancelled = true; };
   }, [clientId, category, isAllTime, effectiveFrom, effectiveTo]);
 
+  // Clear stale data immediately when the client changes so nothing renders for the wrong client.
+  useEffect(() => { setData(null); }, [clientId]);
+
   const brands = useMemo(() => [...(data?.brands ?? [])].sort((a, b) => a.rank - b.rank), [data]);
   const topComps = useMemo(() => brands.filter(b => !b.is_own).slice(0, 3).map(b => b.brand), [brands]);
   const trendData = useMemo(() => (data?.trend ?? []).map(t => ({ month: t.month, ...t.shares })), [data]);
 
-  if (loading) {
-    return (
-      <section className="animate-fade-in">
-        <div className="flex items-baseline justify-between mb-4"><span className="section-label">Creator Share of Voice</span></div>
-        <Skeleton className="h-[280px] w-full" />
-      </section>
-    );
-  }
+  if (loading && !data) return null;
   if (!data || brands.length === 0) return null;
 
   const own = data.own;
