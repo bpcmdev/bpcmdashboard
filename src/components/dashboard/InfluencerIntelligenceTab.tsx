@@ -99,7 +99,7 @@ const normalizeNetwork = (n: string | null): string => {
   if (!n) return 'Other';
   const v = n.toLowerCase();
   if (v.includes('insta')) return 'Instagram';
-  if (v.includes('tiktok') || v === 'tt') return 'TikTok';
+  if (v.includes('tiktok') || v.includes('tik_tok') || v === 'tt') return 'TikTok';
   if (v.includes('youtube') || v === 'yt') return 'YouTube';
   if (v.includes('linkedin')) return 'LinkedIn';
   if (v.includes('twitter') || v === 'x') return 'X';
@@ -311,12 +311,6 @@ const NetworkBadge = ({ network }: { network: string }) => {
   return <span className="font-mono-ui text-[9px] tracking-[0.12em] uppercase px-2 py-0.5 bg-foreground text-background">{n}</span>;
 };
 
-// Deduplicate posts that appear once per campaign in lefty_posts.
-const uniqueByPost = (arr: LeftyPost[]) => {
-  const seen = new Set<string>();
-  return arr.filter(p => { const k = p.post_id ?? p.id; if (seen.has(k)) return false; seen.add(k); return true; });
-};
-
 // Content Spotlight card: post image with thumbnail_url → thumbnail_fallback_url
 // fallback; falls back to the plain card layout if both are null or fail to load.
 const ContentSpotlightCard = ({ p }: { p: LeftyPost }) => {
@@ -392,16 +386,33 @@ const ContentSpotlightCard = ({ p }: { p: LeftyPost }) => {
   );
 };
 
+interface TabLeaderRow { name: string; meta_id: string | null; posts_followers: number; posts: number; reach: number; emv: number; avg_eng: number; followers: number; profile: LeftyInfluencer | null; }
+interface TabData {
+  has_posts: boolean;
+  campaigns: string[];
+  kpis: { posts: number; reach: number; emv: number; eng: number; authors: number };
+  engagement: { likes: number; comments: number; views: number; shares: number };
+  monthly_all: { key: string; posts: number; reach: number; emv: number; authors: number; eng: number }[];
+  monthly_filtered: { key: string; posts: number; reach: number; emv: number; engagements: number }[];
+  campaigns_agg: { name: string; posts: number; reach: number; emv: number; authors: number; first_date: string; last_date: string; monthly: { key: string; reach: number; emv: number }[] }[];
+  leaderboard_total: number;
+  leaderboard: TabLeaderRow[];
+  top_posts: LeftyPost[];
+}
+
 // ---------- main tab ----------
 const InfluencerIntelligenceTab = () => {
   const { activeClientId, refreshKey, isAllTime, effectiveFrom, effectiveTo } = useWeek();
   const { clientColor, isAdmin } = useAdmin();
   const accent = clientColor || ROYAL;
 
-  const [posts, setPosts] = useState<LeftyPost[]>([]);
+  const [tab, setTab] = useState<TabData | null>(null);
   const [partnerships, setPartnerships] = useState<Partnership[]>([]);
   const [monthlyPerf, setMonthlyPerf] = useState<LeftyMonthlyPerf[]>([]);
-  const [influencerProfiles, setInfluencerProfiles] = useState<Map<string, LeftyInfluencer>>(new Map());
+  const [refreshing, setRefreshing] = useState(false);
+  const [drawerPosts, setDrawerPosts] = useState<{ id: string; post_link: string | null; network: string | null; campaign_name: string | null; posted_at: string | null; emv: number | null }[]>([]);
+  const [drawerPostsLoading, setDrawerPostsLoading] = useState(false);
+  const hasTabRef = useRef(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -429,41 +440,9 @@ const InfluencerIntelligenceTab = () => {
     if (!isAllTime && (!effectiveFrom || !effectiveTo)) return;
     let cancelled = false;
     (async () => {
-      setLoading(true);
+      const first = !hasTabRef.current;
+      if (first) setLoading(true); else setRefreshing(true);
       setError(false);
-      const PAGE = 1000;
-      const CONCURRENCY = 8;
-      const MAX_ROWS = 100000;
-      const POST_COLS = 'id, post_id, campaign_name, network, author_name, followers, impressions, reach, emv, engagement_rate, post_link, posted_at, likes, comments, views, shares, meta_id, caption_excerpt, thumbnail_url, thumbnail_fallback_url, saves';
-
-      const buildPostsQuery = (cols: string, opts?: { count: 'exact'; head: true }) => {
-        let q = supabase.from('lefty_posts').select(cols, opts).eq('client_id', activeClientId);
-        if (!isAllTime) {
-          q = q.gte('posted_at', effectiveFrom).lte('posted_at', `${effectiveTo}T23:59:59.999Z`);
-        }
-        return q;
-      };
-
-      const fetchPosts = async (): Promise<LeftyPost[] | null> => {
-        const { count, error: cErr } = await buildPostsQuery('id', { count: 'exact', head: true });
-        if (cErr) return null;
-        const total = Math.min(count ?? 0, MAX_ROWS);
-        const ranges: [number, number][] = [];
-        for (let from = 0; from < total; from += PAGE) ranges.push([from, Math.min(from + PAGE, total) - 1]);
-        const pages: LeftyPost[][] = new Array(ranges.length);
-        for (let i = 0; i < ranges.length; i += CONCURRENCY) {
-          if (cancelled) return null;
-          const group = ranges.slice(i, i + CONCURRENCY);
-          const results = await Promise.all(group.map(([a, b]) =>
-            buildPostsQuery(POST_COLS).order('posted_at', { ascending: false }).range(a, b)
-          ));
-          for (let j = 0; j < results.length; j++) {
-            if (results[j].error) return null;
-            pages[i + j] = ((results[j].data as unknown) as LeftyPost[]) ?? [];
-          }
-        }
-        return pages.flat();
-      };
 
       let pq = supabase
         .from('partnerships')
@@ -484,70 +463,32 @@ const InfluencerIntelligenceTab = () => {
         mq = mq.gte('month_start', effectiveFrom).lte('month_start', effectiveTo);
       }
 
-      const [all, { data: pData }, { data: mpData }] = await Promise.all([
-        fetchPosts(),
+      const [{ data: tData, error: tErr }, { data: pData }, { data: mpData }] = await Promise.all([
+        supabase.rpc('influencer_tab_data_secure' as any, {
+          p_client_id: activeClientId,
+          p_start: isAllTime ? null : effectiveFrom,
+          p_end: isAllTime ? null : effectiveTo,
+          p_network: network === 'all' ? null : network,
+          p_campaigns: selectedCampaigns.length ? selectedCampaigns : null,
+        }),
         pq.order('created_at', { ascending: false }),
         mq.order('month_start', { ascending: true }),
       ]);
       if (cancelled) return;
-      if (!all) { setError(true); setLoading(false); return; }
-
-      // Influencer profiles keyed by meta_id
-      const metaIds = Array.from(new Set(all.map(p => p.meta_id).filter((x): x is string => !!x)));
-      let profiles: LeftyInfluencer[] = [];
-      if (metaIds.length > 0) {
-        const CHUNK = 200;
-        const slices: string[][] = [];
-        for (let i = 0; i < metaIds.length; i += CHUNK) slices.push(metaIds.slice(i, i + CHUNK));
-        for (let i = 0; i < slices.length; i += CONCURRENCY) {
-          if (cancelled) return;
-          const results = await Promise.all(slices.slice(i, i + CONCURRENCY).map(slice =>
-            supabase
-              .from('lefty_influencers')
-              .select('meta_id, name, instagram_url, tiktok_url, youtube_url, x_url, followers, blended_eng_rate, static_eng_rate, video_eng_rate, emv, est_reach')
-              .in('meta_id', slice)
-          ));
-          results.forEach(({ data: infData }) => {
-            if (infData) profiles = profiles.concat(infData as LeftyInfluencer[]);
-          });
-        }
-      }
-
-
-      if (cancelled) return;
-      setPosts(all);
+      if (tErr || !tData) { setError(true); setLoading(false); setRefreshing(false); return; }
+      setTab(tData as unknown as TabData);
+      hasTabRef.current = true;
       setPartnerships((pData ?? []) as Partnership[]);
       setMonthlyPerf((mpData ?? []) as LeftyMonthlyPerf[]);
-      const profMap = new Map<string, LeftyInfluencer>();
-      profiles.forEach(p => profMap.set(p.meta_id, p));
-      setInfluencerProfiles(profMap);
       setLoading(false);
+      setRefreshing(false);
     })();
     return () => { cancelled = true; };
-  }, [activeClientId, refreshKey, isAllTime, effectiveFrom, effectiveTo]);
+  }, [activeClientId, refreshKey, isAllTime, effectiveFrom, effectiveTo, network, selectedCampaigns]);
 
+  const campaignList = tab?.campaigns ?? [];
 
-  // Distinct campaigns from posts
-  const campaignList = useMemo(() => {
-    const set = new Set<string>();
-    posts.forEach(p => { if (p.campaign_name) set.add(p.campaign_name); });
-    return Array.from(set).sort();
-  }, [posts]);
-
-  // Filtered posts (server already scoped by date; only apply network/campaign here).
-  const filteredPosts = useMemo(() => {
-    return posts.filter(p => {
-      if (network !== 'all' && normalizeNetwork(p.network) !== network) return false;
-      if (selectedCampaigns.length > 0 && (!p.campaign_name || !selectedCampaigns.includes(p.campaign_name))) return false;
-      return true;
-    });
-  }, [posts, network, selectedCampaigns]);
-  const uniquePosts = useMemo(() => uniqueByPost(posts), [posts]);
-  const uniqueFilteredPosts = useMemo(() => uniqueByPost(filteredPosts), [filteredPosts]);
-  // No client-side prior-period comparison — global week selector drives the window.
-  const priorPosts: LeftyPost[] = [];
-
-  // Monthly aggregates over the last 6 months (for KPI sparklines) — from all posts
+  // Monthly aggregates over the last 6 months (for KPI sparklines)
   const sixMonthKeys = useMemo(() => {
     const out: string[] = [];
     const d = new Date();
@@ -559,68 +500,33 @@ const InfluencerIntelligenceTab = () => {
     return out;
   }, []);
 
-  const monthly = useMemo(() => {
-    const map = new Map<string, { posts: number; reach: number; emv: number; authors: Set<string>; engSum: number; engN: number }>();
-    uniquePosts.forEach(p => {
-      if (!p.posted_at) return;
-      const k = monthKey(p.posted_at);
-      const cur = map.get(k) ?? { posts: 0, reach: 0, emv: 0, authors: new Set(), engSum: 0, engN: 0 };
-      cur.posts += 1;
-      cur.reach += p.reach ?? 0;
-      cur.emv += p.emv ?? 0;
-      if (p.author_name) cur.authors.add(p.author_name);
-      if (typeof p.engagement_rate === 'number' && p.engagement_rate > 0) {
-        cur.engSum += p.engagement_rate; cur.engN += 1;
-      }
-      map.set(k, cur);
-    });
-    return map;
-  }, [uniquePosts]);
+  const monthly = useMemo(
+    () => new Map((tab?.monthly_all ?? []).map(m => [m.key, { posts: m.posts, reach: m.reach, emv: m.emv, authors: m.authors, eng: m.eng }])),
+    [tab]
+  );
 
   const spark = (metric: 'posts' | 'reach' | 'emv' | 'authors' | 'eng'): number[] =>
     sixMonthKeys.map(k => {
       const v = monthly.get(k);
       if (!v) return 0;
-      if (metric === 'authors') return v.authors.size;
-      if (metric === 'eng') return v.engN > 0 ? (v.engSum / v.engN) * 100 : 0;
       return v[metric];
     });
 
-  // KPI totals
-  const kpis = useMemo(() => {
-    const sumReach = (arr: LeftyPost[]) => arr.reduce((s, p) => s + (p.reach ?? 0), 0);
-    const sumEmv = (arr: LeftyPost[]) => arr.reduce((s, p) => s + (p.emv ?? 0), 0);
-    const avgEng = (arr: LeftyPost[]) => {
-      const vals = arr.map(p => p.engagement_rate).filter((v): v is number => typeof v === 'number' && v > 0);
-      return vals.length ? (vals.reduce((s, v) => s + v, 0) / vals.length) * 100 : 0;
-    };
-    const distinctAuthors = (arr: LeftyPost[]) => new Set(arr.map(p => p.author_name).filter(Boolean)).size;
-    return {
-      posts: { cur: uniqueFilteredPosts.length, prior: priorPosts.length },
-      reach: { cur: sumReach(uniqueFilteredPosts), prior: sumReach(priorPosts) },
-      emv: { cur: sumEmv(uniqueFilteredPosts), prior: sumEmv(priorPosts) },
-      eng: { cur: avgEng(uniqueFilteredPosts), prior: avgEng(priorPosts) },
-      authors: { cur: distinctAuthors(uniqueFilteredPosts), prior: distinctAuthors(priorPosts) },
-    };
-  }, [uniqueFilteredPosts, priorPosts]);
+  const kpis = useMemo(() => ({
+    posts: { cur: tab?.kpis.posts ?? 0, prior: 0 },
+    reach: { cur: tab?.kpis.reach ?? 0, prior: 0 },
+    emv: { cur: tab?.kpis.emv ?? 0, prior: 0 },
+    eng: { cur: tab?.kpis.eng ?? 0, prior: 0 },
+    authors: { cur: tab?.kpis.authors ?? 0, prior: 0 },
+  }), [tab]);
 
-  // Engagement helper (likes + comments + shares; views tracked separately)
-  const engagementsOf = (p: LeftyPost) => (p.likes ?? 0) + (p.comments ?? 0) + (p.shares ?? 0);
-
-  // Engagement breakdown totals (from filtered posts, no row caps)
   const engagementTotals = useMemo(() => {
-    let likes = 0, comments = 0, views = 0, shares = 0;
-    uniqueFilteredPosts.forEach(p => {
-      likes += p.likes ?? 0;
-      comments += p.comments ?? 0;
-      views += p.views ?? 0;
-      shares += p.shares ?? 0;
-    });
-    return { likes, comments, views, shares, engagements: likes + comments + shares };
-  }, [uniqueFilteredPosts]);
+    const e = tab?.engagement ?? { likes: 0, comments: 0, views: 0, shares: 0 };
+    return { ...e, engagements: e.likes + e.comments + e.shares };
+  }, [tab]);
 
   // Monthly series for chart (filtered).
-  // Prefers lefty_monthly_perf when neutral filters, otherwise computes from posts.
+  // Prefers lefty_monthly_perf when neutral filters, otherwise uses server-aggregated rows.
   const filteredMonthly = useMemo(() => {
     const neutralFilters = network === 'all' && selectedCampaigns.length === 0;
     const fromIso = isAllTime ? '' : effectiveFrom;
@@ -637,18 +543,7 @@ const InfluencerIntelligenceTab = () => {
         engagements: m.engagements ?? 0,
       }));
     } else {
-      const map = new Map<string, { posts: number; reach: number; emv: number; engagements: number }>();
-      uniqueFilteredPosts.forEach(p => {
-        if (!p.posted_at) return;
-        const k = monthKey(p.posted_at);
-        const cur = map.get(k) ?? { posts: 0, reach: 0, emv: 0, engagements: 0 };
-        cur.posts += 1;
-        cur.reach += p.reach ?? 0;
-        cur.emv += p.emv ?? 0;
-        cur.engagements += engagementsOf(p);
-        map.set(k, cur);
-      });
-      rows = Array.from(map.entries()).map(([k, v]) => ({ key: k, ...v }));
+      rows = (tab?.monthly_filtered ?? []).map(m => ({ key: m.key, posts: m.posts, reach: m.reach, emv: m.emv, engagements: m.engagements }));
     }
 
     if (rows.length === 0) return [];
@@ -666,33 +561,16 @@ const InfluencerIntelligenceTab = () => {
       const r = byKey.get(k) ?? { key: k, posts: 0, reach: 0, emv: 0, engagements: 0 };
       return { month: monthLabel(k), key: k, ...r };
     });
-  }, [uniqueFilteredPosts, monthlyPerf, network, selectedCampaigns, isAllTime, effectiveFrom, effectiveTo]);
+  }, [tab, monthlyPerf, network, selectedCampaigns, isAllTime, effectiveFrom, effectiveTo]);
 
-  // Campaign aggregates (from filtered posts)
-  const campaignAgg = useMemo(() => {
-    const map = new Map<string, { name: string; posts: number; reach: number; emv: number; authors: Set<string>; firstDate: string; lastDate: string; monthly: Map<string, { reach: number; emv: number }> }>();
-    filteredPosts.forEach(p => {
-      const name = (p.campaign_name ?? '').trim();
-      if (!name) return;
-      const cur = map.get(name) ?? { name, posts: 0, reach: 0, emv: 0, authors: new Set(), firstDate: '', lastDate: '', monthly: new Map() };
-      cur.posts += 1;
-      cur.reach += p.reach ?? 0;
-      cur.emv += p.emv ?? 0;
-      if (p.author_name) cur.authors.add(p.author_name);
-      if (p.posted_at) {
-        const iso = p.posted_at.slice(0, 10);
-        if (!cur.firstDate || iso < cur.firstDate) cur.firstDate = iso;
-        if (!cur.lastDate || iso > cur.lastDate) cur.lastDate = iso;
-        const mk = monthKey(p.posted_at);
-        const m = cur.monthly.get(mk) ?? { reach: 0, emv: 0 };
-        m.reach += p.reach ?? 0;
-        m.emv += p.emv ?? 0;
-        cur.monthly.set(mk, m);
-      }
-      map.set(name, cur);
-    });
-    return Array.from(map.values());
-  }, [filteredPosts]);
+  const campaignAgg = useMemo(
+    () => (tab?.campaigns_agg ?? []).map(c => ({
+      name: c.name, posts: c.posts, reach: c.reach, emv: c.emv, authors: c.authors,
+      firstDate: c.first_date, lastDate: c.last_date,
+      monthly: new Map((c.monthly ?? []).map(m => [m.key, { reach: m.reach, emv: m.emv }])),
+    })),
+    [tab]
+  );
 
   const top10Campaigns = useMemo(
     () => [...campaignAgg].sort((a, b) => b.emv - a.emv).slice(0, 10),
@@ -714,7 +592,7 @@ const InfluencerIntelligenceTab = () => {
           id: c.name,
           name: c.name,
           status: pm?.status ?? 'tracked',
-          influencers: c.authors.size,
+          influencers: c.authors,
           posts: c.posts,
           reach: c.reach,
           emv: c.emv,
@@ -743,36 +621,36 @@ const InfluencerIntelligenceTab = () => {
     setTableSort(s => s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'desc' });
   };
 
-  // Influencer leaderboard (enriched with lefty_influencers profile via meta_id)
-  const influencers = useMemo(() => {
-    const map = new Map<string, { name: string; metaId: string | null; postsFollowers: number; posts: number; reach: number; emv: number; engSum: number; engN: number; postsList: LeftyPost[] }>();
-    uniqueFilteredPosts.forEach(p => {
-      const name = (p.author_name ?? '').trim();
-      if (!name) return;
-      const cur = map.get(name) ?? { name, metaId: null, postsFollowers: 0, posts: 0, reach: 0, emv: 0, engSum: 0, engN: 0, postsList: [] };
-      cur.postsFollowers = Math.max(cur.postsFollowers, p.followers ?? 0);
-      if (!cur.metaId && p.meta_id) cur.metaId = p.meta_id;
-      cur.posts += 1;
-      cur.reach += p.reach ?? 0;
-      cur.emv += p.emv ?? 0;
-      if (typeof p.engagement_rate === 'number' && p.engagement_rate > 0) { cur.engSum += p.engagement_rate; cur.engN += 1; }
-      cur.postsList.push(p);
-      map.set(name, cur);
-    });
-    return Array.from(map.values())
-      .map(x => {
-        const profile = x.metaId ? influencerProfiles.get(x.metaId) ?? null : null;
-        // Prefer authoritative followers from lefty_influencers when available.
-        const followers = profile?.followers ?? x.postsFollowers;
-        return { ...x, followers, profile, avgEng: x.engN > 0 ? (x.engSum / x.engN) * 100 : 0 };
-      })
-      .sort((a, b) => b.emv - a.emv);
-  }, [uniqueFilteredPosts, influencerProfiles]);
-
-  const topPostsGrid = useMemo(
-    () => [...uniqueFilteredPosts].sort((a, b) => (b.emv ?? 0) - (a.emv ?? 0)).slice(0, 12),
-    [uniqueFilteredPosts]
+  const influencers = useMemo(
+    () => (tab?.leaderboard ?? []).map(r => ({
+      name: r.name, metaId: r.meta_id, postsFollowers: r.posts_followers, posts: r.posts,
+      reach: r.reach, emv: r.emv, followers: r.followers, profile: r.profile, avgEng: r.avg_eng,
+    })),
+    [tab]
   );
+
+  const topPostsGrid = tab?.top_posts ?? [];
+
+  // Creator drawer posts (fetched on demand).
+  useEffect(() => {
+    if (!drawerAuthor || !activeClientId) { setDrawerPosts([]); return; }
+    let cancelled = false;
+    setDrawerPostsLoading(true);
+    (async () => {
+      const { data } = await supabase.rpc('influencer_author_posts_secure' as any, {
+        p_client_id: activeClientId,
+        p_author: drawerAuthor,
+        p_start: isAllTime ? null : effectiveFrom,
+        p_end: isAllTime ? null : effectiveTo,
+        p_network: network === 'all' ? null : network,
+        p_campaigns: selectedCampaigns.length ? selectedCampaigns : null,
+      });
+      if (cancelled) return;
+      setDrawerPosts(((data as unknown) as typeof drawerPosts) ?? []);
+      setDrawerPostsLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [drawerAuthor, activeClientId, isAllTime, effectiveFrom, effectiveTo, network, selectedCampaigns]);
 
   const activePartnerships = partnerships.filter(p => p.status !== 'past');
   const drawerAuthorData = drawerAuthor ? influencers.find(i => i.name === drawerAuthor) : null;
@@ -790,10 +668,11 @@ const InfluencerIntelligenceTab = () => {
   return (
     <div className="p-6 space-y-8">
       <DataStateWrapper loading={loading} error={error} skeletonCount={5}>
-        {posts.length === 0 ? (
+        {!tab?.has_posts ? (
           <EmptyState icon="📣" title="No influencer data yet" description="Once posts are synced, the intelligence view will populate here." />
         ) : (
           <>
+            <div className={refreshing ? 'opacity-60 transition-opacity pointer-events-none' : 'transition-opacity'}>
             {activeClientId && (
               <AISummarySection clientId={activeClientId} accent={accent} isAdmin={isAdmin} kind="influencer" functionName="influencer-summary" />
             )}
@@ -1180,9 +1059,12 @@ const InfluencerIntelligenceTab = () => {
                               <tr key={`${r.id}-x`} className="bg-[hsl(0,0%,99%)] border-b border-black/10">
                                 <td colSpan={7} className="p-4">
                                   <CampaignExpandedPanel
+                                    clientId={activeClientId!}
                                     campaignName={r.name}
-                                    posts={filteredPosts.filter(p => p.campaign_name === r.name)}
                                     accent={accent}
+                                    network={network}
+                                    start={isAllTime ? null : effectiveFrom}
+                                    end={isAllTime ? null : effectiveTo}
                                   />
                                 </td>
                               </tr>
@@ -1201,7 +1083,7 @@ const InfluencerIntelligenceTab = () => {
             <section className="animate-fade-in">
               <div className="flex items-baseline justify-between mb-4">
                 <span className="section-label">Influencer Leaderboard</span>
-                <span className="section-count">{influencers.length}</span>
+                <span className="section-count">{tab?.leaderboard_total ?? influencers.length}</span>
               </div>
 
               {/* Top 3 spotlight */}
@@ -1316,6 +1198,7 @@ const InfluencerIntelligenceTab = () => {
 
             {/* 7. Inbound Creator Discovery */}
             {activeClientId && <InboundCreatorsSection clientId={activeClientId} accent={accent} />}
+            </div>
           </>
         )}
       </DataStateWrapper>
@@ -1423,9 +1306,9 @@ const InfluencerIntelligenceTab = () => {
               <div>
                 <p className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground mb-2">Posts</p>
                 <div className="divide-y divide-black/[0.06] border border-black/10">
-                  {drawerAuthorData.postsList
-                    .sort((a, b) => (b.emv ?? 0) - (a.emv ?? 0))
-                    .map(p => (
+                  {drawerPostsLoading ? (
+                    <div className="p-3 space-y-2"><Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-full" /></div>
+                  ) : drawerPosts.map(p => (
                       <a
                         key={p.id}
                         href={p.post_link ?? undefined}
@@ -1453,20 +1336,36 @@ const InfluencerIntelligenceTab = () => {
 };
 
 // ---------- expanded campaign panel ----------
-const CampaignExpandedPanel = ({ campaignName, posts, accent }: { campaignName: string; posts: LeftyPost[]; accent: string }) => {
-  const totalPosts = posts.length;
-  const totalReach = posts.reduce((s, p) => s + (p.reach ?? 0), 0);
-  const totalEmv = posts.reduce((s, p) => s + (p.emv ?? 0), 0);
+interface CampaignDetail {
+  posts: number; reach: number; emv: number;
+  top_authors: { name: string; emv: number; reach: number; posts: number }[];
+  top_posts: { id: string; post_link: string | null; author_name: string | null; network: string | null; reach: number | null; emv: number | null }[];
+}
 
-  const byAuthor = new Map<string, { name: string; emv: number; reach: number; posts: number }>();
-  posts.forEach(p => {
-    const k = p.author_name ?? '—';
-    const cur = byAuthor.get(k) ?? { name: k, emv: 0, reach: 0, posts: 0 };
-    cur.emv += p.emv ?? 0; cur.reach += p.reach ?? 0; cur.posts += 1;
-    byAuthor.set(k, cur);
-  });
-  const topAuthors = Array.from(byAuthor.values()).sort((a, b) => b.emv - a.emv).slice(0, 5);
-  const topPosts = [...posts].sort((a, b) => (b.emv ?? 0) - (a.emv ?? 0)).slice(0, 5);
+const CampaignExpandedPanel = ({ clientId, campaignName, accent, network, start, end }: { clientId: string; campaignName: string; accent: string; network: string; start: string | null; end: string | null }) => {
+  const [detail, setDetail] = useState<CampaignDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    (async () => {
+      const { data } = await supabase.rpc('influencer_campaign_detail_secure' as any, {
+        p_client_id: clientId, p_campaign: campaignName, p_start: start, p_end: end,
+        p_network: network === 'all' ? null : network,
+      });
+      if (cancelled) return;
+      setDetail((data as unknown as CampaignDetail) ?? null);
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [clientId, campaignName, network, start, end]);
+
+  if (loading) return <Skeleton className="h-[180px] w-full" />;
+  const totalPosts = detail?.posts ?? 0;
+  const totalReach = detail?.reach ?? 0;
+  const totalEmv = detail?.emv ?? 0;
+  const topAuthors = detail?.top_authors ?? [];
+  const topPosts = detail?.top_posts ?? [];
 
   return (
     <div className="space-y-4">
