@@ -362,7 +362,7 @@ const MultiplatformTrackingTab = () => {
   if (error) {
     return (
       <div className="p-6 py-24 text-center">
-        <p className="text-sm text-destructive font-medium">Multiplatform data could not be loaded. Refresh the page to try again.</p>
+        <p className="text-sm text-destructive font-medium">Social listening data could not be loaded. Refresh the page to try again.</p>
       </div>
     );
   }
@@ -371,7 +371,7 @@ const MultiplatformTrackingTab = () => {
     return (
       <div className="p-6">
         <div className="section-card border p-10 text-center max-w-xl mx-auto">
-          <p className="font-display text-lg">Multiplatform tracking isn't set up for this client yet</p>
+          <p className="font-display text-lg">Social listening isn't set up for this client yet</p>
           <p className="text-sm text-muted-foreground mt-2">
             {isAdmin
               ? 'Add the client’s Brand24 project to brand24_client_config and the daily sync will start filling this tab.'
