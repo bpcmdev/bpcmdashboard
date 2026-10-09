@@ -396,9 +396,6 @@ const MultiplatformTrackingTab = () => {
 
   return (
     <div className="p-6 space-y-8">
-      <SocialListeningOverview />
-
-      <SocialListeningTextInsights />
       {/* ---------- Intro ---------- */}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -451,6 +448,10 @@ const MultiplatformTrackingTab = () => {
           );
         })}
       </div>
+
+      <SocialListeningOverview />
+
+      <SocialListeningTextInsights />
 
       {/* ---------- Trend ---------- */}
       <div className="section-card border p-5">
