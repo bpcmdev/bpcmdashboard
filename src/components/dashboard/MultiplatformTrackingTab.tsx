@@ -449,6 +449,10 @@ const MultiplatformTrackingTab = () => {
         })}
       </div>
 
+      <SocialListeningOverview />
+
+      <SocialListeningTextInsights />
+
       {/* ---------- Trend ---------- */}
       <div className="section-card border p-5">
         <SectionTitle right={<span className="text-[11px] text-muted-foreground">{trend?.bucket === 'week' ? 'Weekly' : 'Daily'} mentions</span>}>
