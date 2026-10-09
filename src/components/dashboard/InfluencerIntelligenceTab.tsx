@@ -330,7 +330,7 @@ const ContentSpotlightCard = ({ p }: { p: LeftyPost }) => {
       className={`block bg-card border border-black/10 p-5 text-left hover:border-[#1B2B8A]/40 hover:-translate-y-0.5 transition-all group ${hasImage ? 'overflow-hidden' : ''}`}
     >
       {hasImage && (
-        <div className="aspect-[4/5] w-full overflow-hidden">
+        <div className="-mx-5 -mt-5 mb-4 aspect-[4/5] overflow-hidden">
           <img
             src={src ?? undefined}
             alt={p.author_name ?? 'Post'}
@@ -346,7 +346,7 @@ const ContentSpotlightCard = ({ p }: { p: LeftyPost }) => {
           />
         </div>
       )}
-      <div className={hasImage ? '-mx-5 -mt-5 p-5' : ''}>
+      <div>
         <div className="flex items-start justify-between gap-2 mb-3">
           <div className="min-w-0 flex-1">
             <p className="font-bold text-sm text-foreground truncate">{p.author_name ?? '—'}</p>
@@ -1509,18 +1509,14 @@ const CreatorShareOfVoiceSection = ({ clientId, accent }: { clientId: string; ac
     return () => { cancelled = true; };
   }, [clientId, category, isAllTime, effectiveFrom, effectiveTo]);
 
+  // Clear stale data immediately when the client changes so nothing renders for the wrong client.
+  useEffect(() => { setData(null); }, [clientId]);
+
   const brands = useMemo(() => [...(data?.brands ?? [])].sort((a, b) => a.rank - b.rank), [data]);
   const topComps = useMemo(() => brands.filter(b => !b.is_own).slice(0, 3).map(b => b.brand), [brands]);
   const trendData = useMemo(() => (data?.trend ?? []).map(t => ({ month: t.month, ...t.shares })), [data]);
 
-  if (loading) {
-    return (
-      <section className="animate-fade-in">
-        <div className="flex items-baseline justify-between mb-4"><span className="section-label">Creator Share of Voice</span></div>
-        <Skeleton className="h-[280px] w-full" />
-      </section>
-    );
-  }
+  if (loading && !data) return null;
   if (!data || brands.length === 0) return null;
 
   const own = data.own;
@@ -1532,6 +1528,7 @@ const CreatorShareOfVoiceSection = ({ clientId, accent }: { clientId: string; ac
 
   return (
     <section className="animate-fade-in">
+      <div className={loading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
       <div className="flex items-start justify-between gap-4 mb-4 flex-wrap">
         <div>
           <span className="section-label">Creator Share of Voice</span>
@@ -1636,8 +1633,9 @@ const CreatorShareOfVoiceSection = ({ clientId, accent }: { clientId: string; ac
       )}
 
       <p className="text-[11px] text-muted-foreground">
-        Source: Kin industry panel (independent creator benchmark, EMV as calculated by Kin). Monthly data, so selected dates are rounded to whole months. Retention = share of a brand's creators who post again the following quarter.
+        Source: Kin industry panel (independent creator benchmark, EMV as calculated by Kin). Monthly data, so selected dates are rounded to whole months. Retention is Kin's quarterly creator retention rate.
       </p>
+      </div>
     </section>
   );
 };

@@ -10,6 +10,7 @@ import { LinkPreviewTrigger } from './LinkPreviewDrawer';
 
 interface LeftyPost {
   id: string;
+  post_id: string | null;
   campaign_name: string | null;
   network: string | null;
   author_name: string | null;
@@ -58,9 +59,10 @@ const InfluencerSocialTab = () => {
       while (true) {
         let q = supabase
           .from('lefty_posts')
-          .select('id, campaign_name, network, author_name, followers, impressions, reach, emv, engagement_rate, post_link, posted_at')
+          .select('id, post_id, campaign_name, network, author_name, followers, impressions, reach, emv, engagement_rate, post_link, posted_at')
           .eq('client_id', activeClientId)
-          .order('posted_at', { ascending: false });
+          .order('posted_at', { ascending: false })
+          .order('id', { ascending: true });
         if (!isAllTime) {
           q = q
             .gte('posted_at', effectiveFrom)
@@ -73,10 +75,12 @@ const InfluencerSocialTab = () => {
         all.push(...batch);
         if (batch.length < PAGE) break;
         from += PAGE;
-        if (from > 50000) break; // safety
+        if (from > 100000) break; // safety
       }
       if (cancelled) return;
-      setPosts(all);
+      const seen = new Set<string>();
+      const unique = all.filter(p => { const k = p.post_id ?? p.id; if (seen.has(k)) return false; seen.add(k); return true; });
+      setPosts(unique);
       setLoading(false);
     })();
     return () => { cancelled = true; };
