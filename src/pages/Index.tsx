@@ -32,7 +32,7 @@ const TAB_MAP: Record<string, React.ComponentType> = {
   'PRODUCT LAUNCHES': ProductLaunchesTab,
   'PIPELINE & MOMENTS': PipelineMomentsTab,
   'EARNED MEDIA': EarnedMediaTab,
-  'MULTIPLATFORM TRACKING': MultiplatformTrackingTab,
+  'SOCIAL LISTENING': MultiplatformTrackingTab,
   'INFLUENCER INTELLIGENCE': InfluencerIntelligenceTab,
   'INFLUENCER & SOCIAL': InfluencerIntelligenceTab,
 
@@ -84,7 +84,7 @@ function DashboardContent() {
         'KEY WINS': 'key_wins',
         'PRODUCT LAUNCHES': 'product_launches',
         'EARNED MEDIA': 'earned_media',
-        'MULTIPLATFORM TRACKING': 'multiplatform_tracking',
+        'SOCIAL LISTENING': 'multiplatform_tracking',
         'INFLUENCER INTELLIGENCE': 'influencer_social',
         'INFLUENCER & SOCIAL': 'influencer_social',
 
