@@ -1633,8 +1633,9 @@ const CreatorShareOfVoiceSection = ({ clientId, accent }: { clientId: string; ac
       )}
 
       <p className="text-[11px] text-muted-foreground">
-        Source: Kin industry panel (independent creator benchmark, EMV as calculated by Kin). Monthly data, so selected dates are rounded to whole months. Retention = share of a brand's creators who post again the following quarter.
+        Source: Kin industry panel (independent creator benchmark, EMV as calculated by Kin). Monthly data, so selected dates are rounded to whole months. Retention is Kin's quarterly creator retention rate.
       </p>
+      </div>
     </section>
   );
 };
