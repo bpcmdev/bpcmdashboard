@@ -59,9 +59,10 @@ const InfluencerSocialTab = () => {
       while (true) {
         let q = supabase
           .from('lefty_posts')
-          .select('id, campaign_name, network, author_name, followers, impressions, reach, emv, engagement_rate, post_link, posted_at')
+          .select('id, post_id, campaign_name, network, author_name, followers, impressions, reach, emv, engagement_rate, post_link, posted_at')
           .eq('client_id', activeClientId)
-          .order('posted_at', { ascending: false });
+          .order('posted_at', { ascending: false })
+          .order('id', { ascending: true });
         if (!isAllTime) {
           q = q
             .gte('posted_at', effectiveFrom)
