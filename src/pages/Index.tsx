@@ -7,6 +7,7 @@ import NarrativeTicker from '@/components/dashboard/NarrativeTicker';
 import KpiBar from '@/components/dashboard/KpiBar';
 import TabNavigation from '@/components/dashboard/TabNavigation';
 import EarnedMediaTab from '@/components/dashboard/EarnedMediaTab';
+import MultiplatformTrackingTab from '@/components/dashboard/MultiplatformTrackingTab';
 import KeyWinsTab from '@/components/dashboard/KeyWinsTab';
 import ProductLaunchesTab from '@/components/dashboard/ProductLaunchesTab';
 import PipelineMomentsTab from '@/components/dashboard/PipelineMomentsTab';
@@ -31,6 +32,7 @@ const TAB_MAP: Record<string, React.ComponentType> = {
   'PRODUCT LAUNCHES': ProductLaunchesTab,
   'PIPELINE & MOMENTS': PipelineMomentsTab,
   'EARNED MEDIA': EarnedMediaTab,
+  'MULTIPLATFORM TRACKING': MultiplatformTrackingTab,
   'INFLUENCER INTELLIGENCE': InfluencerIntelligenceTab,
   'INFLUENCER & SOCIAL': InfluencerIntelligenceTab,
 
@@ -82,6 +84,7 @@ function DashboardContent() {
         'KEY WINS': 'key_wins',
         'PRODUCT LAUNCHES': 'product_launches',
         'EARNED MEDIA': 'earned_media',
+        'MULTIPLATFORM TRACKING': 'multiplatform_tracking',
         'INFLUENCER INTELLIGENCE': 'influencer_social',
         'INFLUENCER & SOCIAL': 'influencer_social',
 
