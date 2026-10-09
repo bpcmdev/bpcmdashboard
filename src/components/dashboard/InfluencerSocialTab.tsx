@@ -10,6 +10,7 @@ import { LinkPreviewTrigger } from './LinkPreviewDrawer';
 
 interface LeftyPost {
   id: string;
+  post_id: string | null;
   campaign_name: string | null;
   network: string | null;
   author_name: string | null;
