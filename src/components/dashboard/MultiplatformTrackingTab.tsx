@@ -398,6 +398,7 @@ const MultiplatformTrackingTab = () => {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="font-display text-2xl leading-tight">Beyond social: Reddit, YouTube, podcasts, Substack and blogs</h2>
+          <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
             {formatCount(totalMentions)} organic mentions across Reddit, YouTube, podcasts, Substack, blogs and forums
             {range.p_start ? ` between ${formatDay(range.p_start)} and ${formatDay(range.p_end, true)}` : ' to date'}.
           </p>
