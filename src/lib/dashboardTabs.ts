@@ -12,6 +12,7 @@ export const ALL_TABS: TabDef[] = [
   { id: 'key_wins',            label: 'KEY WINS' },
   { id: 'product_launches',    label: 'PRODUCT LAUNCHES' },
   { id: 'earned_media',        label: 'EARNED MEDIA' },
+  { id: 'multiplatform_tracking', label: 'MULTIPLATFORM TRACKING' },
   { id: 'influencer_social',   label: 'INFLUENCER INTELLIGENCE' },
   
   { id: 'ai_visibility',       label: 'AI VISIBILITY' },
