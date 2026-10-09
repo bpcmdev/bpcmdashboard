@@ -141,13 +141,20 @@ function useColumns(count: number): number {
     return () => window.removeEventListener('resize', calc);
   }, []);
   if (width < 768) return 2;
-  if (width < 1280) return 3;
-  return Math.min(6, Math.max(1, count));
+  if (count <= 4) return Math.max(1, count);
+  if (width < 1024) return 3;
+  return Math.min(6, count);
 }
 
-const XL_COLS: Record<number, string> = {
-  1: 'xl:grid-cols-1', 2: 'xl:grid-cols-2', 3: 'xl:grid-cols-3', 4: 'xl:grid-cols-4', 5: 'xl:grid-cols-5', 6: 'xl:grid-cols-6',
-};
+/** Up to four cards share one row from tablet width up; five or six share a row on large screens. */
+function gridClass(count: number): string {
+  if (count <= 1) return 'grid-cols-1';
+  if (count === 2) return 'grid-cols-2';
+  if (count === 3) return 'grid-cols-2 md:grid-cols-3';
+  if (count === 4) return 'grid-cols-2 md:grid-cols-4';
+  if (count === 5) return 'grid-cols-2 md:grid-cols-3 lg:grid-cols-5';
+  return 'grid-cols-2 md:grid-cols-3 lg:grid-cols-6';
+}
 
 function Delta({ current, prior }: { current: number; prior: number | null | undefined }) {
   if (prior == null) return null;
@@ -187,11 +194,11 @@ function seriesFor(trend: TrendResp | null, g: Group): { date: string; mentions:
 }
 
 function Sparkline({ g, data }: { g: Group; data: { date: string; mentions: number }[] }) {
-  if (data.length < 2) return <div className="h-10" aria-hidden />;
+  if (data.length < 2) return <div className="h-8" aria-hidden />;
   const { hue } = META[g];
   const id = `plat-spark-${g}`;
   return (
-    <div className="h-10 -mx-1" aria-hidden>
+    <div className="h-8 -mx-1" aria-hidden>
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
           <defs>
@@ -459,7 +466,7 @@ const SocialListeningPlatformCards = ({ clientId, platforms, trend, range, onVie
   if (!platforms.length) return null;
 
   return (
-    <div className={cn('grid gap-4 grid-cols-2 md:grid-cols-3', XL_COLS[Math.min(6, Math.max(1, platforms.length))])}>
+    <div className={cn('grid gap-3', gridClass(platforms.length))}>
       {platforms.map((p, i) => {
         const meta = META[p.platform];
         const Icon = meta.icon;
@@ -476,7 +483,7 @@ const SocialListeningPlatformCards = ({ clientId, platforms, trend, range, onVie
               aria-controls={active ? 'listening-platform-detail' : undefined}
               onClick={() => setSelected(active ? null : p.platform)}
               className={cn(
-                'group relative text-left border bg-card p-4 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+                'group relative min-w-0 text-left border bg-card p-3 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
                 'hover:-translate-y-0.5 hover:shadow-md',
                 active && '-translate-y-0.5 shadow-md',
               )}
@@ -492,18 +499,18 @@ const SocialListeningPlatformCards = ({ clientId, platforms, trend, range, onVie
               }}
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="flex items-center gap-2 text-xs font-semibold min-w-0" style={{ color: accent(meta.hue, 36) }}>
-                  <span className="w-6 h-6 rounded-full flex items-center justify-center shrink-0" style={{ background: tint(meta.hue, 0.14) }}>
-                    <Icon className="w-3.5 h-3.5" aria-hidden />
+                <span className="flex items-center gap-1.5 text-[11px] font-semibold min-w-0" style={{ color: accent(meta.hue, 36) }}>
+                  <span className="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style={{ background: tint(meta.hue, 0.14) }}>
+                    <Icon className="w-3 h-3" aria-hidden />
                   </span>
                   <span className="truncate">{meta.label}</span>
                 </span>
                 <Delta current={p.mentions} prior={p.prior_mentions} />
               </div>
-              <p className="text-3xl font-bold tabular-nums mt-3 leading-none font-display"><AnimatedCount value={num(p.mentions)} /></p>
-              <div className="mt-2"><Sparkline g={p.platform} data={seriesByGroup.get(p.platform) ?? []} /></div>
+              <p className="text-2xl font-bold tabular-nums mt-2 leading-none font-display"><AnimatedCount value={num(p.mentions)} /></p>
+              <div className="mt-1"><Sparkline g={p.platform} data={seriesByGroup.get(p.platform) ?? []} /></div>
               <div
-                className="flex h-1.5 w-full overflow-hidden bg-muted mt-2"
+                className="flex h-1 w-full overflow-hidden bg-muted mt-1.5"
                 role="img"
                 aria-label={scored ? `${Math.round(pos)}% positive, ${Math.round(neg)}% negative` : 'No sentiment yet'}
               >
@@ -515,7 +522,7 @@ const SocialListeningPlatformCards = ({ clientId, platforms, trend, range, onVie
                 {scored ? `${Math.round(pos)}% positive` : 'No mentions yet'}
                 {p.reach ? `, ${fmt(p.reach)} est. reach` : ''}
               </p>
-              <p className="text-[10px] text-muted-foreground mt-1 opacity-70 group-hover:opacity-100 transition-opacity">
+              <p className="text-[10px] text-muted-foreground mt-0.5 opacity-70 group-hover:opacity-100 transition-opacity">
                 {active ? 'Click to close' : 'Click for details'}
               </p>
             </button>
@@ -541,4 +548,4 @@ const SocialListeningPlatformCards = ({ clientId, platforms, trend, range, onVie
   );
 };
 
-export default SocialListeningPlatformCards;
+export default SocialListeningPlatformCards
