@@ -390,6 +390,8 @@ const MultiplatformTrackingTab = () => {
   const themes = arr<Theme>(chatter?.themes);
   const fallbackCards = !cards.length ? arr<FeedRow>(feed?.rows).filter(r => (r.content || '').length > 60).slice(0, 6) : [];
   const lf = longForm;
+  // Podcasts and broadcast only get a card once there is something to show.
+  const showLongForm = num(lf?.podcast_mentions) > 0 || num(lf?.broadcast_segments) > 0 || arr<LongFormItem>(lf?.recent).length > 0;
   const maxPage = feed ? Math.max(0, Math.ceil(feed.total / PAGE_SIZE) - 1) : 0;
 
   return (
@@ -561,7 +563,8 @@ const MultiplatformTrackingTab = () => {
       </div>
 
       {/* ---------- Podcasts & broadcast + themes ---------- */}
-      <div className="grid gap-4 lg:grid-cols-5">
+      <div className={cn('grid gap-4', showLongForm && 'lg:grid-cols-5')}>
+        {showLongForm && (
         <div className="section-card border p-5 lg:col-span-3">
           <SectionTitle>Podcasts{lf?.has_broadcast_source ? ' & broadcast' : ''}</SectionTitle>
           <div className="flex flex-wrap gap-8">
@@ -620,8 +623,9 @@ const MultiplatformTrackingTab = () => {
             <p className="text-[11px] text-muted-foreground mt-3">TV and radio monitoring isn't connected. Brand24 doesn't cover broadcast, so it needs a separate source.</p>
           )}
         </div>
+        )}
 
-        <div className="section-card border p-5 lg:col-span-2">
+        <div className={cn('section-card border p-5', showLongForm && 'lg:col-span-2')}>
           <SectionTitle>Conversation themes</SectionTitle>
           {themes.length ? (
             <ol className="space-y-4">
