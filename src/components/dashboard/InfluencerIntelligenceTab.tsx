@@ -14,6 +14,11 @@ import Sparkline from './Sparkline';
 import PaginationControls from './PaginationControls';
 import { LinkPreviewTrigger } from './LinkPreviewDrawer';
 import AISummarySection from './AISummarySection';
+import InfluencerHeroKpis from './InfluencerHeroKpis';
+import InfluencerEngagementCards from './InfluencerEngagementCards';
+import InfluencerPodium from './InfluencerPodium';
+import InfluencerSovCards from './InfluencerSovCards';
+import InfluencerInboundCards from './InfluencerInboundCards';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNowStrict, format, parseISO } from 'date-fns';
@@ -677,13 +682,12 @@ const InfluencerIntelligenceTab = () => {
               <AISummarySection clientId={activeClientId} accent={accent} isAdmin={isAdmin} kind="influencer" functionName="influencer-summary" />
             )}
             {/* 1. Hero KPI band */}
-            <section className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-              <KpiCard label="Total Posts" value={kpis.posts.cur} prior={kpis.posts.prior} format={n => Math.round(n).toLocaleString()} spark={spark('posts')} delay={0} />
-              <KpiCard label="Total Reach" value={kpis.reach.cur} prior={kpis.reach.prior} format={n => formatReach(Math.round(n))} spark={spark('reach')} delay={60} />
-              <KpiCard label="Total EMV" value={kpis.emv.cur} prior={kpis.emv.prior} format={n => formatMoney(Math.round(n))} spark={spark('emv')} delay={120} />
-              <KpiCard label="Avg Engagement" value={kpis.eng.cur} prior={kpis.eng.prior} format={n => `${n.toFixed(2)}%`} spark={spark('eng')} delay={180} />
-              <KpiCard label="Active Influencers" value={kpis.authors.cur} prior={kpis.authors.prior} format={n => Math.round(n).toLocaleString()} spark={spark('authors')} delay={240} />
-            </section>
+            <InfluencerHeroKpis
+              accent={accent}
+              kpis={{ posts: kpis.posts.cur, reach: kpis.reach.cur, emv: kpis.emv.cur, eng: kpis.eng.cur, authors: kpis.authors.cur }}
+              monthly={tab?.monthly_all ?? []}
+              topCampaign={top10Campaigns[0] ? { name: top10Campaigns[0].name, emv: top10Campaigns[0].emv } : null}
+            />
 
             {/* 2. Filter bar (sticky) */}
             <FilterBar
@@ -780,56 +784,12 @@ const InfluencerIntelligenceTab = () => {
                   <span className="section-label">Engagement Breakdown</span>
                   <span className="font-mono-ui text-[10px] tracking-[0.12em] uppercase text-muted-foreground">Filtered window</span>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {[
-                    { label: 'Likes', value: engagementTotals.likes, color: '#E4405F' },
-                    { label: 'Comments', value: engagementTotals.comments, color: accent },
-                    { label: 'Views', value: engagementTotals.views, color: '#000000' },
-                    { label: 'Shares', value: engagementTotals.shares, color: GOLD },
-                  ].map(m => (
-                    <div key={m.label} className="border border-black/10 p-3">
-                      <p className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground">{m.label}</p>
-                      <p className="font-display text-xl font-bold tabular-nums mt-1" style={{ color: m.color }}>{formatCount(m.value)}</p>
-                    </div>
-                  ))}
-                </div>
-                {/* Engagement mix bar (likes+comments+shares) */}
-                {engagementTotals.engagements > 0 && (
-                  <div className="mt-4">
-                    <p className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground mb-2">Engagement mix</p>
-                    <div className="flex h-3 w-full overflow-hidden border border-black/10">
-                      {[
-                        { key: 'Likes', v: engagementTotals.likes, color: '#E4405F' },
-                        { key: 'Comments', v: engagementTotals.comments, color: accent },
-                        { key: 'Shares', v: engagementTotals.shares, color: GOLD },
-                      ].map(seg => {
-                        const pct = (seg.v / engagementTotals.engagements) * 100;
-                        return pct > 0 ? (
-                          <div
-                            key={seg.key}
-                            title={`${seg.key}: ${formatCount(seg.v)} (${pct.toFixed(1)}%)`}
-                            style={{ width: `${pct}%`, backgroundColor: seg.color }}
-                          />
-                        ) : null;
-                      })}
-                    </div>
-                    <div className="flex flex-wrap gap-4 mt-2">
-                      {[
-                        { key: 'Likes', color: '#E4405F' },
-                        { key: 'Comments', color: accent },
-                        { key: 'Shares', color: GOLD },
-                      ].map(l => (
-                        <span key={l.key} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                          <span className="w-2 h-2 inline-block" style={{ backgroundColor: l.color }} />
-                          {l.key}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                <p className="text-[10px] text-muted-foreground mt-3 italic">
-                  Like counts unavailable for some Instagram posts due to platform privacy settings.
-                </p>
+                <InfluencerEngagementCards
+                  accent={accent}
+                  totals={engagementTotals}
+                  posts={kpis.posts.cur}
+                  topPosts={topPostsGrid}
+                />
               </div>
             </section>
 
@@ -1087,50 +1047,12 @@ const InfluencerIntelligenceTab = () => {
               </div>
 
               {/* Top 3 spotlight */}
-              {influencers.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  {influencers.slice(0, 3).map((inf, i) => {
-                    const t = tierOf(inf.followers);
-                    return (
-                      <button
-                        key={inf.name}
-                        onClick={() => setDrawerAuthor(inf.name)}
-                        className="text-left bg-card border border-black/10 p-5 hover:border-[#C9A961] hover:-translate-y-0.5 transition-all"
-                      >
-                        <div className="flex items-center gap-3 mb-3">
-                          <div
-                            className="w-11 h-11 rounded-full flex items-center justify-center font-display text-lg font-bold text-black"
-                            style={{ background: `radial-gradient(circle at 30% 30%, #F0D68C 0%, ${GOLD} 60%, #8A6A2E 100%)` }}
-                          >
-                            {i + 1}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="font-bold text-sm text-foreground truncate">{inf.name}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className={`font-mono-ui text-[9px] tracking-[0.12em] uppercase px-1.5 py-0.5 ${t.color}`}>{t.label}</span>
-                              <span className="text-[10px] text-muted-foreground">{formatCount(inf.followers)} followers</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2 pt-3 border-t border-black/[0.06]">
-                          <div>
-                            <p className="font-mono-ui text-[8px] tracking-[0.18em] uppercase text-muted-foreground">EMV</p>
-                            <p className="font-display text-lg font-bold" style={{ color: accent }}>{formatMoney(inf.emv)}</p>
-                          </div>
-                          <div>
-                            <p className="font-mono-ui text-[8px] tracking-[0.18em] uppercase text-muted-foreground">Reach</p>
-                            <p className="font-display text-lg font-bold">{formatReach(inf.reach)}</p>
-                          </div>
-                          <div>
-                            <p className="font-mono-ui text-[8px] tracking-[0.18em] uppercase text-muted-foreground">Posts</p>
-                            <p className="font-display text-lg font-bold">{inf.posts}</p>
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+              <InfluencerPodium
+                accent={accent}
+                creators={influencers}
+                totals={{ emv: kpis.emv.cur, reach: kpis.reach.cur, posts: kpis.posts.cur }}
+                onOpen={setDrawerAuthor}
+              />
 
               {/* Rest as table */}
               {influencers.length > 3 && (
@@ -1553,31 +1475,7 @@ const CreatorShareOfVoiceSection = ({ clientId, accent }: { clientId: string; ac
         )}
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="border border-black/[0.08] bg-white px-4 py-3">
-          <p className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground">{own ? `${own.brand} share` : 'Share'}</p>
-          <p className="font-display text-xl font-bold tabular-nums" style={{ color: accent }}>{own ? `${own.emv_share}%` : '—'}</p>
-          {own && own.delta_pts != null && (
-            <p className={`text-[11px] tabular-nums ${own.delta_pts > 0 ? 'text-emerald-600' : own.delta_pts < 0 ? 'text-red-600' : 'text-muted-foreground'}`}>
-              {`${own.delta_pts > 0 ? '+' : ''}${own.delta_pts} pts vs prior period`}
-            </p>
-          )}
-        </div>
-        <div className="border border-black/[0.08] bg-white px-4 py-3">
-          <p className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground">Rank</p>
-          <p className="font-display text-xl font-bold tabular-nums">{own ? `#${own.rank} of ${own.brand_count}` : '—'}</p>
-        </div>
-        <div className="border border-black/[0.08] bg-white px-4 py-3">
-          <p className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground">Creators / month</p>
-          <p className="font-display text-xl font-bold tabular-nums">{own?.avg_monthly_creators != null ? formatCount(own.avg_monthly_creators) : '—'}</p>
-          {own?.peer_median_creators != null && <p className="text-[11px] text-muted-foreground tabular-nums">Peer median {formatCount(own.peer_median_creators)}</p>}
-        </div>
-        <div className="border border-black/[0.08] bg-white px-4 py-3">
-          <p className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground">Creator retention</p>
-          <p className="font-display text-xl font-bold tabular-nums">{own?.retention_pct != null ? `${own.retention_pct}%` : '—'}</p>
-          {own?.peer_median_retention_pct != null && <p className="text-[11px] text-muted-foreground tabular-nums">Peer median {own.peer_median_retention_pct}%</p>}
-        </div>
-      </div>
+      <InfluencerSovCards accent={accent} own={own} brands={brands} trend={data.trend} />
 
       <div className="border border-black/[0.08] bg-white px-4 py-3 mb-6 overflow-x-auto">
         <table className="w-full text-sm">
@@ -1725,16 +1623,7 @@ const InboundCreatorsSection = ({ clientId, accent }: { clientId: string; accent
       </div>
       <p className="text-xs text-muted-foreground mb-4">Organic mentions from creators outside your activated campaigns.</p>
 
-      <div className={summary.activation_source === 'kin' ? 'grid grid-cols-2 md:grid-cols-4 gap-4 mb-6' : 'grid grid-cols-3 gap-4 mb-6'}>
-        {stats.map(s => (
-          <div key={s.label} className="border border-black/[0.08] bg-white px-4 py-3">
-            <p className="font-mono-ui text-[9px] tracking-[0.18em] uppercase text-muted-foreground">{s.label}</p>
-            <p className="font-display text-xl font-bold tabular-nums" style={s.label === 'Inbound MIV' ? { color: accent } : undefined}>
-              {s.value}
-            </p>
-          </div>
-        ))}
-      </div>
+      <InfluencerInboundCards accent={accent} summary={summary} creators={creators} platform={platform} />
 
       <div className="overflow-x-auto border border-black/[0.08] bg-white">
         <table className="w-full text-sm min-w-[720px]">
