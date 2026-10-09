@@ -53,6 +53,13 @@ const sourceMeta = (s: string) => SOURCES[s] ?? { label: s.charAt(0).toUpperCase
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const hourLabel = (h: number) => (h === 0 ? '12 AM' : h < 12 ? `${h} AM` : h === 12 ? '12 PM' : `${h - 12} PM`);
+type PanelId = 'voices' | 'followed' | 'hashtags' | 'sites';
+const PANELS: { id: PanelId; label: string; note: string }[] = [
+  { id: 'voices',   label: 'Top voices',        note: 'By estimated reach' },
+  { id: 'followed', label: 'Most followed',     note: 'By follower count' },
+  { id: 'hashtags', label: 'Trending hashtags', note: 'Most mentions first' },
+  { id: 'sites',    label: 'Most active sites', note: 'Most mentions first' },
+];
 
 const num = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 const arr = <T,>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : []);
@@ -143,6 +150,7 @@ const SocialListeningOverview = () => {
   const [insights, setInsights] = useState<Insights | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [panel, setPanel] = useState<PanelId>('voices');
 
   const range = useMemo(() => {
     if (isAllTime || !effectiveFrom || !effectiveTo) return { p_start: null, p_end: null };
@@ -301,48 +309,61 @@ const SocialListeningOverview = () => {
         </div>
       </div>
 
-      {/* ---------- Voices ---------- */}
+      {/* ---------- Voices, hashtags and sites (one panel at a time) ---------- */}
       {insights && (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div className="section-card border p-5">
-            <SectionTitle right={<span className="text-[11px] text-muted-foreground">By estimated reach</span>}>Top voices</SectionTitle>
-            <VoiceTable rows={arr<Voice>(insights.voices_by_reach)} mode="reach" />
+        <div className="section-card border p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div role="tablist" aria-label="Voices, hashtags and sites" className="flex flex-wrap gap-1">
+              {PANELS.map(p => (
+                <button
+                  key={p.id}
+                  type="button"
+                  role="tab"
+                  id={`listening-tab-${p.id}`}
+                  aria-selected={panel === p.id}
+                  aria-controls="listening-panel"
+                  onClick={() => setPanel(p.id)}
+                  className={cn(
+                    'px-3 py-1.5 text-xs font-semibold border transition-colors focus:outline-none focus-visible:ring-2',
+                    panel === p.id
+                      ? 'bg-foreground text-background border-foreground'
+                      : 'border-border text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            <span className="text-[11px] text-muted-foreground">{PANELS.find(p => p.id === panel)?.note}</span>
           </div>
-          <div className="section-card border p-5">
-            <SectionTitle>Most followed voices</SectionTitle>
-            <VoiceTable rows={arr<Voice>(insights.voices_by_followers)} mode="followers" />
-          </div>
-        </div>
-      )}
 
-      {/* ---------- Hashtags + sites ---------- */}
-      {insights && (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div className="section-card border p-5">
-            <SectionTitle>Trending hashtags</SectionTitle>
-            {arr(insights.hashtags).length ? (
-              <ul className="divide-y divide-border">
-                {arr<Insights['hashtags'][number]>(insights.hashtags).map(h => (
-                  <li key={h.hashtag} className="flex items-center justify-between py-2 text-sm">
-                    <span className="font-semibold">{h.hashtag.startsWith('#') ? h.hashtag : `#${h.hashtag}`}</span>
-                    <span className="text-muted-foreground tabular-nums">{formatCount(num(h.mentions))} mentions</span>
-                  </li>
-                ))}
-              </ul>
-            ) : <p className="text-sm text-muted-foreground">No hashtags recorded in this period.</p>}
-          </div>
-          <div className="section-card border p-5">
-            <SectionTitle>Most active sites</SectionTitle>
-            {arr(insights.sites).length ? (
-              <ul className="divide-y divide-border">
-                {arr<Insights['sites'][number]>(insights.sites).map(s => (
-                  <li key={s.domain} className="flex items-center justify-between py-2 text-sm">
-                    <a href={`https://${s.domain}`} target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline">{s.domain}</a>
-                    <span className="text-muted-foreground tabular-nums">{formatCount(num(s.mentions))} mentions</span>
-                  </li>
-                ))}
-              </ul>
-            ) : <p className="text-sm text-muted-foreground">No sites recorded in this period.</p>}
+          <div role="tabpanel" id="listening-panel" aria-labelledby={`listening-tab-${panel}`}>
+            {panel === 'voices' && <VoiceTable rows={arr<Voice>(insights.voices_by_reach)} mode="reach" />}
+            {panel === 'followed' && <VoiceTable rows={arr<Voice>(insights.voices_by_followers)} mode="followers" />}
+            {panel === 'hashtags' && (
+              arr(insights.hashtags).length ? (
+                <ul className="divide-y divide-border">
+                  {arr<Insights['hashtags'][number]>(insights.hashtags).map(h => (
+                    <li key={h.hashtag} className="flex items-center justify-between py-2 text-sm">
+                      <span className="font-semibold">{h.hashtag.startsWith('#') ? h.hashtag : `#${h.hashtag}`}</span>
+                      <span className="text-muted-foreground tabular-nums">{formatCount(num(h.mentions))} mentions</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : <p className="text-sm text-muted-foreground">No hashtags recorded in this period.</p>
+            )}
+            {panel === 'sites' && (
+              arr(insights.sites).length ? (
+                <ul className="divide-y divide-border">
+                  {arr<Insights['sites'][number]>(insights.sites).map(s => (
+                    <li key={s.domain} className="flex items-center justify-between py-2 text-sm">
+                      <a href={`https://${s.domain}`} target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline">{s.domain}</a>
+                      <span className="text-muted-foreground tabular-nums">{formatCount(num(s.mentions))} mentions</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : <p className="text-sm text-muted-foreground">No sites recorded in this period.</p>
+            )}
           </div>
         </div>
       )}
