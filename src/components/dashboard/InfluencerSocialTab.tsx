@@ -75,10 +75,12 @@ const InfluencerSocialTab = () => {
         all.push(...batch);
         if (batch.length < PAGE) break;
         from += PAGE;
-        if (from > 50000) break; // safety
+        if (from > 100000) break; // safety
       }
       if (cancelled) return;
-      setPosts(all);
+      const seen = new Set<string>();
+      const unique = all.filter(p => { const k = p.post_id ?? p.id; if (seen.has(k)) return false; seen.add(k); return true; });
+      setPosts(unique);
       setLoading(false);
     })();
     return () => { cancelled = true; };
