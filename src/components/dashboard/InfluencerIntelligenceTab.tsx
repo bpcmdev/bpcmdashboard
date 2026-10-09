@@ -1080,10 +1080,10 @@ const InfluencerIntelligenceTab = () => {
             </section>
 
             {/* 5. Influencer Leaderboard */}
-                <span className="section-count">{tab?.leaderboard_total ?? influencers.length}</span>
+            <section className="animate-fade-in">
               <div className="flex items-baseline justify-between mb-4">
                 <span className="section-label">Influencer Leaderboard</span>
-                <span className="section-count">{influencers.length}</span>
+                <span className="section-count">{tab?.leaderboard_total ?? influencers.length}</span>
               </div>
 
               {/* Top 3 spotlight */}
