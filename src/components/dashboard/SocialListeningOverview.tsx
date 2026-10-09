@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- listening_* RPCs are not in the generated Supabase types yet */
 import { Fragment, useEffect, useMemo, useState } from 'react';
-import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
 import { formatCount } from '@/lib/format';
@@ -8,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import SocialListeningKpis from '@/components/dashboard/SocialListeningKpis';
 import SocialListeningSourceMix from '@/components/dashboard/SocialListeningSourceMix';
+import SocialListeningSentiment from '@/components/dashboard/SocialListeningSentiment';
 
 /* ------------------------------------------------------------------------------------------------
  * Social Listening — all-channel overview (Brand24 → n8n → Supabase)
@@ -185,33 +185,14 @@ const SocialListeningOverview = () => {
 
   const c = overview.current as Kpis;
 
-  const sentimentData = sources.map(s => ({
-    name: sourceMeta(s.source).label,
-    Positive: num(s.positive),
-    Neutral: num(s.neutral),
-    Negative: num(s.negative),
-  }));
-
   return (
     <div className="space-y-6">
       {/* ---------- KPI cards (interactive) ---------- */}
       <SocialListeningKpis overview={overview} />
 
       {/* ---------- Sentiment + mix by source ---------- */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="section-card border p-5">
-          <SectionTitle>Sentiment by source</SectionTitle>
-          <ResponsiveContainer width="100%" height={Math.max(180, sentimentData.length * 38)}>
-            <BarChart data={sentimentData} layout="vertical" margin={{ top: 0, right: 12, left: 8, bottom: 0 }}>
-              <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10, fill: 'hsl(0 0% 45%)' }} axisLine={false} tickLine={false} />
-              <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 11, fill: 'hsl(0 0% 30%)' }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ backgroundColor: 'hsl(0 0% 9%)', border: 'none', borderRadius: 2, fontSize: 11 }} labelStyle={{ color: 'white' }} cursor={{ fill: 'hsl(0 0% 96%)' }} />
-              <Bar dataKey="Positive" stackId="s" fill="hsl(152 55% 40%)" />
-              <Bar dataKey="Neutral" stackId="s" fill="hsl(0 0% 82%)" />
-              <Bar dataKey="Negative" stackId="s" fill="hsl(0 70% 50%)" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+      <div className="grid gap-4 lg:grid-cols-2 items-start">
+        <SocialListeningSentiment sources={sources} />
 
         <SocialListeningSourceMix sources={sources} />
       </div>
