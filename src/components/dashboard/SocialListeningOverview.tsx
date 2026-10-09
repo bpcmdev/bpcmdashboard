@@ -1,12 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- listening_* RPCs are not in the generated Supabase types yet */
 import { Fragment, useEffect, useMemo, useState } from 'react';
-import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
 import { formatCount } from '@/lib/format';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import SocialListeningKpis from '@/components/dashboard/SocialListeningKpis';
+import SocialListeningSourceMix from '@/components/dashboard/SocialListeningSourceMix';
 
 /* ------------------------------------------------------------------------------------------------
  * Social Listening — all-channel overview (Brand24 → n8n → Supabase)
@@ -157,7 +158,6 @@ const SocialListeningOverview = () => {
   }, [activeClientId, effectiveFrom, effectiveTo, isAllTime, range, refreshKey]);
 
   const sources = useMemo(() => arr<SourceRow>(overview?.sources).filter(s => num(s.mentions) > 0), [overview]);
-  const totalSourceMentions = sources.reduce((s, r) => s + num(r.mentions), 0);
 
   const heat = useMemo(() => {
     const cells = new Map<string, number>();
@@ -205,7 +205,7 @@ const SocialListeningOverview = () => {
             <BarChart data={sentimentData} layout="vertical" margin={{ top: 0, right: 12, left: 8, bottom: 0 }}>
               <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10, fill: 'hsl(0 0% 45%)' }} axisLine={false} tickLine={false} />
               <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 11, fill: 'hsl(0 0% 30%)' }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ backgroundColor: 'hsl(0 0% 9%)', border: 'none', borderRadius: 2, color: 'white', fontSize: 11 }} cursor={{ fill: 'hsl(0 0% 96%)' }} />
+              <Tooltip contentStyle={{ backgroundColor: 'hsl(0 0% 9%)', border: 'none', borderRadius: 2, fontSize: 11 }} labelStyle={{ color: 'white' }} cursor={{ fill: 'hsl(0 0% 96%)' }} />
               <Bar dataKey="Positive" stackId="s" fill="hsl(152 55% 40%)" />
               <Bar dataKey="Neutral" stackId="s" fill="hsl(0 0% 82%)" />
               <Bar dataKey="Negative" stackId="s" fill="hsl(0 70% 50%)" />
@@ -213,36 +213,7 @@ const SocialListeningOverview = () => {
           </ResponsiveContainer>
         </div>
 
-        <div className="section-card border p-5">
-          <SectionTitle>Where mentions come from</SectionTitle>
-          <div className="flex flex-col sm:flex-row items-center gap-6">
-            <div className="w-48 h-48 shrink-0">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={sources} dataKey="mentions" nameKey="source" innerRadius="62%" outerRadius="100%" stroke="none" isAnimationActive={false}>
-                    {sources.map(s => <Cell key={s.source} fill={sourceMeta(s.source).color} />)}
-                  </Pie>
-                  <Tooltip
-                    formatter={(v: number, _n: string, item: any) => [formatCount(v), sourceMeta(item?.payload?.source ?? '').label]}
-                    contentStyle={{ backgroundColor: 'hsl(0 0% 9%)', border: 'none', borderRadius: 2, color: 'white', fontSize: 11 }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <ul className="space-y-1.5 text-sm w-full">
-              {sources.map(s => (
-                <li key={s.source} className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: sourceMeta(s.source).color }} />
-                  <span className="flex-1">{sourceMeta(s.source).label}</span>
-                  <span className="tabular-nums text-muted-foreground">{formatCount(num(s.mentions))}</span>
-                  <span className="tabular-nums font-semibold w-10 text-right">
-                    {totalSourceMentions ? Math.round((num(s.mentions) / totalSourceMentions) * 100) : 0}%
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
+        <SocialListeningSourceMix sources={sources} />
       </div>
 
       {/* ---------- Voices, hashtags and sites (one panel at a time) ---------- */}
