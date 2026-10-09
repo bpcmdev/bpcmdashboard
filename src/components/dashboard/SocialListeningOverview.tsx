@@ -3,9 +3,10 @@ import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { supabase } from '@/lib/supabase';
 import { useWeek } from '@/contexts/WeekContext';
-import { formatCount, formatMoney } from '@/lib/format';
+import { formatCount } from '@/lib/format';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import SocialListeningKpis from '@/components/dashboard/SocialListeningKpis';
 
 /* ------------------------------------------------------------------------------------------------
  * Social Listening — all-channel overview (Brand24 → n8n → Supabase)
@@ -53,6 +54,7 @@ const sourceMeta = (s: string) => SOURCES[s] ?? { label: s.charAt(0).toUpperCase
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const hourLabel = (h: number) => (h === 0 ? '12 AM' : h < 12 ? `${h} AM` : h === 12 ? '12 PM' : `${h - 12} PM`);
+
 type PanelId = 'voices' | 'followed' | 'hashtags' | 'sites';
 const PANELS: { id: PanelId; label: string; note: string }[] = [
   { id: 'voices',   label: 'Top voices',        note: 'By estimated reach' },
@@ -74,35 +76,6 @@ function SectionTitle({ children, right }: { children: React.ReactNode; right?: 
     <div className="flex items-center justify-between gap-3 mb-4">
       <h3 className="text-[11px] font-bold tracking-[0.15em] uppercase text-muted-foreground">{children}</h3>
       {right}
-    </div>
-  );
-}
-
-/** Never a percentage off a zero prior; "up" is good unless `invert` (e.g. negative mentions). */
-function Delta({ current, prior, invert = false }: { current: number; prior: number | null | undefined; invert?: boolean }) {
-  if (prior == null) return null;
-  if (prior === 0) return current ? <span className="text-[10px] font-bold text-muted-foreground">New</span> : null;
-  const pct = ((current - prior) / prior) * 100;
-  if (!Number.isFinite(pct) || Math.round(pct) === 0) return <span className="text-[10px] text-muted-foreground">Stable</span>;
-  const up = pct > 0;
-  const good = invert ? !up : up;
-  return (
-    <span className={cn('text-[10px] font-bold px-1.5 py-0.5', good ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700')}>
-      {up ? '↑' : '↓'} {Math.abs(Math.round(pct))}%
-    </span>
-  );
-}
-
-function Kpi({ label, value, current, prior, invert, hint }: {
-  label: string; value: string; current: number; prior: number | null | undefined; invert?: boolean; hint?: string;
-}) {
-  return (
-    <div className="px-4 py-3.5" title={hint}>
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <div className="flex items-center gap-2 mt-1">
-        <p className="text-xl font-bold tabular-nums">{value}</p>
-        <Delta current={current} prior={prior} invert={invert} />
-      </div>
     </div>
   );
 }
@@ -211,23 +184,6 @@ const SocialListeningOverview = () => {
   if (!overview || !num(overview.current?.mentions)) return null;
 
   const c = overview.current as Kpis;
-  const p = overview.prior as Partial<Kpis> | null;
-  const pv = (k: keyof Kpis) => (p ? num(p[k]) : null);
-
-  const kpis: { label: string; key: keyof Kpis; money?: boolean; invert?: boolean; hint?: string }[] = [
-    { label: 'Total mentions', key: 'mentions' },
-    { label: 'Total reach', key: 'reach', hint: 'Estimated audience across all mentions' },
-    { label: 'Positive mentions', key: 'positive' },
-    { label: 'Negative mentions', key: 'negative', invert: true },
-    { label: 'Advertising value (AVE)', key: 'ave', money: true, hint: 'Brand24 estimate of the equivalent paid media value' },
-    { label: 'Social media mentions', key: 'social_mentions', hint: 'TikTok, X, YouTube, Instagram and Facebook' },
-    { label: 'Non-social mentions', key: 'non_social_mentions', hint: 'News, Reddit, blogs, forums, podcasts and the web' },
-    { label: 'Total social interactions', key: 'social_interactions', hint: 'Reactions, comments and shares on social posts' },
-    { label: 'Social media reach', key: 'social_reach' },
-    { label: 'Non-social reach', key: 'non_social_reach' },
-    { label: 'Social reactions', key: 'social_reactions', hint: 'Likes and other reactions' },
-    { label: 'Social shares', key: 'social_shares' },
-  ];
 
   const sentimentData = sources.map(s => ({
     name: sourceMeta(s.source).label,
@@ -238,28 +194,8 @@ const SocialListeningOverview = () => {
 
   return (
     <div className="space-y-6">
-      {/* ---------- KPI grid ---------- */}
-      <div className="section-card border">
-        <div className="px-4 pt-4"><SectionTitle>Overview across all channels</SectionTitle></div>
-        <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y divide-border border-t border-border">
-          {kpis.map(k => (
-            <Kpi
-              key={k.key}
-              label={k.label}
-              value={k.money ? formatMoney(num(c[k.key])) : formatCount(num(c[k.key]))}
-              current={num(c[k.key])}
-              prior={pv(k.key)}
-              invert={k.invert}
-              hint={k.hint}
-            />
-          ))}
-        </div>
-        {!p && overview.data_since && (
-          <p className="text-[11px] text-muted-foreground px-4 py-2 border-t border-border">
-            Period-over-period changes appear once listening data covers the previous period (data starts {new Date(overview.data_since + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}).
-          </p>
-        )}
-      </div>
+      {/* ---------- KPI cards (interactive) ---------- */}
+      <SocialListeningKpis overview={overview} />
 
       {/* ---------- Sentiment + mix by source ---------- */}
       <div className="grid gap-4 lg:grid-cols-2">
