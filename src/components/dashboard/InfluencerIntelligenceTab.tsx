@@ -330,7 +330,7 @@ const ContentSpotlightCard = ({ p }: { p: LeftyPost }) => {
       className={`block bg-card border border-black/10 p-5 text-left hover:border-[#1B2B8A]/40 hover:-translate-y-0.5 transition-all group ${hasImage ? 'overflow-hidden' : ''}`}
     >
       {hasImage && (
-        <div className="aspect-[4/5] w-full overflow-hidden">
+        <div className="-mx-5 -mt-5 mb-4 aspect-[4/5] overflow-hidden">
           <img
             src={src ?? undefined}
             alt={p.author_name ?? 'Post'}
@@ -346,7 +346,7 @@ const ContentSpotlightCard = ({ p }: { p: LeftyPost }) => {
           />
         </div>
       )}
-      <div className={hasImage ? '-mx-5 -mt-5 p-5' : ''}>
+      <div>
         <div className="flex items-start justify-between gap-2 mb-3">
           <div className="min-w-0 flex-1">
             <p className="font-bold text-sm text-foreground truncate">{p.author_name ?? '—'}</p>
