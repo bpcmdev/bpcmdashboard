@@ -13,9 +13,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import SocialListeningOverview from '@/components/dashboard/SocialListeningOverview';
 import SocialListeningTextInsights from '@/components/dashboard/SocialListeningTextInsights';
+import SocialListeningPlatformCards from '@/components/dashboard/SocialListeningPlatformCards';
 
 /* ------------------------------------------------------------------------------------------------
- * Tab 3 — Multiplatform Tracking
+ * Tab 3 — Social Listening
  * Alternative-media listening (Brand24 → n8n → Supabase). No purely social channels by design.
  * RPCs: listening_platform_summary, listening_trend, listening_long_form,
  *       listening_chatter_latest, listening_mentions_feed
@@ -189,23 +190,6 @@ function DeltaChip({ current, prior }: { current: number; prior: number | null |
   );
 }
 
-function SentimentBar({ positive, neutral, negative }: { positive: number; neutral: number; negative: number }) {
-  const total = positive + neutral + negative;
-  if (!total) return <div className="h-1.5 w-full bg-muted" aria-hidden />;
-  const pct = (n: number) => `${(n / total) * 100}%`;
-  return (
-    <div
-      className="flex h-1.5 w-full overflow-hidden bg-muted"
-      role="img"
-      aria-label={`${Math.round((positive / total) * 100)}% positive, ${Math.round((negative / total) * 100)}% negative`}
-    >
-      <div style={{ width: pct(positive), backgroundColor: 'hsl(152 55% 40%)' }} />
-      <div style={{ width: pct(neutral), backgroundColor: 'hsl(0 0% 78%)' }} />
-      <div style={{ width: pct(negative), backgroundColor: 'hsl(0 70% 50%)' }} />
-    </div>
-  );
-}
-
 function SentimentDot({ value }: { value: number | null }) {
   const label = value == null ? 'Unscored' : value > 0 ? 'Positive' : value < 0 ? 'Negative' : 'Neutral';
   const color = value == null ? 'hsl(0 0% 85%)' : value > 0 ? 'hsl(152 55% 40%)' : value < 0 ? 'hsl(0 70% 50%)' : 'hsl(0 0% 70%)';
@@ -272,7 +256,7 @@ const MultiplatformTrackingTab = () => {
       if (cancelled) return;
       const err = s.error || t.error || l.error || c.error;
       if (err) {
-        console.error('Multiplatform tracking RPC failed:', err);
+        console.error('Social listening RPC failed:', err);
         setError(true);
         setLoading(false);
         return;
@@ -309,7 +293,11 @@ const MultiplatformTrackingTab = () => {
 
   const platforms = useMemo(() => {
     const list = arr<PlatformStat>(summary?.platforms);
-    return list.filter(p => p.platform !== 'broadcast' || p.mentions > 0 || longForm?.has_broadcast_source);
+    return list.filter(p => {
+      if (p.platform === 'podcast') return p.mentions > 0;
+      if (p.platform === 'broadcast') return p.mentions > 0 || !!longForm?.has_broadcast_source;
+      return true;
+    });
   }, [summary, longForm]);
 
   const chartData = useMemo(() => {
@@ -411,43 +399,17 @@ const MultiplatformTrackingTab = () => {
         </div>
       </div>
 
-      {/* ---------- Platform strip ---------- */}
-      <div className={cn('grid gap-4 grid-cols-2 md:grid-cols-3', platforms.length > 5 ? 'xl:grid-cols-6' : 'xl:grid-cols-5')}>
-        {platforms.map(p => {
-          const meta = PLATFORMS[p.platform];
-          const Icon = meta.icon;
-          const scored = p.positive + p.negative + p.neutral;
-          const active = filter === p.platform;
-          return (
-            <button
-              key={p.platform}
-              type="button"
-              onClick={() => setFilter(active ? null : p.platform)}
-              aria-pressed={active}
-              className={cn(
-                'section-card border p-4 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
-                active && 'ring-2 ring-offset-1',
-              )}
-              style={active ? ({ '--tw-ring-color': meta.color } as React.CSSProperties) : undefined}
-              title={active ? 'Show all platforms in the feed' : `Filter the feed to ${meta.label}`}
-            >
-              <div className="flex items-center gap-1.5" style={{ color: meta.color }}>
-                <Icon className="w-4 h-4" aria-hidden />
-                <span className="text-xs font-semibold">{meta.label}</span>
-              </div>
-              <p className="font-display text-[28px] leading-none font-bold mt-3 tabular-nums">{formatCount(p.mentions)}</p>
-              <div className="mt-1 min-h-[14px]"><DeltaChip current={p.mentions} prior={p.prior_mentions} /></div>
-              <div className="mt-3">
-                <SentimentBar positive={p.positive} neutral={p.neutral} negative={p.negative} />
-                <p className="text-[10px] text-muted-foreground mt-1">
-                  {scored ? `${Math.round((p.positive / scored) * 100)}% positive` : 'No mentions yet'}
-                  {p.reach ? `, ${formatCount(p.reach)} est. reach` : ''}
-                </p>
-              </div>
-            </button>
-          );
-        })}
-      </div>
+      {/* ---------- Platform cards (interactive) ---------- */}
+      <SocialListeningPlatformCards
+        clientId={activeClientId}
+        platforms={platforms}
+        trend={trend}
+        range={range}
+        onViewFeed={g => {
+          setFilter(g);
+          document.getElementById('listening-feed')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }}
+      />
 
       <SocialListeningOverview />
 
@@ -652,7 +614,7 @@ const MultiplatformTrackingTab = () => {
       </div>
 
       {/* ---------- Mentions feed ---------- */}
-      <div className="section-card border p-5">
+      <div id="listening-feed" className="section-card border p-5 scroll-mt-6">
         <SectionTitle right={feed ? <span className="text-[11px] text-muted-foreground">{formatCount(feed.total)} mentions</span> : null}>
           All mentions
         </SectionTitle>
