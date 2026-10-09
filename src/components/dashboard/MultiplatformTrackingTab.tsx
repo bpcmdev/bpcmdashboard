@@ -11,6 +11,7 @@ import { useAdmin } from '@/hooks/useAdmin';
 import { formatCount } from '@/lib/format';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import SocialListeningOverview from '@/components/dashboard/SocialListeningOverview';
 
 /* ------------------------------------------------------------------------------------------------
  * Tab 3 — Multiplatform Tracking
@@ -392,10 +393,11 @@ const MultiplatformTrackingTab = () => {
 
   return (
     <div className="p-6 space-y-8">
+      <SocialListeningOverview />
       {/* ---------- Intro ---------- */}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="font-display text-2xl leading-tight">Organic conversation beyond social</h2>
+          <h2 className="font-display text-2xl leading-tight">Beyond social: Reddit, YouTube, podcasts, Substack and blogs</h2>
           <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
             {formatCount(totalMentions)} organic mentions across Reddit, YouTube, podcasts, Substack, blogs and forums
             {range.p_start ? ` between ${formatDay(range.p_start)} and ${formatDay(range.p_end, true)}` : ' to date'}.
