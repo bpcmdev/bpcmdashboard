@@ -12,6 +12,7 @@ import { formatCount } from '@/lib/format';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import SocialListeningOverview from '@/components/dashboard/SocialListeningOverview';
+import SocialListeningTextInsights from '@/components/dashboard/SocialListeningTextInsights';
 
 /* ------------------------------------------------------------------------------------------------
  * Tab 3 — Multiplatform Tracking
@@ -394,6 +395,8 @@ const MultiplatformTrackingTab = () => {
   return (
     <div className="p-6 space-y-8">
       <SocialListeningOverview />
+
+      <SocialListeningTextInsights />
       {/* ---------- Intro ---------- */}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
