@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import SocialListeningOverview from '@/components/dashboard/SocialListeningOverview';
 import SocialListeningTextInsights from '@/components/dashboard/SocialListeningTextInsights';
 import SocialListeningPlatformCards from '@/components/dashboard/SocialListeningPlatformCards';
+import SocialListeningShareOfVoice from '@/components/dashboard/SocialListeningShareOfVoice';
 
 /* ------------------------------------------------------------------------------------------------
  * Tab 3 — Social Listening
@@ -412,6 +413,8 @@ const MultiplatformTrackingTab = () => {
       />
 
       <SocialListeningOverview />
+
+      <SocialListeningShareOfVoice />
 
       <SocialListeningTextInsights />
 
