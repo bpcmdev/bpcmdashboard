@@ -10,6 +10,8 @@ import { cn } from '@/lib/utils';
 import EarnedMediaHero from './EarnedMediaHero';
 import EarnedMediaQuality from './EarnedMediaQuality';
 import EarnedMediaDrivers from './EarnedMediaDrivers';
+import EarnedMediaTrends from './EarnedMediaTrends';
+import EarnedMediaTopHits from './EarnedMediaTopHits';
 
 const PRESS_COLOR = 'hsl(var(--chart-royal, 226 67% 33%))';
 const SOCIAL_COLOR = 'hsl(var(--chart-gold))';
@@ -283,117 +285,8 @@ const EarnedMediaOverview = () => {
           </div>
         )}
 
-        {/* 3b — COVERAGE VOLUME CHARTS (monthly + trailing 8 weeks) */}
-        {showCoverageCharts && (monthlyCoverage.length > 0 || weekly8.length > 0) && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-            {monthlyCoverage.length > 0 && (
-              <div className="section-card border p-5 md:p-6">
-                <SectionTitle>Press Coverage — Monthly</SectionTitle>
-                <div className="h-56">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={monthlyCoverage} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                      <CartesianGrid vertical={false} stroke="hsl(var(--border))" />
-                      <XAxis
-                        dataKey="label"
-                        tick={{ fontSize: 10 }}
-                        stroke="hsl(var(--muted-foreground))"
-                      />
-                      <YAxis
-                        allowDecimals={false}
-                        tick={{ fontSize: 10 }}
-                        stroke="hsl(var(--muted-foreground))"
-                        width={40}
-                      />
-                      <ReTooltip
-                        cursor={{ fill: 'hsl(var(--muted) / 0.5)' }}
-                        contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', fontSize: 11 }}
-                        formatter={(value: any) => [formatCount(num(value)), 'Placements']}
-                      />
-                      <Bar
-                        dataKey="placements"
-                        fill={PRESS_COLOR}
-                        radius={[2, 2, 0, 0]}
-                        animationBegin={80}
-                        animationDuration={700}
-                        animationEasing="ease-out"
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-                <p className="text-[10px] text-muted-foreground mt-3">
-                  Press placements grouped by calendar month.
-                </p>
-              </div>
-            )}
-
-            {weekly8.length > 0 && (
-              <div className="section-card border p-5 md:p-6">
-                <SectionTitle>Placement Volume — 8 Weeks</SectionTitle>
-                <div className="h-56">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={weekly8} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                      <CartesianGrid vertical={false} stroke="hsl(var(--border))" />
-                      <XAxis
-                        dataKey="week"
-                        tick={{ fontSize: 10 }}
-                        stroke="hsl(var(--muted-foreground))"
-                      />
-                      <YAxis
-                        allowDecimals={false}
-                        tick={{ fontSize: 10 }}
-                        stroke="hsl(var(--muted-foreground))"
-                        width={40}
-                      />
-                      <ReTooltip
-                        cursor={{ fill: 'hsl(var(--muted) / 0.5)' }}
-                        contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', fontSize: 11 }}
-                        formatter={(value: any) => [formatCount(num(value)), 'Placements']}
-                      />
-                      <Bar
-                        dataKey="placements"
-                        fill={PRESS_COLOR}
-                        radius={[2, 2, 0, 0]}
-                        animationBegin={120}
-                        animationDuration={700}
-                        animationEasing="ease-out"
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-                <p className="text-[10px] text-muted-foreground mt-3">
-                  Placements per week, trailing 8 weeks of available data.
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* 4 — TREND */}
-        <div className="section-card border p-5 md:p-6">
-          <SectionTitle>MIV Trend</SectionTitle>
-          {weekly.length === 0 ? (
-            <p className="text-xs text-muted-foreground text-center py-8">No weekly coverage in this period.</p>
-          ) : (
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={weekly} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                  <CartesianGrid vertical={false} stroke="hsl(var(--border))" />
-                  <XAxis dataKey="week" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
-                  <YAxis tickFormatter={(v) => formatMoney(v)} tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" width={56} />
-                  <ReTooltip
-                    contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', fontSize: 11 }}
-                    formatter={(value: any, name: any, payload: any) => {
-                      if (name === 'press_miv') return [`${formatMoney(num(value))} · ${formatCount(num(payload?.payload?.press_count))} placements`, 'Press MIV'];
-                      return [`${formatMoney(num(value))} · ${formatCount(num(payload?.payload?.social_count))} mentions`, 'Social MIV'];
-                    }}
-                  />
-                  <Bar dataKey="press_miv" stackId="miv" fill={PRESS_COLOR} radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="social_miv" stackId="miv" fill={SOCIAL_COLOR} radius={[2, 2, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </div>
+        {/* 3b + 4 — COVERAGE VOLUME AND MIV TREND */}
+        <EarnedMediaTrends weekly={weekly} />
 
         {/* 5 — QUALITY */}
         <EarnedMediaQuality tierMix={tierMix} pressChannelMix={arr(summary.press_channel_mix)} />
@@ -402,117 +295,7 @@ const EarnedMediaOverview = () => {
         <EarnedMediaDrivers topOutlets={topOutlets} byProduct={byProduct} />
 
         {/* 7 — TOP HITS */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-          <div className="section-card border p-5 md:p-6">
-            <SectionTitle>Top Press</SectionTitle>
-            {topPress.length === 0 ? (
-              <p className="text-xs text-muted-foreground py-4">No press hits in this period.</p>
-            ) : (
-              <div className="divide-y divide-border">
-                {topPress.map((p: any, i: number) => {
-                  const chan = channelLabel(p.channel_type);
-                  return (
-                    <div key={p.id ?? `${p.headline}-${i}`} className="flex gap-3 py-3">
-                      {p.print_cover_url && (
-                        <a href={p.print_cover_url} target="_blank" rel="noopener noreferrer" className="shrink-0">
-                          <img src={p.print_cover_url} alt="Print cover" loading="lazy" className="w-10 h-14 object-cover border border-border rounded-sm" />
-                        </a>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs leading-snug">
-                          {p.url ? (
-                            <a href={p.url} target="_blank" rel="noopener noreferrer" className="hover:underline">{p.headline}</a>
-                          ) : (
-                            p.headline
-                          )}
-                        </p>
-                        <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                          <span className="text-[11px] font-bold">{p.outlet}</span>
-                          <span className={cn('text-[10px] font-bold tracking-wider px-1.5 py-0.5', tierBadgeClass(p.tier))}>
-                            {tierName(p.tier).toUpperCase()}
-                          </span>
-                          {chan && (
-                            <span className="text-[9px] font-bold tracking-wider px-1.5 py-0.5 border border-border text-muted-foreground">{chan}</span>
-                          )}
-                          <span className="text-[10px] text-muted-foreground">{formatDay(p.published_at)}</span>
-                          {p.print_clipping_url && (
-                            <a
-                              href={p.print_clipping_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground underline underline-offset-2"
-                            >
-                              <ImageIcon className="w-3 h-3" />
-                              View clipping
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                      <div className="shrink-0 self-start text-right pt-0.5">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <p className="text-xs text-muted-foreground tabular-nums cursor-help">
-                              {formatReach(num(p.potential_reach))} reach
-                            </p>
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-[240px] text-xs">
-                            Potential reach — outlet audience size reported by Launchmetrics, not article views.
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <div className="section-card border p-5 md:p-6">
-            <SectionTitle>Top Social</SectionTitle>
-            {topSocial.length === 0 ? (
-              <p className="text-xs text-muted-foreground py-4">No social mentions in this period.</p>
-            ) : (
-              <div className="divide-y divide-border">
-                {topSocial.map((s: any, i: number) => (
-                  <div key={s.id ?? `${s.voice_name}-${i}`} className="flex items-center gap-3 py-3">
-                    <span className="text-muted-foreground shrink-0">{channelIcon(s.channel)}</span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-bold truncate">
-                        {s.url ? (
-                          <a href={s.url} target="_blank" rel="noopener noreferrer" className="hover:underline">{s.voice_name ?? s.source_handle}</a>
-                        ) : (
-                          s.voice_name ?? s.source_handle
-                        )}
-                      </p>
-                      <div className="flex flex-wrap items-center gap-2 mt-0.5">
-                        {s.source_handle && <span className="text-[10px] text-muted-foreground truncate">{s.source_handle}</span>}
-                        <span className="text-[10px] text-muted-foreground">{formatDay(s.published_at)}</span>
-                        {s.in_lefty && (
-                          <span className="text-[9px] font-bold tracking-wider px-1.5 py-0.5" style={{ backgroundColor: SOCIAL_COLOR, color: '#1a1a1a' }}>
-                            BPCM CREATOR
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="shrink-0 self-start text-right pt-0.5">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <p className="text-xs text-muted-foreground tabular-nums cursor-help">
-                            {formatReach(num(s.potential_reach))} reach
-                            {s.engagement_rate != null ? ` · ${(num(s.engagement_rate) * (num(s.engagement_rate) <= 1 ? 100 : 1)).toFixed(1)}% eng.` : ''}
-                          </p>
-                        </TooltipTrigger>
-                        <TooltipContent className="max-w-[240px] text-xs">
-                          Potential reach — audience size reported by Launchmetrics, not views.
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        <EarnedMediaTopHits topPress={topPress} topSocial={topSocial} />
       </div>
     </TooltipProvider>
   );
