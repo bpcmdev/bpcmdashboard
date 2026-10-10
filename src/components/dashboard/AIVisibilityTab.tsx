@@ -17,6 +17,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { LinkPreviewTrigger } from './LinkPreviewDrawer';
 import PaginationControls from './PaginationControls';
 import BrandPerceptionSection from './BrandPerceptionSection';
+import AiKpiCards, { AiCompetitiveLadder } from './AiKpiCards';
+import { AiObjections, AiActionPlan, AiAccuracy } from './AiPerceptionExtras';
 import CollapsibleSection from './CollapsibleSection';
 import { format, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -1019,7 +1021,7 @@ const CompetitiveAnalysisSection = ({
         }
       >
         {view === 'model' && <ModelBrandMatrix rows={matrix} loading={loading.matrix} />}
-        {view === 'competitive' && <CompetitiveTable rows={summary} loading={loading.summary} />}
+        {view === 'competitive' && <AiCompetitiveLadder rows={summary} loading={loading.summary} accent={accent} />}
         {view === 'platform' && <PerPlatformCompetitiveSov rows={platformCompetitive} loading={loading.platformCompetitive} />}
       </CollapsibleSection>
     </div>
@@ -3003,7 +3005,10 @@ const AIVisibilityTab = () => {
         </CollapsibleSection>
       )}
       <BrandAttributesSection clientId={activeClientId} accent={clientColor || '#1B2B8A'} clientName={clientName || 'your brand'} />
-      <KpiCards rows={kpis} loading={loading.kpis} />
+      <AiKpiCards kpis={kpis} trend={trend} summary={summary} loading={loading.kpis} accent={clientColor || '#1B2B8A'} />
+      <AiAccuracy clientId={activeClientId} clientName={clientName} />
+      <AiObjections clientId={activeClientId} clientName={clientName} />
+      <AiActionPlan clientId={activeClientId} accent={clientColor || '#1B2B8A'} />
       {isAdmin && (
         <GeoRecommendationsSection
           clientId={activeClientId}
