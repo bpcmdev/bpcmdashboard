@@ -7,6 +7,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { BarChart, Bar, XAxis, YAxis, Tooltip as ReTooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { Image as ImageIcon, Instagram, Youtube, Music2, Twitter, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import EarnedMediaHero from './EarnedMediaHero';
+import EarnedMediaQuality from './EarnedMediaQuality';
+import EarnedMediaDrivers from './EarnedMediaDrivers';
 
 const PRESS_COLOR = 'hsl(var(--chart-royal, 226 67% 33%))';
 const SOCIAL_COLOR = 'hsl(var(--chart-gold))';
@@ -247,44 +250,17 @@ const EarnedMediaOverview = () => {
   return (
     <TooltipProvider>
       <div className="space-y-4 md:space-y-6">
-        {/* 1 — HERO */}
-        <div className="section-card border p-5 md:p-6">
-          <Label>Total Media Impact Value</Label>
-          <p className="font-display text-[44px] md:text-[56px] leading-none font-bold mt-2 tabular-nums">
-            {formatMoney(totalMiv)}
-          </p>
-          <div className="mt-5">
-            <div className="flex h-3 w-full overflow-hidden rounded-sm bg-muted">
-              <div style={{ width: `${pressPct}%`, backgroundColor: PRESS_COLOR }} />
-              <div style={{ width: `${socialPct}%`, backgroundColor: SOCIAL_COLOR }} />
-            </div>
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-1 mt-3">
-              <span className="flex items-center gap-2 text-xs">
-                <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: PRESS_COLOR }} />
-                <Label>Press</Label>
-                <span className="font-display font-bold tabular-nums">{formatMoney(pressMiv)}</span>
-                <span className="text-muted-foreground">{pressPct}%</span>
-              </span>
-              <span className="flex items-center gap-2 text-xs">
-                <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: SOCIAL_COLOR }} />
-                <Label>Social</Label>
-                <span className="font-display font-bold tabular-nums">{formatMoney(socialMiv)}</span>
-                <span className="text-muted-foreground">{socialPct}%</span>
-              </span>
-            </div>
-          </div>
-          <p className="text-[10px] text-muted-foreground mt-4">
-            MIV (Media Impact Value) is Launchmetrics' dollar valuation of earned coverage.
-          </p>
-        </div>
-
-        {/* 2 — STAT ROW */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatCard label="Press Placements" value={formatCount(num(t.press_count))} current={num(t.press_count)} prior={prior ? num(prior.press_count) : null} />
-          <StatCard label="Outlets" value={formatCount(num(t.distinct_outlets))} current={num(t.distinct_outlets)} prior={prior ? num(prior.distinct_outlets) : null} />
-          <StatCard label="Tier 1 Placements" value={formatCount(num(t.tier1_count))} current={num(t.tier1_count)} prior={prior ? num(prior.tier1_count) : null} />
-          <StatCard label="Social Mentions" value={formatCount(num(t.social_count))} current={num(t.social_count)} prior={prior ? num(prior.social_count) : null} />
-        </div>
+        {/* 1 + 2 — HERO VALUE CARD AND STAT CARDS */}
+        <EarnedMediaHero
+          totals={t}
+          prior={prior}
+          weekly={weekly}
+          tierMix={tierMix}
+          pressChannelMix={arr(summary.press_channel_mix)}
+          socialChannelMix={arr(summary.social_channel_mix)}
+          topOutlets={topOutlets}
+          topSocial={topSocial}
+        />
 
         {/* 3 — SOCIAL ATTRIBUTION */}
         {leftyCount > 0 && (
@@ -420,92 +396,10 @@ const EarnedMediaOverview = () => {
         </div>
 
         {/* 5 — QUALITY */}
-        <div className="section-card border p-5 md:p-6">
-          <SectionTitle>Coverage Quality</SectionTitle>
-          {tierMix.length === 0 ? (
-            <p className="text-xs text-muted-foreground py-4">No tiered placements in this period.</p>
-          ) : (
-            <div className="divide-y divide-border">
-              <div className="grid grid-cols-4 gap-2 pb-2">
-                <Label>Tier</Label>
-                <Label className="text-right">Placements</Label>
-                <Label className="text-right">MIV</Label>
-                <Label className="text-right">Avg MIV</Label>
-              </div>
-              {tierMix.map((r) => (
-                <div key={r.tier} className="grid grid-cols-4 gap-2 py-2 items-center text-xs">
-                  <span className={cn('justify-self-start text-[10px] font-bold tracking-wider px-2 py-0.5', tierBadgeClass(r.tier || null))}>
-                    {tierName(r.tier || null).toUpperCase()}
-                  </span>
-                  <span className="text-right tabular-nums">{formatCount(r.count)}</span>
-                  <span className="text-right tabular-nums font-display font-bold">{formatMoney(r.miv)}</span>
-                  <span className="text-right tabular-nums text-muted-foreground">
-                    {r.count ? formatMoney(r.miv / r.count) : '—'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {pressChannelMix.length > 0 && (
-            <div className="mt-6 pt-4 border-t border-border">
-              <Label>Online vs Print</Label>
-              <div className="mt-3 space-y-2">
-                {pressChannelMix.map((r) => (
-                  <div key={r.channel} className="flex items-center gap-3 text-xs">
-                    <span className="w-16 text-[10px] font-bold tracking-wider text-muted-foreground">{r.channel}</span>
-                    <div className="flex-1 h-2 bg-muted rounded-sm overflow-hidden">
-                      <div
-                        className="h-full"
-                        style={{ width: `${channelTotal ? (r.count / channelTotal) * 100 : 0}%`, backgroundColor: PRESS_COLOR }}
-                      />
-                    </div>
-                    <span className="tabular-nums w-10 text-right">{formatCount(r.count)}</span>
-                    <span className="tabular-nums w-16 text-right font-display font-bold">{formatMoney(r.miv)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+        <EarnedMediaQuality tierMix={tierMix} pressChannelMix={arr(summary.press_channel_mix)} />
 
         {/* 6 — WHAT DROVE IT */}
-        <div className={cn('grid gap-4 md:gap-6', byProduct.length > 0 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1')}>
-          <div className="section-card border p-5 md:p-6">
-            <SectionTitle>Top Outlets</SectionTitle>
-            {topOutlets.length === 0 ? (
-              <p className="text-xs text-muted-foreground py-4">No outlets in this period.</p>
-            ) : (
-              <div className="divide-y divide-border">
-                {topOutlets.map((o: any, i: number) => (
-                  <div key={`${o.outlet}-${i}`} className="flex items-center gap-3 py-2 text-xs">
-                    <span className="font-bold flex-1 truncate">{o.outlet ?? '—'}</span>
-                    <span className={cn('text-[10px] font-bold tracking-wider px-2 py-0.5 shrink-0', tierBadgeClass(o.tier))}>
-                      {tierName(o.tier).toUpperCase()}
-                    </span>
-                    <span className="tabular-nums text-muted-foreground w-8 text-right">{formatCount(num(o.count))}</span>
-                    <span className="tabular-nums font-display font-bold w-16 text-right">{formatMoney(num(o.miv))}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {byProduct.length > 0 && (
-            <div className="section-card border p-5 md:p-6">
-              <SectionTitle>MIV by Product</SectionTitle>
-              <div className="divide-y divide-border">
-                {byProduct.map((p: any, i: number) => (
-                  <div key={`${p.product}-${i}`} className="flex items-center gap-3 py-2 text-xs">
-                    <span className="font-bold flex-1 truncate">{p.product ?? '—'}</span>
-                    <span className="tabular-nums text-muted-foreground w-8 text-right">{formatCount(num(p.count))}</span>
-                    <span className="tabular-nums font-display font-bold w-16 text-right">{formatMoney(num(p.miv))}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+        <EarnedMediaDrivers topOutlets={topOutlets} byProduct={byProduct} />
 
         {/* 7 — TOP HITS */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
