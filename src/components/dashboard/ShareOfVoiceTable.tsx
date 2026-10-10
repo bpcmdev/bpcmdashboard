@@ -196,7 +196,7 @@ const ShareOfVoiceTable = () => {
                 />
               </span>
               <span className={`text-xs w-11 text-right tabular-nums ${row.highlight ? 'font-bold text-foreground' : 'text-foreground/75'}`}>{row.pct}%</span>
-              <span className="w-16 text-right">
+              <span className="w-20 shrink-0 text-right">
                 {row.deltaPts !== 0 ? <DeltaChip pct={row.deltaPts} suffix="pts" /> : <span className="text-[10px] text-muted-foreground">—</span>}
               </span>
             </button>

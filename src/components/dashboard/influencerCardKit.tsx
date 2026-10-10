@@ -112,7 +112,7 @@ export function DeltaChip({ pct, invert = false, suffix = '%', title }: { pct: n
   return (
     <span
       title={title}
-      className={cn('font-mono-ui text-[10px] tracking-[0.06em] px-1.5 py-0.5 tabular-nums', good ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700')}
+      className={cn('font-mono-ui text-[10px] tracking-[0.06em] px-1.5 py-0.5 tabular-nums whitespace-nowrap', good ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700')}
     >
       {up ? '▲' : '▼'} {Math.abs(pct).toFixed(1)}{suffix === '%' ? '%' : ` ${suffix}`}
     </span>
